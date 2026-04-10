@@ -1,0 +1,34 @@
+# Claude Code internals — do not commit
+.credentials.json
+file-history/
+projects/
+sessions/
+session-env/
+backups/
+cache/
+shell-snapshots/
+paste-cache/
+downloads/
+telemetry/
+history.jsonl
+plugins/
+
+# Local-only settings (may contain sensitive allow rules)
+settings.local.json
+
+# Hook runtime log
+hooks/tool-log.txt
+
+# Memory (personal, managed separately)
+memory/
+
+# Python bytecode
+tools/**/__pycache__/
+tools/**/*.pyc
+tools/**/*.pyo
+tools/**/*.backup
+
+# Playwright runtime artifacts
+tools/general/playwright/car_comparison_rows.json
+tools/general/playwright/.firefox-profile-threads/
+tools/general/playwright/.pw-firefox-*/
