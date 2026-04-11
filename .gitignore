@@ -11,8 +11,6 @@ paste-cache/
 downloads/
 telemetry/
 history.jsonl
-plugins/
-
 # Local-only settings (may contain sensitive allow rules)
 settings.local.json
 

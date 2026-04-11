@@ -1,0 +1,16 @@
+[Unit]
+Description=Lazytools MCP Server
+After=network.target tailscaled.service
+Wants=tailscaled.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/lazywork/workspace/tools/mcp-server
+ExecStart=/home/lazywork/workspace/tools/mcp-server/.venv/bin/python3 server.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

@@ -4,6 +4,29 @@
 Plugins extend Claude Code's native capabilities at the agent level.
 They do not contain business logic — they wire up how Claude perceives and acts.
 
+## Remote MCP Server (Tailscale)
+
+A custom MCP server runs on this machine, accessible to any Claude on the Tailscale network.
+
+| Detail | Value |
+|--------|-------|
+| Host | `lazywork-mbp.tailc83490.ts.net:8765` |
+| SSE URL | `http://lazywork-mbp.tailc83490.ts.net:8765/sse` |
+| Service | `systemctl --user status lazytools-mcp` |
+| Source | `tools/mcp-server/server.py` |
+
+**Exposed tools:** `threads_search`, `run_screener`, `run_layer1_context`, `get_watchlist`, `get_monitoring_status`, `get_stockbit_data`, `read_runtime_log`
+
+**To add on another laptop** — add to `~/.claude/settings.json`:
+```json
+"mcpServers": {
+  "lazytools": {
+    "type": "sse",
+    "url": "http://lazywork-mbp.tailc83490.ts.net:8765/sse"
+  }
+}
+```
+
 ## Three Plugin Types
 
 ### 1. Hooks (`~/workspace/hooks/`)
