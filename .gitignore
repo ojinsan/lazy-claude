@@ -21,6 +21,7 @@ hooks/tool-log.txt
 memory/
 
 # Python bytecode
+tools/mcp-server/.venv/
 tools/**/__pycache__/
 tools/**/*.pyc
 tools/**/*.pyo
