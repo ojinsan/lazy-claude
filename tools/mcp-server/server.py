@@ -21,6 +21,7 @@ WORKSPACE = Path('/home/lazywork/workspace')
 TRADER_DIR = WORKSPACE / 'tools/trader'
 THREADS_SCRIPT  = WORKSPACE / 'tools/general/playwright/threads-scraper.js'
 FACEBOOK_SCRIPT = WORKSPACE / 'tools/general/playwright/facebook-scraper.js'
+GOOGLE_SCRIPT   = WORKSPACE / 'tools/general/scripts/google_workspace.py'
 OPENCLAW = Path('/home/lazywork/.openclaw/workspace')
 RUNTIME = OPENCLAW / 'scarlett/runtime'
 MONITORING_DIR = RUNTIME / 'monitoring'
@@ -35,7 +36,7 @@ _TRADER_ENV = {**os.environ, 'TRADER_DIR': str(TRADER_DIR), 'PYTHONPATH': str(WO
 
 mcp = FastMCP(
     "lazytools",
-    instructions="Tools running on lazywork-mbp. Threads/Facebook scraping, trading screener, stockbit data, broker profile, SID tracker, Wyckoff, market structure, trade plan, journal, macro, layer2 screening, alerts, monitoring, logs.",
+    instructions="Tools running on lazywork-mbp. Threads/Facebook scraping, trading screener, stockbit data, broker profile, SID tracker, Wyckoff, market structure, trade plan, journal, macro, layer2 screening, alerts, monitoring, logs. Google: Calendar (list/create/update/delete), Sheets (read/write/append), Drive (search/list).",
     host="0.0.0.0",
     port=8765,
 )
@@ -552,6 +553,110 @@ def read_runtime_log(log_name: str = 'intraday-10m', lines: int = 50) -> str:
         raise RuntimeError(f"Log '{log_name}' not found. Available: {available}")
     content = log_file.read_text().splitlines()
     return '\n'.join(content[-lines:])
+
+
+# ─── Google — helpers ────────────────────────────────────────────────────────
+
+def _gws(*args) -> str:
+    """Call google_workspace.py with given args, return stdout or raise."""
+    result = subprocess.run(
+        [SYSTEM_PYTHON, str(GOOGLE_SCRIPT)] + list(args),
+        capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr[:500])
+    return result.stdout[:4000]
+
+
+# ─── Google — Calendar ───────────────────────────────────────────────────────
+
+@mcp.tool()
+def google_calendar_list(days: int = 7, calendar_id: str = 'primary') -> str:
+    """List upcoming Google Calendar events. Default: next 7 days, primary calendar."""
+    return _gws('calendar', 'list', '--days', str(days), '--calendar-id', calendar_id)
+
+
+@mcp.tool()
+def google_calendar_create(title: str, start: str, end: str, description: str = '', calendar_id: str = 'primary') -> str:
+    """
+    Create a Google Calendar event.
+    - start/end: ISO 8601 datetime e.g. '2026-04-12T10:00:00+07:00'
+    """
+    args = ['calendar', 'create', '--title', title, '--start', start, '--end', end, '--calendar-id', calendar_id]
+    if description:
+        args += ['--description', description]
+    return _gws(*args)
+
+
+@mcp.tool()
+def google_calendar_update(event_id: str, title: str = '', start: str = '', end: str = '', description: str = '', calendar_id: str = 'primary') -> str:
+    """Update an existing Google Calendar event by event_id. Only pass fields to change."""
+    args = ['calendar', 'update', '--event-id', event_id, '--calendar-id', calendar_id]
+    if title:
+        args += ['--title', title]
+    if start:
+        args += ['--start', start]
+    if end:
+        args += ['--end', end]
+    if description:
+        args += ['--description', description]
+    return _gws(*args)
+
+
+@mcp.tool()
+def google_calendar_delete(event_id: str, calendar_id: str = 'primary') -> str:
+    """Delete a Google Calendar event by event_id."""
+    return _gws('calendar', 'delete', '--event-id', event_id, '--calendar-id', calendar_id)
+
+
+# ─── Google — Sheets ─────────────────────────────────────────────────────────
+
+@mcp.tool()
+def google_sheets_read(spreadsheet_id: str, range_name: str) -> str:
+    """
+    Read values from a Google Sheet.
+    - spreadsheet_id: the sheet ID from the URL
+    - range_name: A1 notation e.g. 'Sheet1!A1:D10'
+    """
+    return _gws('sheets', 'read', '--spreadsheet-id', spreadsheet_id, '--range', range_name)
+
+
+@mcp.tool()
+def google_sheets_write(spreadsheet_id: str, range_name: str, values: str) -> str:
+    """
+    Write values to a Google Sheet.
+    - values: JSON 2D array e.g. '[["Name","Score"],["Alice",95]]'
+    """
+    return _gws('sheets', 'write', '--spreadsheet-id', spreadsheet_id, '--range', range_name, '--values', values)
+
+
+@mcp.tool()
+def google_sheets_append(spreadsheet_id: str, range_name: str, values: str) -> str:
+    """
+    Append rows to a Google Sheet.
+    - values: JSON 2D array e.g. '[["Alice",95]]'
+    """
+    return _gws('sheets', 'append', '--spreadsheet-id', spreadsheet_id, '--range', range_name, '--values', values)
+
+
+# ─── Google — Drive ──────────────────────────────────────────────────────────
+
+@mcp.tool()
+def google_drive_search(query: str, max_results: int = 10) -> str:
+    """Search Google Drive files by name keyword."""
+    return _gws('drive', 'search', '--query', query, '--max', str(max_results))
+
+
+@mcp.tool()
+def google_drive_list(folder_id: str = '', max_results: int = 25) -> str:
+    """
+    List files in Google Drive.
+    - folder_id: restrict to a specific folder (empty = root/all)
+    """
+    args = ['drive', 'list', '--max', str(max_results)]
+    if folder_id:
+        args += ['--folder-id', folder_id]
+    return _gws(*args)
 
 
 # ─── Entry point ─────────────────────────────────────────────────────────────

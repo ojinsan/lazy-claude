@@ -53,6 +53,6 @@ It is NOT part of the 4-layer stack above — it exposes workspace tools directl
 ## Importing Context
 - For trading tasks: see skills/trader/README.md + jobs/trader/README.md
 - For personal assistant tasks: see skills/personal-assistant/README.md
-- For tool usage: see tools/CLAUDE.md
+- For tool usage and file index: see tools/CLAUDE.md
 - For connector details: see connectors/CLAUDE.md
 - For hooks/MCP/commands: see plugins/CLAUDE.md

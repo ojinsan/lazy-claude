@@ -17,8 +17,8 @@ They do not contain business logic — only auth, request construction, and resp
 | stockbit    | REST API          | tools/trader/api.py                      | No            |
 | airtable    | REST API + MCP    | tools/trader/airtable_client.py          | Yes           |
 | notion      | Browser + MCP     | tools/general/browser/notion_browser.py  | Yes           |
-| google      | OAuth REST        | tools/general/scripts/google_workspace.py| No            |
-| threads     | Playwright        | tools/general/playwright/threads-scraper.js | No        |
+| google      | OAuth REST        | tools/general/scripts/google_workspace.py| Yes (lazytools MCP) |
+| threads     | Playwright        | tools/general/playwright/threads-scraper.js | Yes (lazytools MCP) |
 | browser     | Playwright base   | tools/general/browser/browser_base.py    | No            |
 
 ## Dependency Direction
