@@ -1,6 +1,6 @@
 # tools/ — Index
 
-Business logic scripts. Import from connectors/, called by jobs/ or directly by the MCP server.
+Business logic scripts. Import from connectors/, called by playbooks/ or directly by the MCP server.
 
 ## Structure
 

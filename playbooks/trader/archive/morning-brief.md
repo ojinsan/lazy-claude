@@ -8,8 +8,8 @@
 ## Load First
 
 - `~/.claude/skills/trader/README.md`
-- `~/.claude/jobs/trader/insight-gathering.md`
-- `~/.claude/jobs/trader/deep-analysis.md`
+- `playbooks/trader/archive/insight-gathering.md`
+- `playbooks/trader/archive/deep-analysis.md`
 - `~/.claude/skills/trader/trade-planning.md`
 - `~/.claude/skills/trader/risk-rules.md`
 

@@ -17,7 +17,7 @@
 ```
 plugins/     → Claude Code extensions: hooks, MCP registry, slash commands
 connectors/  → External service clients: one per service, no business logic
-tools/       → Business logic scripts: import from connectors, called by jobs/skills
+tools/       → Business logic scripts: import from connectors, called by playbooks/skills
 skills/      → Role playbooks: context + rules for how to think per role
 ```
 
@@ -34,7 +34,7 @@ It is NOT part of the 4-layer stack above — it exposes workspace tools directl
 | connectors/  | Service clients (stockbit, airtable, notion, google, …)     |
 | tools/       | Business logic scripts (trader/, general/, other/)          |
 | skills/      | Role playbooks (trader/, personal-assistant/, general/, …)  |
-| jobs/        | Scheduled workflow definitions (trader/, adhoc/, etc.)      |
+| playbooks/   | Workflow guides for Claude (trader/, personal-assistant/, adhoc/, …) |
 | schedule/    | Cron/trigger definitions                                    |
 | hooks/       | Hook scripts executed by settings.json                      |
 | code/        | Active code projects                                        |
@@ -46,12 +46,12 @@ It is NOT part of the 4-layer stack above — it exposes workspace tools directl
 - Check for existing venv/requirements before installing dependencies.
 
 ## schedule/ Rules
-- Cron definitions reference scripts in tools/ or commands in jobs/.
+- Cron definitions reference scripts in tools/ or playbooks/ commands.
 - Format: one .md file per scheduled task.
 - Use `claude schedule` skill to register remote triggers.
 
 ## Importing Context
-- For trading tasks: see skills/trader/README.md + jobs/trader/README.md
+- For trading tasks: see skills/trader/README.md + playbooks/trader/README.md
 - For personal assistant tasks: see skills/personal-assistant/README.md
 - For tool usage and file index: see tools/CLAUDE.md
 - For connector details: see connectors/CLAUDE.md

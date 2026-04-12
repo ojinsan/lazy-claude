@@ -30,6 +30,8 @@ WATCHLIST_FILE = RUNTIME / 'watchlists/active.json'
 
 # Trader scripts need system python (has requests, httpx, etc.)
 SYSTEM_PYTHON = '/usr/bin/python3'
+# Google scripts need gsheets venv (has google-api-python-client)
+GOOGLE_PYTHON = '/home/lazywork/.openclaw/workspace/.venv-gsheets/bin/python3'
 
 # Shared env for trader subprocess calls — never embed paths into script strings
 _TRADER_ENV = {**os.environ, 'TRADER_DIR': str(TRADER_DIR), 'PYTHONPATH': str(WORKSPACE / 'tools')}
@@ -560,7 +562,7 @@ def read_runtime_log(log_name: str = 'intraday-10m', lines: int = 50) -> str:
 def _gws(*args) -> str:
     """Call google_workspace.py with given args, return stdout or raise."""
     result = subprocess.run(
-        [SYSTEM_PYTHON, str(GOOGLE_SCRIPT)] + list(args),
+        [GOOGLE_PYTHON, str(GOOGLE_SCRIPT)] + list(args),
         capture_output=True, text=True, timeout=30,
     )
     if result.returncode != 0:
