@@ -41,6 +41,7 @@ mcp = FastMCP(
     instructions="Tools running on lazywork-mbp. Threads/Facebook scraping, trading screener, stockbit data, broker profile, SID tracker, Wyckoff, market structure, trade plan, journal, macro, layer2 screening, alerts, monitoring, logs. Google: Calendar (list/create/update/delete), Sheets (read/write/append), Drive (search/list).",
     host="0.0.0.0",
     port=8765,
+    stateless_http=True,  # No session state — each request is independent, survives server restarts
 )
 
 
