@@ -1,13 +1,11 @@
 # Claude Code — User Instructions
 
-## Identity
-- User: Boss O | Market: Indonesia | Currency: IDR
-
 ## Core Rules
 - Be concise. No filler text, no summaries after tool calls.
 - No emojis unless asked.
 - Verify before acting on any memory — check current file state first.
 - For destructive actions (delete, push, overwrite): always confirm first.
+- Use the caveman skill/plugin when available for tasks it supports.
 
 ## Token Efficiency Rules
 - Read only files explicitly relevant to the task.
@@ -24,7 +22,10 @@ skills/      → Role playbooks: context + rules for how to think per role
 ```
 
 Dependency direction: `skills → tools → connectors → external services`
-MCP servers bypass the script stack: `plugins/MCP → external services (native)`
+
+**MCP server** (`tools/mcp-server/`) is a separate self-hosted SSE server running on this machine,
+accessible by other Claude instances (e.g. MacBook Air) over Tailscale as native MCP tools.
+It is NOT part of the 4-layer stack above — it exposes workspace tools directly to remote Claudes.
 
 ## Directory Map
 | Dir          | Purpose                                                     |
@@ -54,5 +55,4 @@ MCP servers bypass the script stack: `plugins/MCP → external services (native)
 - For personal assistant tasks: see skills/personal-assistant/README.md
 - For tool usage: see tools/CLAUDE.md
 - For connector details: see connectors/CLAUDE.md
-- For job templates: see jobs/CLAUDE.md
 - For hooks/MCP/commands: see plugins/CLAUDE.md
