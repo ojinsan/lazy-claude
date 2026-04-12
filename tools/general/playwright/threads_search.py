@@ -24,8 +24,8 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
-WORKSPACE = Path("/home/lazywork/.openclaw/workspace")
-DEFAULT_PROFILE = WORKSPACE / "scarlett" / "tools" / "general" / "playwright" / ".firefox-profile-threads"  # openclaw runtime path
+WORKSPACE = Path("/home/lazywork/workspace")
+DEFAULT_PROFILE = WORKSPACE / "tools" / "general" / "playwright" / ".firefox-profile-threads"
 LEGACY_PROFILE = Path.home() / ".config" / "playwright" / "firefox_profiles" / "cloned_profile"
 
 

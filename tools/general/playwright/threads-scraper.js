@@ -99,8 +99,8 @@ async function main() {
 
   // Primary: logged-in Threads profile (do NOT wipe or recreate on each run)
   // Fallback: .pw-firefox-threads (Playwright-run copy)
-  const PRIMARY_PROFILE = '/home/lazywork/.openclaw/workspace/scarlett/tools/general/playwright/.firefox-profile-threads';
-  const FALLBACK_PROFILE = '/home/lazywork/.openclaw/workspace/scarlett/tools/general/playwright/.pw-firefox-threads';
+  const PRIMARY_PROFILE = '/home/lazywork/workspace/tools/general/playwright/.firefox-profile-threads';
+  const FALLBACK_PROFILE = '/home/lazywork/workspace/tools/general/playwright/.pw-firefox-threads';
   const userDataDir = require('fs').existsSync(PRIMARY_PROFILE) ? PRIMARY_PROFILE : FALLBACK_PROFILE;
 
   const browser = await firefox.launchPersistentContext(userDataDir, {

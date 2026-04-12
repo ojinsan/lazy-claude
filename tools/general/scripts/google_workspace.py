@@ -9,8 +9,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-WORKSPACE = Path("/home/lazywork/.openclaw/workspace")
-TOKEN_DIR = WORKSPACE / "scarlett" / "runtime" / "tokens"  # openclaw runtime path (on-disk name)
+WORKSPACE = Path("/home/lazywork/workspace")
+TOKEN_DIR = WORKSPACE / "runtime" / "tokens"
 ENV_PATH = WORKSPACE / ".env.local"
 TOKEN_DIR.mkdir(parents=True, exist_ok=True)
 

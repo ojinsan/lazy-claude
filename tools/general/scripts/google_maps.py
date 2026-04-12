@@ -6,7 +6,7 @@ import json
 import os
 from pathlib import Path
 
-WORKSPACE = Path("/home/lazywork/.openclaw/workspace")
+WORKSPACE = Path("/home/lazywork/workspace")
 ENV_PATH = WORKSPACE / ".env.local"
 
 

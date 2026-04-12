@@ -8,13 +8,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
-WORKSPACE = Path("/home/lazywork/.openclaw/workspace")
-_RUNTIME_ROOT = WORKSPACE / "scarlett"  # openclaw runtime dir (name is on-disk, not renamed)
-RUNTIME = _RUNTIME_ROOT / "runtime"
+WORKSPACE = Path("/home/lazywork/workspace")
+RUNTIME = WORKSPACE / "runtime"
 SCREENSHOT_DIR = RUNTIME / "screenshots"
-PROFILE_ROOT = _RUNTIME_ROOT / "tools" / "general" / "browser" / "profiles"
+PROFILE_ROOT = WORKSPACE / "tools" / "general" / "browser" / "profiles"
 DEFAULT_PROFILE = PROFILE_ROOT / "default"
-LEGACY_THREADS_PROFILE = _RUNTIME_ROOT / "tools" / "general" / "playwright" / ".firefox-profile-threads"
+LEGACY_THREADS_PROFILE = WORKSPACE / "tools" / "general" / "playwright" / ".firefox-profile-threads"
 ENV_PATH = WORKSPACE / ".env.local"
 
 for p in [SCREENSHOT_DIR, PROFILE_ROOT]:

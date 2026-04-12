@@ -22,8 +22,7 @@ TRADER_DIR = WORKSPACE / 'tools/trader'
 THREADS_SCRIPT  = WORKSPACE / 'tools/general/playwright/threads-scraper.js'
 FACEBOOK_SCRIPT = WORKSPACE / 'tools/general/playwright/facebook-scraper.js'
 GOOGLE_SCRIPT   = WORKSPACE / 'tools/general/scripts/google_workspace.py'
-OPENCLAW = Path('/home/lazywork/.openclaw/workspace')
-RUNTIME = OPENCLAW / 'scarlett/runtime'
+RUNTIME = WORKSPACE / 'runtime'
 MONITORING_DIR = RUNTIME / 'monitoring'
 LOG_DIR = RUNTIME / 'logs'
 WATCHLIST_FILE = RUNTIME / 'watchlists/active.json'
@@ -31,14 +30,14 @@ WATCHLIST_FILE = RUNTIME / 'watchlists/active.json'
 # Trader scripts need system python (has requests, httpx, etc.)
 SYSTEM_PYTHON = '/usr/bin/python3'
 # Google scripts need gsheets venv (has google-api-python-client)
-GOOGLE_PYTHON = '/home/lazywork/.openclaw/workspace/.venv-gsheets/bin/python3'
+GOOGLE_PYTHON = '/home/lazywork/workspace/.venv-gsheets/bin/python3'
 
 # Shared env for trader subprocess calls — never embed paths into script strings
 _TRADER_ENV = {**os.environ, 'TRADER_DIR': str(TRADER_DIR), 'PYTHONPATH': str(WORKSPACE / 'tools')}
 
 mcp = FastMCP(
     "lazytools",
-    instructions="Tools running on lazywork-mbp. Threads/Facebook scraping, trading screener, stockbit data, broker profile, SID tracker, Wyckoff, market structure, trade plan, journal, macro, layer2 screening, alerts, monitoring, logs. Google: Calendar (list/create/update/delete), Sheets (read/write/append), Drive (search/list).",
+    instructions="Tools running on lazywork-mbp. Threads/Facebook scraping, trading screener, stockbit data, broker profile, SID tracker, Wyckoff, market structure, trade plan, journal, macro, layer2 screening, alerts, monitoring, logs. Stockbit screener: run preset templates or custom filters (stockbit_run_template, stockbit_run_custom_screener, stockbit_screener_templates, stockbit_screener_presets, stockbit_screener_metrics). Stockbit emitten info + native watchlists. Carina broker: cash balance, position detail, orders list, cancel order, amend order. Google: Calendar (list/create/update/delete), Sheets (read/write/append), Drive (search/list).",
     host="0.0.0.0",
     port=8765,
     stateless_http=True,  # No session state — each request is independent, survives server restarts
@@ -663,6 +662,375 @@ def google_drive_list(folder_id: str = '', max_results: int = 25) -> str:
     if folder_id:
         args += ['--folder-id', folder_id]
     return _gws(*args)
+
+
+# ─── Trader — Stockbit Screener ──────────────────────────────────────────────
+
+def _sb_script(code: str, env: dict | None = None) -> str:
+    """Run inline trader script, return stdout (trimmed) or raise."""
+    full_env = {**_TRADER_ENV, **(env or {})}
+    result = subprocess.run(
+        [SYSTEM_PYTHON, '-c', code],
+        capture_output=True, text=True, timeout=30, env=full_env,
+    )
+    if not result.stdout and result.returncode != 0:
+        raise RuntimeError(result.stderr[:500])
+    return result.stdout[:4000]
+
+
+@mcp.tool()
+def stockbit_screener_templates() -> str:
+    """
+    List all Stockbit screener templates (saved + favorites).
+    Returns: [{id, name, type, favorite}, ...]
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    print(json.dumps(api.get_screener_templates(), ensure_ascii=False, indent=2))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""")
+
+
+@mcp.tool()
+def stockbit_screener_presets() -> str:
+    """
+    List Stockbit preset screener categories (Guru Screener, Value, Growth, etc.).
+    Returns nested preset tree with template IDs.
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    print(json.dumps(api.get_screener_presets(), ensure_ascii=False, indent=2))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""")
+
+
+@mcp.tool()
+def stockbit_screener_metrics(search: str = '') -> str:
+    """
+    List available Stockbit screening metrics (fitem_ids for building filters).
+    - search: optional keyword filter (e.g. 'volume', 'pe', 'roe')
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+keyword = os.environ.get('SEARCH', '').lower()
+try:
+    all_metrics = api.get_screener_metrics()
+    if keyword:
+        matches = []
+        for group in all_metrics:
+            for child in group.get('child', []):
+                if keyword in child.get('fitem_name', '').lower():
+                    matches.append({'fitem_id': child.get('fitem_id'), 'fitem_name': child.get('fitem_name'), 'group': group.get('fitem_name')})
+        print(json.dumps(matches, ensure_ascii=False, indent=2))
+    else:
+        print(json.dumps(all_metrics, ensure_ascii=False, indent=2))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""", env={'SEARCH': search})
+
+
+@mcp.tool()
+def stockbit_run_template(template_id: int, result_type: str = 'TEMPLATE_TYPE_CUSTOM') -> str:
+    """
+    Run a Stockbit screener template by ID.
+    Get IDs from stockbit_screener_templates() or stockbit_screener_presets().
+    - template_id: numeric template ID
+    - result_type: 'TEMPLATE_TYPE_CUSTOM' or 'TEMPLATE_TYPE_GURU'
+    Returns matching companies with metric values.
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    result = api.run_screener_template(int(os.environ['TMPL_ID']), result_type=os.environ['TMPL_TYPE'])
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""", env={'TMPL_ID': str(template_id), 'TMPL_TYPE': result_type})
+
+
+@mcp.tool()
+def stockbit_run_custom_screener(
+    filters_json: str,
+    universe_scope: str = 'IHSG',
+    universe_scope_id: str = '',
+    ordercol: int = 2,
+    ordertype: str = 'desc',
+    page: int = 1,
+) -> str:
+    """
+    Run a custom Stockbit screener with arbitrary filters.
+
+    filters_json: JSON array of filter rules, e.g.:
+        '[{"type":"lt","item1":2667,"item2":"15"},{"type":"gt","item1":2676,"item2":"10"}]'
+      Each rule: {"type": "gt"|"lt"|"eq"|"between", "item1": <fitem_id>, "item2": <value>, "item3": <upper> (between only)}
+      Get fitem_ids from stockbit_screener_metrics().
+
+    universe_scope: 'IHSG' (all), 'idx' (index), 'sector'
+    universe_scope_id: for idx/sector — e.g. '550' for LQ45, '559' for IDX30
+    ordercol: column index to sort by (default 2)
+    ordertype: 'asc' or 'desc'
+    page: result page (each page ~50 stocks)
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    filters = json.loads(os.environ['FILTERS'])
+    universe = {"scope": os.environ['SCOPE'], "scopeID": os.environ['SCOPE_ID'], "name": ""}
+    result = api.run_screener_custom(
+        filters=filters,
+        universe=universe,
+        page=int(os.environ['PAGE']),
+        ordercol=int(os.environ['ORDERCOL']),
+        ordertype=os.environ['ORDERTYPE'],
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""", env={
+        'FILTERS': filters_json,
+        'SCOPE': universe_scope,
+        'SCOPE_ID': universe_scope_id,
+        'PAGE': str(page),
+        'ORDERCOL': str(ordercol),
+        'ORDERTYPE': ordertype,
+    })
+
+
+# ─── Trader — Stockbit Emitten & Watchlist ────────────────────────────────────
+
+@mcp.tool()
+def stockbit_emitten_info(symbol: str) -> str:
+    """
+    Get Stockbit company info for a ticker (price, change, avg volume, market cap, exchange).
+    Endpoint: exodus.stockbit.com/emitten/{symbol}/info
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    print(json.dumps(api.get_emitten_info(os.environ['SYM']), ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""", env={'SYM': symbol.upper()})
+
+
+@mcp.tool()
+def stockbit_watchlists() -> str:
+    """List user's Stockbit native watchlists (not backend watchlist)."""
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    print(json.dumps(api.get_stockbit_watchlists(), ensure_ascii=False, indent=2))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""")
+
+
+@mcp.tool()
+def stockbit_watchlist_items(watchlist_id: int, page: int = 1, limit: int = 50) -> str:
+    """
+    Get stocks in a Stockbit native watchlist.
+    Get watchlist_id from stockbit_watchlists().
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    print(json.dumps(api.get_stockbit_watchlist(int(os.environ['WID']), page=int(os.environ['PAGE']), limit=int(os.environ['LIMIT'])), ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""", env={'WID': str(watchlist_id), 'PAGE': str(page), 'LIMIT': str(limit)})
+
+
+# ─── Trader — Carina (Portfolio & Orders) ────────────────────────────────────
+
+@mcp.tool()
+def carina_cash_balance() -> str:
+    """Get available cash balance from Carina broker API."""
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    cash = api.get_cash_balance()
+    info = api.get_cash_info()
+    print(json.dumps({"available_cash": cash, "cash_info": info}, ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""")
+
+
+@mcp.tool()
+def carina_position_detail(stock_code: str) -> str:
+    """
+    Get per-stock position detail from Carina (qty, avg price, P/L, market value).
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    print(json.dumps(api.get_position_detail(os.environ['SYM']), ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""", env={'SYM': stock_code.upper()})
+
+
+@mcp.tool()
+def carina_orders(stock_code: str = '') -> str:
+    """
+    List open/today's orders from Carina broker.
+    - stock_code: filter by ticker (empty = all orders)
+    Returns: [{order_id, symbol, side, price, shares, status_text, filled_shares}, ...]
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+sym = os.environ.get('SYM', '')
+try:
+    print(json.dumps(api.get_orders(sym or None), ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""", env={'SYM': stock_code.upper()})
+
+
+@mcp.tool()
+def carina_place_buy(symbol: str, price: int, shares: int, board_type: str = 'RG', is_gtc: bool = False) -> str:
+    """
+    Place a BUY order via Carina broker.
+    WARNING: This is a REAL trading order. Confirm symbol/price/shares with user before calling.
+    - symbol: ticker e.g. 'BBCA'
+    - price: limit price in IDR
+    - shares: number of shares (1 lot = 100 shares)
+    - board_type: 'RG' (regular) or 'TN' (negotiated)
+    - is_gtc: Good Till Cancelled (default False = day order)
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    result = api.place_buy_order(
+        symbol=os.environ['SYM'],
+        price=int(os.environ['PRICE']),
+        shares=int(os.environ['SHARES']),
+        board_type=os.environ['BOARD'],
+        is_gtc=os.environ['GTC'] == '1',
+    )
+    print(json.dumps({"ok": True, "result": result}, ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"ok": False, "error": str(e)}))
+""", env={
+        'SYM': symbol.upper(), 'PRICE': str(price), 'SHARES': str(shares),
+        'BOARD': board_type, 'GTC': '1' if is_gtc else '0',
+    })
+
+
+@mcp.tool()
+def carina_place_sell(symbol: str, price: int, shares: int, board_type: str = 'RG', is_gtc: bool = False) -> str:
+    """
+    Place a SELL order via Carina broker.
+    WARNING: This is a REAL trading order. Confirm symbol/price/shares with user before calling.
+    - symbol: ticker e.g. 'BBCA'
+    - price: limit price in IDR
+    - shares: number of shares (1 lot = 100 shares)
+    - board_type: 'RG' (regular) or 'TN' (negotiated)
+    - is_gtc: Good Till Cancelled (default False = day order)
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    result = api.place_sell_order(
+        symbol=os.environ['SYM'],
+        price=int(os.environ['PRICE']),
+        shares=int(os.environ['SHARES']),
+        board_type=os.environ['BOARD'],
+        is_gtc=os.environ['GTC'] == '1',
+    )
+    print(json.dumps({"ok": True, "result": result}, ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"ok": False, "error": str(e)}))
+""", env={
+        'SYM': symbol.upper(), 'PRICE': str(price), 'SHARES': str(shares),
+        'BOARD': board_type, 'GTC': '1' if is_gtc else '0',
+    })
+
+
+@mcp.tool()
+def carina_cancel_order(order_id: str) -> str:
+    """
+    Cancel an open order on Carina broker.
+    WARNING: This is a real trading action.
+    - order_id: Order ID string (e.g. 'XL039421L...')
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    result = api.cancel_order(os.environ['ORDER_ID'])
+    print(json.dumps({"ok": True, "result": result}, ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"ok": False, "error": str(e)}))
+""", env={'ORDER_ID': order_id})
+
+
+@mcp.tool()
+def carina_amend_order(order_id: str, price: int, shares: int) -> str:
+    """
+    Amend price/shares of an open order on Carina broker.
+    WARNING: This is a real trading action.
+    - order_id: Order ID string
+    - price: new limit price in IDR
+    - shares: new share count (not lots)
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    req = [{"order_id": os.environ['ORDER_ID'], "price": int(os.environ['PRICE']), "shares": int(os.environ['SHARES'])}]
+    result = api.amend_orders(req)
+    print(json.dumps({"ok": True, "result": result}, ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"ok": False, "error": str(e)}))
+""", env={'ORDER_ID': order_id, 'PRICE': str(price), 'SHARES': str(shares)})
 
 
 # ─── Entry point ─────────────────────────────────────────────────────────────

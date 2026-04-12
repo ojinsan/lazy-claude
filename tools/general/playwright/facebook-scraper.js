@@ -230,7 +230,7 @@ async function main() {
     process.exit(1);
   }
 
-  const PRIMARY_PROFILE  = '/home/lazywork/.openclaw/workspace/scarlett/tools/general/playwright/.firefox-profile-facebook';
+  const PRIMARY_PROFILE  = '/home/lazywork/workspace/tools/general/playwright/.firefox-profile-facebook';
   const FALLBACK_PROFILE = '/home/lazywork/workspace/tools/general/playwright/.firefox-profile-facebook';
   const userDataDir = fs.existsSync(PRIMARY_PROFILE) ? PRIMARY_PROFILE : FALLBACK_PROFILE;
 

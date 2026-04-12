@@ -2,9 +2,8 @@ from __future__ import annotations
 import os, json
 from pathlib import Path
 
-WORKSPACE = Path('/home/lazywork/.openclaw/workspace')
-_RUNTIME_ROOT = WORKSPACE / 'scarlett'  # openclaw runtime dir (name is on-disk, not renamed)
-RUNTIME = _RUNTIME_ROOT / 'runtime'
+WORKSPACE = Path('/home/lazywork/workspace')
+RUNTIME = WORKSPACE / 'runtime'
 LOG_DIR = RUNTIME / 'logs'
 MONITORING_DIR = RUNTIME / 'monitoring'
 WATCHLIST_DIR = RUNTIME / 'watchlists'

@@ -280,7 +280,7 @@ def _stockbit_get(path: str, params: Optional[dict] = None) -> dict:
     token = get_stockbit_token()
     if not token:
         return {"error": "No Stockbit token"}
-    
+
     try:
         r = httpx.get(
             f"{STOCKBIT_BASE_URL}{path}",
@@ -288,15 +288,105 @@ def _stockbit_get(path: str, params: Optional[dict] = None) -> dict:
             params=params,
             timeout=TIMEOUT,
         )
-        
+
         if r.status_code == 401:
             log.warning(f"401 on {path} — token expired or invalid. Backend needs to refresh it.")
             return {"error": "401 Unauthorized — token needs backend refresh"}
-        
+
         r.raise_for_status()
         return r.json()
     except Exception as e:
         log.error(f"Stockbit GET {path} failed: {e}")
+        return {"error": str(e)}
+
+
+def _stockbit_post(path: str, data: dict) -> dict:
+    """POST request to Stockbit direct API (exodus)."""
+    token = get_stockbit_token()
+    if not token:
+        return {"error": "No Stockbit token"}
+    try:
+        r = httpx.post(
+            f"{STOCKBIT_BASE_URL}{path}",
+            headers=stockbit_headers(token),
+            json=data,
+            timeout=TIMEOUT,
+        )
+        if r.status_code == 401:
+            return {"error": "401 Unauthorized — token needs backend refresh"}
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        log.error(f"Stockbit POST {path} failed: {e}")
+        return {"error": str(e)}
+
+
+def _carina_get(path: str, params: Optional[dict] = None) -> dict:
+    """GET request to Carina (broker/portfolio) API."""
+    token = _load_carina_token()
+    if not token:
+        # fallback to stockbit token
+        token = get_stockbit_token()
+    if not token:
+        return {"error": "No Carina token. Use save_carina_token() to store it."}
+    try:
+        r = httpx.get(
+            f"{CARINA_BASE_URL}{path}",
+            headers={**STOCKBIT_BROWSER_HEADERS, "authorization": f"Bearer {token}", "origin": "https://stockbit.com"},
+            params=params,
+            timeout=TIMEOUT,
+        )
+        if r.status_code == 401:
+            return {"error": "401 Unauthorized — Carina token expired. Use save_carina_token()."}
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        log.error(f"Carina GET {path} failed: {e}")
+        return {"error": str(e)}
+
+
+def _carina_post(path: str, data: dict) -> dict:
+    """POST request to Carina (broker/portfolio) API."""
+    token = _load_carina_token()
+    if not token:
+        token = get_stockbit_token()
+    if not token:
+        return {"error": "No Carina token. Use save_carina_token() to store it."}
+    try:
+        r = httpx.post(
+            f"{CARINA_BASE_URL}{path}",
+            headers={**STOCKBIT_BROWSER_HEADERS, "authorization": f"Bearer {token}", "origin": "https://stockbit.com"},
+            json=data,
+            timeout=TIMEOUT,
+        )
+        if r.status_code == 401:
+            return {"error": "401 Unauthorized — Carina token expired. Use save_carina_token()."}
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        log.error(f"Carina POST {path} failed: {e}")
+        return {"error": str(e)}
+
+
+def _carina_delete(path: str) -> dict:
+    """DELETE request to Carina API."""
+    token = _load_carina_token()
+    if not token:
+        token = get_stockbit_token()
+    if not token:
+        return {"error": "No Carina token."}
+    try:
+        r = httpx.delete(
+            f"{CARINA_BASE_URL}{path}",
+            headers={**STOCKBIT_BROWSER_HEADERS, "authorization": f"Bearer {token}", "origin": "https://stockbit.com"},
+            timeout=TIMEOUT,
+        )
+        if r.status_code == 401:
+            return {"error": "401 Unauthorized — Carina token expired."}
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        log.error(f"Carina DELETE {path} failed: {e}")
         return {"error": str(e)}
 
 
@@ -531,6 +621,438 @@ def get_stockbit_sid_count(symbol: str) -> dict:
         "signal": signal,
         "history": history,
     }
+
+
+# ─── Stockbit Direct: Emitten Info ───────────────────────────────────────────
+
+def get_emitten_info(symbol: str) -> dict:
+    """
+    Get company info from Stockbit (price, change, avg volume, exchange, sector).
+
+    Endpoint: GET exodus.stockbit.com/emitten/{symbol}/info
+    Returns: average, change, date, exchange, last_price, market_cap, etc.
+    """
+    data = _stockbit_get(f"/emitten/{symbol.upper()}/info")
+    if "error" in data:
+        return data
+    return data.get("data", data)
+
+
+# ─── Stockbit Direct: Watchlist ───────────────────────────────────────────────
+
+def get_stockbit_watchlists(category_types: Optional[list[str]] = None, page: int = 1, limit: int = 50) -> list[dict]:
+    """
+    List user's Stockbit watchlists.
+
+    Endpoint: GET exodus.stockbit.com/watchlist
+    Returns: list of {watchlist_id, name, description, total_items, ...}
+    """
+    params: dict = {"page": page, "limit": limit}
+    if category_types:
+        params["category_types"] = category_types
+    data = _stockbit_get("/watchlist", params)
+    if "error" in data:
+        return []
+    return data.get("data", [])
+
+
+def get_stockbit_watchlist(watchlist_id: int, page: int = 1, limit: int = 50) -> dict:
+    """
+    Get items in a Stockbit watchlist.
+
+    Endpoint: GET exodus.stockbit.com/watchlist/{watchlist_id}
+    Returns: {watchlist_id, header, items: [{symbol, last, change, percent, ...}]}
+
+    Args:
+        watchlist_id: Watchlist ID (e.g. 888864)
+        setfincol: Financial columns to include (default: 1)
+    """
+    data = _stockbit_get(f"/watchlist/{watchlist_id}", {"page": page, "limit": limit, "setfincol": 1})
+    if "error" in data:
+        return data
+    return data.get("data", data)
+
+
+def get_stockbit_watchlist_metrics() -> list[dict]:
+    """
+    Get available financial metrics for watchlist columns.
+
+    Endpoint: GET exodus.stockbit.com/watchlist/metric
+    """
+    data = _stockbit_get("/watchlist/metric")
+    if "error" in data:
+        return []
+    return data.get("data", [])
+
+
+# ─── Stockbit Direct: Screener ────────────────────────────────────────────────
+
+def get_screener_templates() -> list[dict]:
+    """
+    List all screener templates (custom + favorites).
+
+    Endpoint: GET exodus.stockbit.com/screener/templates
+    Returns: [{id, name, type, favorite}, ...]
+    """
+    data = _stockbit_get("/screener/templates")
+    if "error" in data:
+        return []
+    return data.get("data", [])
+
+
+def get_screener_presets() -> list[dict]:
+    """
+    Get preset screener categories (Guru Screener, Value, Growth, etc.).
+
+    Endpoint: GET exodus.stockbit.com/screener/preset
+    Returns: [{id, name, childs: [{id, name, childs: [...]}]}]
+    """
+    data = _stockbit_get("/screener/preset")
+    if "error" in data:
+        return []
+    return data.get("data", [])
+
+
+def get_screener_metrics() -> list[dict]:
+    """
+    Get all available screening metrics/filters.
+
+    Endpoint: GET exodus.stockbit.com/screener/metric
+    Returns: [{fitem_id, fitem_name, child: [{fitem_id, fitem_name, ...}]}]
+    """
+    data = _stockbit_get("/screener/metric")
+    if "error" in data:
+        return []
+    return data.get("data", [])
+
+
+def get_screener_universe() -> dict:
+    """
+    Get available stock universes for screener (IHSG, IDX30, LQ45, sectors, etc.).
+
+    Endpoint: GET exodus.stockbit.com/screener/universe
+    Returns: {index: [{id, name, scope, list: [...]}], sector: [...]}
+    """
+    data = _stockbit_get("/screener/universe")
+    if "error" in data:
+        return {}
+    return data.get("data", data)
+
+
+def run_screener_template(template_id: int, result_type: str = "TEMPLATE_TYPE_CUSTOM") -> list[dict]:
+    """
+    Run a preset or saved screener template.
+
+    Endpoint: GET exodus.stockbit.com/screener/templates/{template_id}?type=...
+    Returns: list of matching companies with their metric values.
+
+    Args:
+        template_id: Template ID (get from get_screener_templates() or get_screener_presets())
+        result_type: "TEMPLATE_TYPE_CUSTOM" or "TEMPLATE_TYPE_GURU"
+    """
+    data = _stockbit_get(f"/screener/templates/{template_id}", {"type": result_type})
+    if "error" in data:
+        return []
+    inner = data.get("data", {})
+    return inner.get("calcs", inner) if isinstance(inner, dict) else inner
+
+
+def run_screener_custom(
+    filters: list[dict],
+    universe: Optional[dict] = None,
+    page: int = 1,
+    ordercol: int = 2,
+    ordertype: str = "desc",
+    name: str = "",
+    save: bool = False,
+) -> list[dict]:
+    """
+    Run a custom screener with arbitrary filters.
+
+    Endpoint: POST exodus.stockbit.com/screener/templates
+
+    Args:
+        filters: List of filter rules. Each rule:
+            {"type": "between"|"gt"|"lt"|"eq",
+             "item1": <fitem_id>,    # metric ID from get_screener_metrics()
+             "item2": <value_or_fitem_id>,
+             "item3": <upper_bound>  # only for "between"}
+        universe: {scope, scopeID, name} — default: all IHSG stocks.
+                  Get valid values from get_screener_universe().
+        page: Result page number
+        ordercol: Column index to sort by (default: 2)
+        ordertype: "asc" or "desc"
+        name: Optional screener name
+        save: If True, saves the screener as a template
+
+    Returns:
+        list of matching companies [{company: {symbol, name}, ...metrics}]
+
+    Example filters (volume ratio > 1.5 AND price 100-5000):
+        [
+            {"type": "gt", "item1": <volume_ratio_fitem_id>, "item2": "1.5"},
+            {"type": "between", "item1": <price_fitem_id>, "item2": "100", "item3": "5000"},
+        ]
+    """
+    if universe is None:
+        universe = {"scope": "IHSG", "scopeID": "", "name": ""}
+
+    import json as _json
+    payload = {
+        "name": name,
+        "description": "",
+        "save": "1" if save else "0",
+        "ordertype": ordertype,
+        "ordercol": ordercol,
+        "page": page,
+        "universe": _json.dumps(universe),
+        "filters": _json.dumps(filters),
+    }
+    data = _stockbit_post("/screener/templates", payload)
+    if "error" in data:
+        return []
+    inner = data.get("data", {})
+    return inner.get("calcs", inner) if isinstance(inner, dict) else inner
+
+
+def get_screener_favorites() -> list[dict]:
+    """
+    Get user's favorite screener templates.
+
+    Endpoint: GET exodus.stockbit.com/screener/favorites
+    Returns: [{id, name, type, order}, ...]
+    """
+    data = _stockbit_get("/screener/favorites")
+    if "error" in data:
+        return []
+    return data.get("data", [])
+
+
+# ─── Carina: Balance ──────────────────────────────────────────────────────────
+
+def get_cash_balance() -> float:
+    """
+    Get available cash on hand from Carina.
+
+    Endpoint: GET carina.stockbit.com/balance/cash
+    Returns: available_cash_on_hand as float
+    """
+    data = _carina_get("/balance/cash")
+    if "error" in data:
+        log.warning(f"get_cash_balance: {data['error']}")
+        return 0.0
+    return float(data.get("data", {}).get("available_cash_on_hand", 0))
+
+
+def get_cash_info(stock_code: Optional[str] = None, order_id: Optional[str] = None) -> dict:
+    """
+    Get trading cash info (trade limit, day trade buying power, etc.).
+
+    Endpoint: GET carina.stockbit.com/balance/cash/info
+    Returns: {trade_limit, trade_balance, day_trade_buying_power, ...}
+    """
+    params: dict = {}
+    if stock_code:
+        params["stock_code"] = stock_code.upper()
+    if order_id:
+        params["order_id"] = order_id
+    data = _carina_get("/balance/cash/info", params)
+    if "error" in data:
+        return data
+    return data.get("data", data)
+
+
+# ─── Carina: Portfolio Detail ─────────────────────────────────────────────────
+
+def get_position_detail(stock_code: str) -> dict:
+    """
+    Get per-stock position detail from Carina portfolio.
+
+    Endpoint: GET carina.stockbit.com/portfolio/v2/detail?stock_code={symbol}
+    Returns: {symbol, company, qty, price, asset, ...}
+    """
+    data = _carina_get("/portfolio/v2/detail", {"stock_code": stock_code.upper()})
+    if "error" in data:
+        return data
+    return data.get("data", {}).get("result", data.get("data", data))
+
+
+# ─── Carina: Orders ───────────────────────────────────────────────────────────
+
+def get_orders(stock_code: Optional[str] = None) -> list[dict]:
+    """
+    Get open/today's orders from Carina.
+
+    Endpoint: GET carina.stockbit.com/order/v2/list
+    Returns: list of order dicts {order_id, symbol, side, price, shares, status_text, ...}
+    """
+    params: dict = {}
+    if stock_code:
+        params["filter_criteria.stock_code"] = stock_code.upper()
+    data = _carina_get("/order/v2/list", params)
+    if "error" in data:
+        return []
+    return data.get("data", [])
+
+
+def get_order_detail(order_id: str) -> dict:
+    """
+    Get detail for a specific order.
+
+    Endpoint: GET carina.stockbit.com/order/v2/detail?order_id={order_id}
+    Returns: {order_id, symbol, side, price, shares, status_text, filled_shares, ...}
+    """
+    data = _carina_get("/order/v2/detail", {"order_id": order_id})
+    if "error" in data:
+        return data
+    return data.get("data", data)
+
+
+def place_buy_order(
+    symbol: str,
+    price: int,
+    shares: int,
+    board_type: str = "RG",
+    is_gtc: bool = False,
+    time_in_force: str = "0",
+    ui_ref: Optional[str] = None,
+) -> dict:
+    """
+    Place a buy order via Carina.
+
+    Endpoint: POST carina.stockbit.com/order/v2/buy
+
+    Args:
+        symbol: Stock ticker (e.g. "BBCA")
+        price: Limit price in IDR
+        shares: Number of shares (not lots — 1 lot = 100 shares)
+        board_type: "RG" (regular), "TN" (negotiated)
+        is_gtc: Good Till Cancelled
+        time_in_force: "0" = day order
+        ui_ref: Optional UI reference string
+
+    Returns: {order_id, order_limit_info} or {error}
+
+    WARNING: This places a REAL order. Confirm before calling.
+    """
+    import time as _time
+    if ui_ref is None:
+        ui_ref = f"W{int(_time.time() * 1000)}claude"
+    payload = {
+        "ui_ref": ui_ref,
+        "symbol": symbol.upper(),
+        "price": price,
+        "shares": shares,
+        "board_type": board_type,
+        "is_gtc": is_gtc,
+        "time_in_force": time_in_force,
+        "platform_order_type": "PLATFORM_ORDER_TYPE_LIMIT_DAY",
+    }
+    data = _carina_post("/order/v2/buy", payload)
+    if "error" in data:
+        return data
+    return data.get("data", data)
+
+
+def place_sell_order(
+    symbol: str,
+    price: int,
+    shares: int,
+    board_type: str = "RG",
+    is_gtc: bool = False,
+    time_in_force: str = "0",
+    ui_ref: Optional[str] = None,
+) -> dict:
+    """
+    Place a sell order via Carina.
+
+    Endpoint: POST carina.stockbit.com/order/v2/sell
+
+    Args:
+        symbol: Stock ticker (e.g. "BBCA")
+        price: Limit price in IDR
+        shares: Number of shares (not lots — 1 lot = 100 shares)
+        board_type: "RG" (regular), "TN" (negotiated)
+        is_gtc: Good Till Cancelled
+        time_in_force: "0" = day order
+        ui_ref: Optional UI reference string
+
+    Returns: {order_id, order_limit_info} or {error}
+
+    WARNING: This places a REAL order. Confirm before calling.
+    """
+    import time as _time
+    if ui_ref is None:
+        ui_ref = f"W{int(_time.time() * 1000)}claude"
+    payload = {
+        "ui_ref": ui_ref,
+        "symbol": symbol.upper(),
+        "price": price,
+        "shares": shares,
+        "board_type": board_type,
+        "is_gtc": is_gtc,
+        "time_in_force": time_in_force,
+        "platform_order_type": "PLATFORM_ORDER_TYPE_LIMIT_DAY",
+    }
+    data = _carina_post("/order/v2/sell", payload)
+    if "error" in data:
+        return data
+    return data.get("data", data)
+
+
+def cancel_order(order_id: str, ui_ref: Optional[str] = None) -> dict:
+    """
+    Cancel an open order via Carina.
+
+    Endpoint: POST carina.stockbit.com/order/v2/cancel
+
+    Args:
+        order_id: Order ID to cancel
+
+    Returns: {} on success or {error}
+    """
+    import time as _time
+    if ui_ref is None:
+        ui_ref = f"W{int(_time.time() * 1000)}claude"
+    data = _carina_post("/order/v2/cancel", {"order_id": order_id, "ui_ref": ui_ref})
+    if "error" in data:
+        return data
+    return data.get("data", data)
+
+
+def amend_orders(amend_requests: list[dict], ui_ref: Optional[str] = None) -> dict:
+    """
+    Bulk amend open orders via Carina.
+
+    Endpoint: POST carina.stockbit.com/order/v2/amend/bulk
+
+    Args:
+        amend_requests: List of {order_id, price, shares}
+        ui_ref: Optional UI reference string
+
+    Returns: {accepted: [...], rejected: [...]} or {error}
+
+    Example:
+        amend_orders([{"order_id": "XL039421L...", "price": 1770, "shares": 5000}])
+    """
+    import time as _time
+    if ui_ref is None:
+        ui_ref = f"W{int(_time.time() * 1000)}claude"
+    data = _carina_post("/order/v2/amend/bulk", {"ui_ref": ui_ref, "amend_request": amend_requests})
+    if "error" in data:
+        return data
+    return data.get("data", data)
+
+
+def cancel_stop_order(order_id: str) -> dict:
+    """
+    Cancel a smart/stop order via Carina.
+
+    Endpoint: DELETE carina.stockbit.com/smart-order/stop-order/v1/order/{order_id}
+
+    Returns: {} on success or {error}
+    """
+    return _carina_delete(f"/smart-order/stop-order/v1/order/{order_id}")
 
 
 # ─── Stockbit Direct: Price & Volume ─────────────────────────────────────────

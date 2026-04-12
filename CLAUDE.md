@@ -51,7 +51,7 @@ It is NOT part of the 4-layer stack above — it exposes workspace tools directl
 - Use `claude schedule` skill to register remote triggers.
 
 ## Importing Context
-- For trading tasks: see skills/trader/README.md + playbooks/trader/README.md
+- For trading tasks: read skills/trader/README.md FIRST (philosophy, SID rules, broker rules, skills+tools index), then playbooks/trader/README.md for layer structure. Load individual skills only when the layer needs them.
 - For personal assistant tasks: see skills/personal-assistant/README.md
 - For tool usage and file index: see tools/CLAUDE.md
 - For connector details: see connectors/CLAUDE.md

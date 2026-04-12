@@ -2,7 +2,7 @@
 import os, json, argparse, requests
 from pathlib import Path
 
-ENV_PATH = Path('/home/lazywork/.openclaw/workspace/.env.local')
+ENV_PATH = Path('/home/lazywork/workspace/.env.local')
 BATCH_LIMIT = 10
 
 
