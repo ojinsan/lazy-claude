@@ -566,7 +566,10 @@ def _gws(*args) -> str:
         capture_output=True, text=True, timeout=30,
     )
     if result.returncode != 0:
-        raise RuntimeError(result.stderr[:500])
+        # google_workspace.py outputs {"ok": false, "error": "..."} on failure
+        if result.stdout.strip():
+            return result.stdout[:4000]
+        raise RuntimeError(result.stderr.strip()[:500] or "google_workspace.py exited non-zero")
     return result.stdout[:4000]
 
 

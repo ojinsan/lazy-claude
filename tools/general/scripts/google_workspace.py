@@ -61,11 +61,16 @@ def get_credentials(scope_key: str):
         path.write_text(creds.to_json())
         return creds
 
-    adc = Credentials.from_authorized_user_file(str(Path.home() / ".config" / "gcloud" / "application_default_credentials.json"), scopes=scopes)
-    if adc.expired and adc.refresh_token:
-        adc.refresh(Request())
-    path.write_text(adc.to_json())
-    return adc
+    # Fall back to the shared OAuth token (covers all workspace scopes)
+    shared = TOKEN_DIR / "google_workspace_all.json"
+    if not shared.exists():
+        raise RuntimeError(f"No token at {shared}. Run tools/mcp-server/google_auth_setup.py first.")
+    creds = Credentials.from_authorized_user_file(str(shared))
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        shared.write_text(creds.to_json())
+    path.write_text(creds.to_json())
+    return creds
 
 
 def service(name: str, version: str, scope_key: str):
@@ -381,7 +386,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    import sys
     args = build_parser().parse_args()
+    try:
+        _run(args)
+    except Exception as e:
+        print(json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
+        sys.exit(1)
+
+
+def _run(args) -> None:
     if args.group == "calendar":
         if args.action == "list":
             result = calendar_list(args.days, args.calendar_id)
@@ -442,3 +456,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
