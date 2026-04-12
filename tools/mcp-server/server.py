@@ -4,31 +4,38 @@ Lazywork MCP Server
 Exposes workspace tools over SSE so any Claude on the Tailscale network
 can call them as native MCP tools.
 
-Transport: HTTP + SSE  →  http://lazywork-mbp.tailc83490.ts.net:8765/sse
+Transport: streamable-http  →  http://lazywork-mbp.tailc83490.ts.net:8765/sse
 Auth: Tailscale handles network auth — no token needed.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
-import sys
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
 WORKSPACE = Path('/home/lazywork/workspace')
 TRADER_DIR = WORKSPACE / 'tools/trader'
-THREADS_SCRIPT = WORKSPACE / 'tools/general/playwright/threads-scraper.js'
+THREADS_SCRIPT  = WORKSPACE / 'tools/general/playwright/threads-scraper.js'
+FACEBOOK_SCRIPT = WORKSPACE / 'tools/general/playwright/facebook-scraper.js'
 OPENCLAW = Path('/home/lazywork/.openclaw/workspace')
 RUNTIME = OPENCLAW / 'scarlett/runtime'
 MONITORING_DIR = RUNTIME / 'monitoring'
 LOG_DIR = RUNTIME / 'logs'
 WATCHLIST_FILE = RUNTIME / 'watchlists/active.json'
 
+# Trader scripts need system python (has requests, httpx, etc.)
+SYSTEM_PYTHON = '/usr/bin/python3'
+
+# Shared env for trader subprocess calls — never embed paths into script strings
+_TRADER_ENV = {**os.environ, 'TRADER_DIR': str(TRADER_DIR), 'PYTHONPATH': str(WORKSPACE / 'tools')}
+
 mcp = FastMCP(
     "lazytools",
-    instructions="Tools running on lazywork-mbp. Threads scraping, trading screener, stockbit data, monitoring status.",
+    instructions="Tools running on lazywork-mbp. Threads/Facebook scraping, trading screener, stockbit data, broker profile, SID tracker, Wyckoff, market structure, trade plan, journal, macro, layer2 screening, alerts, monitoring, logs.",
     host="0.0.0.0",
     port=8765,
 )
@@ -43,13 +50,13 @@ def threads_search(query: str, limit: int = 10) -> str:
     Returns post text, likes, and reply counts.
     """
     result = subprocess.run(
-        ['node', str(THREADS_SCRIPT), '--query', query, '--limit', str(limit), '--output', '/tmp/mcp_threads.json'],
+        ['node', str(THREADS_SCRIPT), '--query', query, '--limit', str(limit)],
         capture_output=True, text=True, timeout=60
     )
     if result.returncode != 0:
-        return f"Error: {result.stderr[:500]}"
+        raise RuntimeError(result.stderr[:500])
     try:
-        data = json.loads(Path('/tmp/mcp_threads.json').read_text())
+        data = json.loads(result.stdout)
         posts = data.get('results', [])
         lines = [f"Query: {query} ({len(posts)} results)\n"]
         for p in posts:
@@ -58,7 +65,81 @@ def threads_search(query: str, limit: int = 10) -> str:
                 lines.append(f"---\n{text[:400]}\nLikes: {p.get('likes',0)} | Replies: {p.get('replies',0)}")
         return '\n'.join(lines)
     except Exception as e:
-        return f"Parse error: {e}\nRaw: {result.stdout[:300]}"
+        raise RuntimeError(f"Parse error: {e}\nRaw: {result.stdout[:300]}")
+
+
+# ─── Facebook ────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def facebook_marketplace_search(query: str, location: str = 'jakarta', limit: int = 20, detail: bool = False) -> str:
+    """
+    Search Facebook Marketplace listings by keyword.
+    Returns title, price, location, and URL per listing.
+    Set detail=True to also fetch description from each listing page (slower).
+    """
+    cmd = [
+        'node', str(FACEBOOK_SCRIPT),
+        '--query', query,
+        '--mode', 'marketplace',
+        '--location', location,
+        '--limit', str(limit),
+    ]
+    if detail:
+        cmd.append('--detail')
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr[:500])
+    try:
+        data = json.loads(result.stdout)
+        listings = data.get('results', [])
+        lines = [f"Marketplace: {query} @ {location} ({len(listings)} listings)\n"]
+        for item in listings:
+            lines.append(
+                f"---\n{item.get('title','')}\n"
+                f"Price: {item.get('price','')}\n"
+                f"Location: {item.get('location','')}\n"
+                f"URL: {item.get('url','')}"
+            )
+            if item.get('description'):
+                lines.append(f"Desc: {item['description'][:300]}")
+        return '\n'.join(lines)
+    except Exception as e:
+        raise RuntimeError(f"Parse error: {e}\nRaw: {result.stdout[:300]}")
+
+
+@mcp.tool()
+def facebook_search(query: str, limit: int = 15) -> str:
+    """
+    Search Facebook public posts by keyword.
+    Returns post text, author, timestamp, and engagement counts.
+    """
+    result = subprocess.run(
+        [
+            'node', str(FACEBOOK_SCRIPT),
+            '--query', query,
+            '--mode', 'search',
+            '--limit', str(limit),
+        ],
+        capture_output=True, text=True, timeout=90,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr[:500])
+    try:
+        data = json.loads(result.stdout)
+        posts = data.get('results', [])
+        lines = [f"Facebook search: {query} ({len(posts)} posts)\n"]
+        for p in posts:
+            text = p.get('text', '').strip()
+            if text:
+                lines.append(
+                    f"---\n{text[:500]}\n"
+                    f"Author: {p.get('author','')} | {p.get('timestamp','')}\n"
+                    f"Reactions: {p.get('reactions','')} | Comments: {p.get('comments','')}"
+                )
+        return '\n'.join(lines)
+    except Exception as e:
+        raise RuntimeError(f"Parse error: {e}\nRaw: {result.stdout[:300]}")
 
 
 # ─── Trader — Screener ───────────────────────────────────────────────────────
@@ -71,7 +152,7 @@ def run_screener(tickers: str = '', layer1_only: bool = False, deep_ticker: str 
     - layer1_only: only run macro + sector rotation layer
     - deep_ticker: single ticker for deep dive (includes SID, slow)
     """
-    cmd = [sys.executable, 'screener.py']
+    cmd = [SYSTEM_PYTHON, 'screener.py']
     if tickers:
         cmd += ['--tickers'] + tickers.split()
     if layer1_only:
@@ -80,7 +161,8 @@ def run_screener(tickers: str = '', layer1_only: bool = False, deep_ticker: str 
         cmd += ['--deep', deep_ticker]
 
     result = subprocess.run(
-        cmd, capture_output=True, text=True, timeout=300, cwd=str(TRADER_DIR)
+        cmd, capture_output=True, text=True, timeout=300,
+        cwd=str(TRADER_DIR), env=_TRADER_ENV
     )
     out = result.stdout + result.stderr
     return out[-4000:] if len(out) > 4000 else out
@@ -95,8 +177,9 @@ def run_layer1_context() -> str:
     Takes 1-2 min. Returns the full Layer 1 narrative.
     """
     result = subprocess.run(
-        [sys.executable, 'runtime_layer1_context.py'],
-        capture_output=True, text=True, timeout=180, cwd=str(TRADER_DIR)
+        [SYSTEM_PYTHON, 'runtime_layer1_context.py'],
+        capture_output=True, text=True, timeout=180,
+        cwd=str(TRADER_DIR), env=_TRADER_ENV
     )
     out = result.stdout + result.stderr
     return out[-4000:] if len(out) > 4000 else out
@@ -109,18 +192,25 @@ def get_watchlist() -> str:
     """
     Return the current active watchlist (4-group structure: momentum, accumulation, speculative, avoid).
     """
-    if not WATCHLIST_FILE.exists():
-        return "Watchlist file not found."
-    data = json.loads(WATCHLIST_FILE.read_text())
-    lines = []
-    for group, tickers in data.items():
-        if isinstance(tickers, list):
-            lines.append(f"{group}: {', '.join(tickers) or '(empty)'}")
-        elif isinstance(tickers, dict):
-            lines.append(f"{group}:")
-            for ticker, meta in tickers.items():
-                lines.append(f"  {ticker}: {meta}")
-    return '\n'.join(lines) if lines else json.dumps(data, indent=2)
+    script = """
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    result = api.get_watchlist()
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+"""
+    result = subprocess.run(
+        [SYSTEM_PYTHON, '-c', script],
+        capture_output=True, text=True, timeout=15,
+        env=_TRADER_ENV
+    )
+    if not result.stdout:
+        raise RuntimeError(result.stderr[:500])
+    return result.stdout[:3000]
 
 
 # ─── Trader — Monitoring Status ───────────────────────────────────────────────
@@ -166,37 +256,286 @@ def get_stockbit_data(sid: str) -> str:
     Calls Stockbit API directly via the backend proxy.
     """
     script = """
-import sys, json
-sys.path.insert(0, '{trader_dir}')
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
 from config import load_env
 load_env()
 import api
 
-sid = '{sid}'
-results = {{}}
+sid = os.environ['SID']
+results = {}
 
 try:
-    ob = api.get_orderbook(sid)
+    ob = api.get_stockbit_orderbook(sid)
     results['orderbook'] = ob
 except Exception as e:
     results['orderbook_error'] = str(e)
 
 try:
-    bf = api.get_broker_flow(sid)
+    bf = api.get_stockbit_broker_info(sid)
     results['broker_flow'] = bf
 except Exception as e:
     results['broker_flow_error'] = str(e)
 
 print(json.dumps(results, ensure_ascii=False, indent=2))
-""".format(trader_dir=str(TRADER_DIR), sid=sid.upper())
-
+"""
     result = subprocess.run(
-        [sys.executable, '-c', script],
-        capture_output=True, text=True, timeout=30
+        [SYSTEM_PYTHON, '-c', script],
+        capture_output=True, text=True, timeout=30,
+        env={**_TRADER_ENV, 'SID': sid.upper()}
     )
     if result.returncode != 0:
-        return f"Error: {result.stderr[:500]}"
+        raise RuntimeError(result.stderr[:500])
     return result.stdout[:3000]
+
+
+# ─── Trader — Broker Profile ─────────────────────────────────────────────────
+
+@mcp.tool()
+def get_broker_profile(ticker: str) -> str:
+    """
+    Analyze broker player composition for a ticker.
+    Returns accumulation/distribution signals, dominant players, and net flow summary.
+    """
+    script = """
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+from broker_profile import analyze_players
+try:
+    result = analyze_players(os.environ['TICKER'])
+    print(json.dumps(result.__dict__ if hasattr(result, '__dict__') else result, ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+"""
+    result = subprocess.run(
+        [SYSTEM_PYTHON, '-c', script],
+        capture_output=True, text=True, timeout=60,
+        env={**_TRADER_ENV, 'TICKER': ticker.upper()}
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr[:500])
+    return result.stdout[:4000]
+
+
+# ─── Trader — SID Tracker ─────────────────────────────────────────────────────
+
+@mcp.tool()
+def get_sid_trend(ticker: str) -> str:
+    """
+    Return SID (Smart/Institutional Demand) trend for a ticker.
+    Shows buy/sell accumulation pattern over recent sessions.
+    """
+    script = """
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+from sid_tracker import get_sid_trend
+try:
+    result = get_sid_trend(os.environ['TICKER'])
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+"""
+    result = subprocess.run(
+        [SYSTEM_PYTHON, '-c', script],
+        capture_output=True, text=True, timeout=30,
+        env={**_TRADER_ENV, 'TICKER': ticker.upper()}
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr[:500])
+    return result.stdout[:3000]
+
+
+# ─── Trader — Market Structure ────────────────────────────────────────────────
+
+@mcp.tool()
+def get_market_structure(ticker: str, days: int = 30) -> str:
+    """
+    Analyze market structure (swing highs/lows, trend phase, BOS/CHoCH) for a ticker.
+    """
+    script = """
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+from market_structure import get_structure
+try:
+    result = get_structure(os.environ['TICKER'])
+    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+"""
+    result = subprocess.run(
+        [SYSTEM_PYTHON, '-c', script],
+        capture_output=True, text=True, timeout=30,
+        env={**_TRADER_ENV, 'TICKER': ticker.upper()}
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr[:500])
+    return result.stdout[:3000]
+
+
+# ─── Trader — Wyckoff ─────────────────────────────────────────────────────────
+
+@mcp.tool()
+def run_wyckoff(ticker: str) -> str:
+    """
+    Run Wyckoff phase analysis for a ticker.
+    Returns phase (accumulation/distribution/markup/markdown), cause, and key levels.
+    """
+    result = subprocess.run(
+        [SYSTEM_PYTHON, 'wyckoff.py', ticker.upper()],
+        capture_output=True, text=True, timeout=60,
+        cwd=str(TRADER_DIR), env=_TRADER_ENV
+    )
+    out = result.stdout + result.stderr
+    return out[-3000:] if len(out) > 3000 else out
+
+
+# ─── Trader — Trade Plan ─────────────────────────────────────────────────────
+
+@mcp.tool()
+def run_tradeplan(ticker: str, entry: float = 0.0, cl: float = 0.0, tp: float = 0.0, portfolio: float = 0.0, risk: float = 0.0) -> str:
+    """
+    Generate a risk-sized trade plan for a ticker.
+    - ticker: stock symbol e.g. 'VKTR'
+    - entry: entry price (0 = use current price)
+    - cl: cut loss price
+    - tp: take profit price
+    - portfolio: portfolio size in IDR (0 = use default)
+    - risk: risk per trade % (0 = use default)
+    """
+    cmd = [SYSTEM_PYTHON, 'tradeplan.py', ticker.upper()]
+    if entry:
+        cmd += ['--entry', str(entry)]
+    if cl:
+        cmd += ['--cl', str(cl)]
+    if tp:
+        cmd += ['--tp', str(tp)]
+    if portfolio:
+        cmd += ['--portfolio', str(portfolio)]
+    if risk:
+        cmd += ['--risk', str(risk)]
+
+    result = subprocess.run(
+        cmd, capture_output=True, text=True, timeout=30,
+        cwd=str(TRADER_DIR), env=_TRADER_ENV
+    )
+    out = result.stdout + result.stderr
+    return out[-3000:] if len(out) > 3000 else out
+
+
+# ─── Trader — Journal ────────────────────────────────────────────────────────
+
+@mcp.tool()
+def get_journal(ticker: str = '', limit: int = 20) -> str:
+    """
+    Return trading journal entries: open positions, trade history, and lessons.
+    - ticker: filter by ticker (empty = all)
+    - limit: max trade history entries
+    """
+    script = """
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+from journal import get_open_positions, get_trade_history
+
+ticker = os.environ.get('TICKER', '')
+limit = int(os.environ.get('LIMIT', '20'))
+
+out = {}
+try:
+    out['open_positions'] = get_open_positions()
+except Exception as e:
+    out['open_positions_error'] = str(e)
+try:
+    out['trade_history'] = get_trade_history(ticker or None, limit)
+except Exception as e:
+    out['trade_history_error'] = str(e)
+
+print(json.dumps(out, ensure_ascii=False, indent=2, default=str))
+"""
+    result = subprocess.run(
+        [SYSTEM_PYTHON, '-c', script],
+        capture_output=True, text=True, timeout=15,
+        env={**_TRADER_ENV, 'TICKER': ticker.upper(), 'LIMIT': str(limit)}
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr[:500])
+    return result.stdout[:4000]
+
+
+# ─── Trader — Macro ──────────────────────────────────────────────────────────
+
+@mcp.tool()
+def get_macro() -> str:
+    """
+    Return current macro state: last market regime, active sector theses.
+    """
+    script = """
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+from macro import get_last_regime, get_active_theses
+
+out = {}
+try:
+    regime = get_last_regime()
+    out['regime'] = regime.__dict__ if hasattr(regime, '__dict__') else regime
+except Exception as e:
+    out['regime_error'] = str(e)
+try:
+    theses = get_active_theses()
+    out['active_theses'] = [t.__dict__ if hasattr(t, '__dict__') else t for t in theses]
+except Exception as e:
+    out['theses_error'] = str(e)
+
+print(json.dumps(out, ensure_ascii=False, indent=2, default=str))
+"""
+    result = subprocess.run(
+        [SYSTEM_PYTHON, '-c', script],
+        capture_output=True, text=True, timeout=15,
+        env=_TRADER_ENV
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr[:500])
+    return result.stdout[:3000]
+
+
+# ─── Trader — Layer 2 Screening ──────────────────────────────────────────────
+
+@mcp.tool()
+def run_layer2_screening() -> str:
+    """
+    Run Layer 2 screening: technical + broker flow scan across watchlist.
+    Identifies tickers with confirmed structure + institutional accumulation.
+    Takes ~1 min.
+    """
+    result = subprocess.run(
+        [SYSTEM_PYTHON, 'runtime_layer2_screening.py'],
+        capture_output=True, text=True, timeout=120,
+        cwd=str(TRADER_DIR), env=_TRADER_ENV
+    )
+    out = result.stdout + result.stderr
+    return out[-4000:] if len(out) > 4000 else out
+
+
+# ─── Alerts ──────────────────────────────────────────────────────────────────
+
+@mcp.tool()
+def read_alerts() -> str:
+    """
+    Read unread alerts from the monitoring queue.
+    Returns pending alert messages and marks them as read.
+    """
+    result = subprocess.run(
+        [SYSTEM_PYTHON, 'read_alerts.py'],
+        capture_output=True, text=True, timeout=10,
+        cwd=str(TRADER_DIR), env=_TRADER_ENV
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr[:500])
+    return result.stdout or "NO_ALERTS"
 
 
 # ─── Logs ────────────────────────────────────────────────────────────────────
@@ -210,7 +549,7 @@ def read_runtime_log(log_name: str = 'intraday-10m', lines: int = 50) -> str:
     log_file = LOG_DIR / f'{log_name}.log'
     if not log_file.exists():
         available = [f.stem for f in LOG_DIR.glob('*.log')]
-        return f"Log '{log_name}' not found. Available: {available}"
+        raise RuntimeError(f"Log '{log_name}' not found. Available: {available}")
     content = log_file.read_text().splitlines()
     return '\n'.join(content[-lines:])
 
@@ -219,4 +558,4 @@ def read_runtime_log(log_name: str = 'intraday-10m', lines: int = 50) -> str:
 
 if __name__ == '__main__':
     print("Lazytools MCP server starting on 0.0.0.0:8765 ...")
-    mcp.run(transport='sse')
+    mcp.run(transport='streamable-http')
