@@ -2,38 +2,71 @@
 
 ## Purpose
 
-Track incoming alerts and live changes without letting noise dominate the workflow.
+Run the L3 monitoring loop without drowning in noise. Owns: polling cadence, alert triage labels, escalation rules. Does NOT own orderbook reading (see `orderbook-reading.md`), wall classification (`bid-offer-analysis.md`), or whale/retail interpretation (`whale-retail-analysis.md`).
 
-## Sources
+## Cadence
 
-- alert queue
-- realtime listener
-- monitor loop
-- read-alerts output
-- live orderbook or running trade signals
+| Source | Interval | When to use |
+|--------|----------|-------------|
+| `runtime_monitoring.py` | every 10 m | Default L3 polling, writes `runtime/monitoring/intraday-10m.log` |
+| `runtime_summary_30m.py` | every 30 m | Rolling 30-min summary, writes `summary-30m.log` |
+| `realtime_listener.py --tickers X --interval 30` | 30 s | Active position or live signal hunt |
+| `orderbook_poller.py --ticker X --interval 5` | 5 s | Pre-entry / pre-exit window only |
+| `running_trade_poller.py` | continuous | Tape participation when verifying absorption/distribution |
 
-## Priority Labels
+Default loop: 10-minute baseline + 30-minute summary. Drop to 30 s / 5 s only inside an active entry/exit window.
 
-- high
-- medium
-- low
-- noise
+## Alert Triage
 
-## High Priority Examples
+Every incoming alert gets one label:
 
-- stop loss trigger
-- emergency cut
-- target or reduce level hit
-- breakout confirmed with meaningful follow-through
+| Label | When | Action |
+|-------|------|--------|
+| `high` | Stop hit, target hit, thesis break, breakout confirmed with follow-through | Boss O alert immediately, send L3 telegram |
+| `medium` | New `accumulation_setup` / `shakeout_trap` on tracked name; orderbook flips | Update monitoring log + Airtable Insights |
+| `low` | Minor signal, drifting price, wall behavior change without conviction | Local log only |
+| `noise` | Stale snapshot, single-tick blip, duplicate alert within session | Discard |
 
-## Rule
+Same signal on same ticker twice in one session → downgrade duplicate to `noise`.
 
-Monitoring exists to surface changes, not to replace judgment.
-## Tools
+## Escalation Rules
 
-- `~/workspace/tools/trader/realtime_listener.py` — running trade patterns + orderbook deltas
-- `~/workspace/tools/trader/runtime_monitoring.py` — periodic L3 monitoring loop (cron-driven)
-- `~/workspace/tools/trader/orderbook_poller.py` — live orderbook polling loop
-- `~/workspace/tools/trader/running_trade_poller.py` — live tape / running trades
-- `~/workspace/tools/trader/api.py` — price, orderbook, position data
+Promote `medium` → `high` when ANY of:
+- Tracked ticker is currently held AND signal contradicts thesis
+- Two `medium` signals on the same ticker within 15 minutes
+- Signal coincides with portfolio DD > 3% from HWM (be more reactive when bleeding)
 
+Demote `high` → `medium` when:
+- Source is a single snapshot without confirmation from tape
+- Signal lifetime < 60 s before reverting
+
+## Polling Discipline
+
+- Never run two pollers on the same ticker from two scripts — duplicate cost, duplicate alerts.
+- Always `kill` the poller after the entry/exit window closes (price moved out of zone, order filled, or 30 min elapsed).
+- Pollers write to `runtime/monitoring/realtime/`. Read from there, don't rebuild from scratch.
+
+## Output Per Cycle
+
+For each tracked ticker, produce:
+1. **Latest signal** — `accumulating | distributing | noisy | wait | exit`
+2. **Triage label** — `high | medium | low | noise`
+3. **Promotion / demotion** — move to L4, demote from watchlist, or no change
+4. **Action queued for L5** — none / pre-place limit / cancel / cut
+
+## Tool Resolution
+
+| Use case | Tool |
+|----------|------|
+| Cron L3 loop | `tools/trader/runtime_monitoring.py` |
+| 30-min summary | `tools/trader/runtime_summary_30m.py` |
+| Live event stream | `tools/trader/realtime_listener.py` |
+| Live orderbook | `tools/trader/orderbook_poller.py` |
+| Live tape | `tools/trader/running_trade_poller.py` |
+| Snapshot | `tools/trader/api.py` (`get_price`, `get_orderbook`, `get_running_trade`) |
+
+## Hard Rules
+
+- Monitoring surfaces changes; it does not replace judgment. Every `high` alert still passes through the relevant analysis skill before action.
+- No telegram on every tick — only when triage label changes. Use `skills/trader/telegram-notify.md` (`layer3` subcommand) on label change.
+- Poller leaks burn quota — verify nothing is running after each L3 session.
