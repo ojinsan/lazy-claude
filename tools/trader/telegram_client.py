@@ -223,6 +223,25 @@ def build_order_failed(args: argparse.Namespace) -> str:
     )
 
 
+def build_intent(args: argparse.Namespace) -> str:
+    side = _side(args.action)
+    emoji = "⚡"
+    return _render_message(
+        emoji,
+        f"EXECUTION INTENT (Layer {args.layer}) — {side} {args.ticker}",
+        f"About to place {side} {args.ticker} @ {_format_idr(args.price)}, {_format_shares(args.shares)} shares. Will fire in 60s unless cancelled.",
+        [
+            ("Layer",   args.layer),
+            ("Action",  side),
+            ("Ticker",  args.ticker),
+            ("Price",   _format_idr(args.price)),
+            ("Shares",  _format_shares(args.shares)),
+            ("Reason",  _compact(args.reason)),
+        ],
+        footer="Scarlett trader · intent",
+    )
+
+
 def build_layer0(args: argparse.Namespace) -> str:
     dd = _number(args.dd)
     dd_flag = " ⚠️ DD>5%" if (dd is not None and dd >= 5) else ""
@@ -344,6 +363,15 @@ def build_parser() -> argparse.ArgumentParser:
     layer0.add_argument("--top-exposure", required=True)
     layer0.add_argument("--action", required=True)
     layer0.set_defaults(builder=build_layer0)
+
+    intent = sub.add_parser("intent")
+    intent.add_argument("--layer", required=True)
+    intent.add_argument("--ticker", required=True)
+    intent.add_argument("--action", choices=["BUY", "SELL"], required=True)
+    intent.add_argument("--price", required=True)
+    intent.add_argument("--shares", required=True)
+    intent.add_argument("--reason", default="")
+    intent.set_defaults(builder=build_intent)
 
     placing = sub.add_parser("order-placing")
     placing.add_argument("--side", choices=["BUY", "SELL"], required=True)

@@ -54,6 +54,20 @@ Output per hold: `intact | reduce | exit | watch`
 | Psychology at levels | `tools/trader/psychology.py` — use when price hits wall or key level, judge bandar intent |
 | Realtime listener | `tools/trader/realtime_listener.py --tickers X Y --interval 30` — continuous crossing/flow events → `runtime/monitoring/realtime/` |
 
+## Execution Trigger (Integrated)
+
+Inline execution allowed if ALL of:
+- Signal is `accumulation_setup` (not just `watch` or `distribution_setup`)
+- Price is inside the entry zone from the L4 plan (or within 0.5% of support if no L4 plan yet)
+- Thesis intact (no invalidation signal)
+- Portfolio DD < 5% from HWM
+
+**If all conditions met:**
+1. Send Telegram `intent`: `python3 tools/trader/telegram_client.py intent --layer 3 --ticker {T} --action BUY --price {P} --shares {N} --reason "accumulation_setup confirmed"`
+2. Wait 60 seconds
+3. Place order via `api.place_buy_order()`
+4. Send `order-confirmed` or `order-failed`
+
 ## Output (Required)
 
 Apply three output levels to every ticker assessed:

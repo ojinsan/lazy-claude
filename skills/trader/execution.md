@@ -7,6 +7,12 @@ Uses `api.py`: `place_buy_order`, `place_sell_order`, `cancel_order`, `amend_ord
 
 **These are REAL orders. No dry-run.**
 
+## Primary Tooling
+
+- Stockbit orders: `tools/manual/stockbit.md` → `tools/trader/api.py`
+- Telegram alerts: `tools/manual/telegram.md` → `tools/trader/telegram_client.py`
+- Airtable updates: `tools/manual/airtable.md` → `tools/trader/airtable_client.py`
+
 ---
 
 ## Entry Rules (all must pass)
@@ -84,6 +90,33 @@ Run before any new entry:
 1. `get_position_detail(ticker)` for each hold — verify qty matches Superlist
 2. Check unrealized P&L: if any hold is >-5% from avg cost AND thesis broken → flag for exit
 3. Check open orders: stale orders (placed >1 session ago, unfilled) → cancel via `cancel_order()`
+
+---
+
+## Confidence Gate (Inline Execution from L2–L4)
+
+When a layer other than L5 reaches high confidence, it may execute inline instead of waiting for the 08:30 L5 window. Use this table to decide:
+
+| Layer | Inline execution allowed? | Minimum confidence |
+|-------|--------------------------|-------------------|
+| L1 | Never | — |
+| L2 | Yes, if 5/5 criteria + open entry window | 5/5 criteria |
+| L3 | Yes, if `accumulation_setup` + price in zone + thesis intact | accumulation_setup confirmed |
+| L4 | Yes, if plan is `urgent` + price in entry zone | urgent flag set |
+| L5 | Always — this is the default execution window | N/A |
+
+**Hard override — inline DISABLED regardless of layer/criteria:**
+- Portfolio DD > 5% from high-water mark → no new entries inline
+- Aggression posture ≤ 1 (risk-off regime from L1) → no inline entries
+- Already 3+ entries placed today → no inline entries
+
+**Inline execution sequence (L2/L3/L4):**
+1. Confirm confidence gate above is met
+2. Send Telegram `intent`: `python3 tools/trader/telegram_client.py intent --layer {N} --ticker {T} --action BUY --price {P} --shares {N} --reason "{reason}"`
+3. Wait 60 seconds — if Boss O cancels, abort
+4. Re-read `api.get_orders()` — abort if duplicate order exists
+5. Place via `api.place_buy_order()` / `api.place_sell_order()`
+6. Send `order-confirmed` or `order-failed`
 
 ---
 

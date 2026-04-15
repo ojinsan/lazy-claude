@@ -32,6 +32,10 @@ Build the top-down market map before touching any stock.
 | Stockbit proxies | `tools/trader/api.py` → `get_market_context()` |
 | Runtime script | `tools/trader/runtime_layer1_context.py` |
 
+## Execution Trigger (Integrated)
+
+**L1 does not execute.** Context-only layer. No orders, no intent messages. Proceed to Output.
+
 ## Output (Required)
 
 1. **Market regime**: risk-on / cautious / risk-off + reason

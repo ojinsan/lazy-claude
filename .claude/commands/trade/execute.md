@@ -11,7 +11,7 @@ Non-interactive. Run to completion and exit. Do not wait for user input.
 - If file missing → run `/trade:tradeplan` first, then execute
 
 ## Sequence
-1. Execute `playbooks/trader/execution.md`
+1. Execute `playbooks/trader/layer-5-execution.md`
 
 ## Output
 - Orders logged to `runtime/orders/YYYY-MM-DD.jsonl`

@@ -45,6 +45,21 @@ Invalidation signal: [one clear thing that says exit now]
 - Price-based: hit T1 → reduce 50%, trail the rest
 - Thesis-break: exit same session, no holding hoping
 
+## Execution Trigger (Integrated)
+
+Inline execution allowed if ALL of:
+- Plan marked `urgent` (entry window is live now, not just anticipated)
+- Current price is within the entry zone defined in this plan
+- Portfolio DD < 5% from HWM
+
+**If all conditions met:**
+1. Send Telegram `intent`: `python3 tools/trader/telegram_client.py intent --layer 4 --ticker {T} --action BUY --price {P} --shares {N} --reason "{thesis one-liner}"`
+2. Wait 60 seconds
+3. Place order via `api.place_buy_order(ticker, price, qty)`
+4. Send `order-confirmed` or `order-failed`
+
+Otherwise: plan is queued for the scheduled L5 window at 08:30 WIB.
+
 ## Output (Required)
 
 Apply three output levels per plan:

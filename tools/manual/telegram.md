@@ -23,6 +23,7 @@ Use `--dry-run` to render the message locally without sending.
 | `layer2` | After L2 screening | `--date`, `--shortlist`, `--top-pick`, `--top-reason` |
 | `layer3` | Intraday signal alert | `--timestamp`, `--ticker`, `--signal`, `--note`, `--action` |
 | `layer4` | Trade plan ready | `--date`, `--ticker`, `--thesis`, `--entry-low/high`, `--stop`, `--target1`, `--size-amount/pct`, `--risk`, `--trigger` |
+| `intent` | Before inline execution (L2–L4) | `--layer`, `--ticker`, `--action BUY\|SELL`, `--price`, `--shares`, `--reason` |
 | `order-placing` | Before placing order | `--side`, `--ticker`, `--shares`, `--price` |
 | `order-confirmed` | After order accepted | `--order-id`, `--side`, `--ticker`, `--shares`, `--price` |
 | `order-failed` | After order rejected | `--ticker`, `--error` |

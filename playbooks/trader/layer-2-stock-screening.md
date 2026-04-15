@@ -38,6 +38,21 @@ If hold still passes → confirm thesis intact, carry forward.
 | SID tracker | `skills/trader/sid-tracker.md` |
 | Psychology at levels | `tools/trader/psychology.py` — call when price near key support/resistance to judge who is absorbing vs fleeing |
 
+## Execution Trigger (Integrated)
+
+Inline execution allowed only if a name in the shortlist meets ALL of:
+- All 5 screening criteria aligned (5/5)
+- Price is inside an open entry window right now
+- Portfolio DD < 5% from HWM (check `vault/data/portfolio-state.json`)
+
+**If all conditions met:**
+1. Send Telegram `intent` message: `python3 tools/trader/telegram_client.py intent --layer 2 --ticker {T} --action BUY --price {P} --shares {N} --reason "{reason}"`
+2. Wait 60 seconds
+3. Place limit order via `api.place_buy_order(ticker, price, qty)`
+4. Send `order-confirmed` or `order-failed`
+
+Otherwise: pass name to L4 for a full trade plan.
+
 ## Output (Required)
 
 1. **Shortlist**: 3–8 tickers, each with one-line reason
