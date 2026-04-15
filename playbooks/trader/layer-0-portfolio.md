@@ -14,79 +14,29 @@ Run BEFORE Layer 1 every morning. Start with portfolio health, concentration, an
 
 ## Step 1 — Portfolio Growth & Health
 
-Compute first:
-- Total equity = cash + sum of current position market value
-- MTD return % vs the first saved equity snapshot of the month
-- Drawdown % from the saved high-water mark
-- Cash utilization ratio
-- Position count
+Run `portfolio_health.py compute_portfolio_state()` → equity, MTD, drawdown, utilization, position count.
 
-Use this first-pass posture:
-- Drawdown ≤ 3% → normal risk allowed
-- Drawdown > 5% → reduce planned new exposure by 25%
-- Drawdown > 10% → no new entries until posture improves
+Apply DD posture rules from `skills/trader/portfolio-management.md`.
 
 ## Step 2 — Weighting & Concentration
 
-For each hold:
-- Position size % of total equity
-- P&L %, current market value, and average cost
-- Sector exposure contribution
-
-Flag immediately when:
-- Any single position > 20% of total equity
-- Any sector > 50% of total equity
-- Total deployed exposure > 80% of total equity
+Run `portfolio_health.py compute_concentration_flags()`. Apply per-position / per-sector / total-deployed limits from `portfolio-management.md`.
 
 ## Step 3 — Sector Exposure
 
-Map each hold into a theme bucket:
-- Energy
-- Banking
-- Property
-- Nickel-EV
-- Consumer
-- Other
-
-Check whether current holdings still match yesterday's Layer 1 narrative.
-Flag any orphan hold: a live position that no longer belongs to an active theme.
+Run `portfolio_health.py compute_exposure_breakdown()` → bucket map. Apply sector rules from `skills/trader/sector-exposure.md`. Flag orphan holds (no active L1 theme).
 
 ## Step 4 — Thesis Drift Per Hold
 
-For each hold:
-1. Restate the original thesis and invalidation.
-2. Re-check the 6 screening criteria briefly:
-   - narrative fit
-   - technical structure
-   - broker flow
-   - SID trend
-   - orderbook quality
-   - volume confirmation
-3. Compare days held vs planned horizon.
-4. Mark the hold as `intact`, `watch`, `reduce`, or `exit-candidate`.
-
-If thesis evidence is missing, do not invent it. Mark as `needs refresh` and push it into Layer 4 review.
+For each hold: invoke `skills/trader/thesis-drift-check.md` against `vault/thesis/<TICKER>.md`. Mark `intact | watch | reduce | exit-candidate | needs refresh`.
 
 ## Step 5 — Aggregate Probability & Money Flow
 
-Review the portfolio as one book, not as isolated names:
-- Aggregate smart-money / foreign participation across held names
-- Recent realized P&L, win rate, and risk-reward from journal data when available
-- Whether recent performance supports sizing up, staying flat, or sizing down
-
-Treat broad contradiction as a warning:
-- If one name looks strong but aggregate money flow is weakening across the book, keep sizing conservative.
+Aggregate book-level (not per-name) view via `skills/trader/probability-measurement.md` + `skills/trader/money-flow-analysis.md`. Sizing implication: up / flat / down.
 
 ## Step 6 — Self-Evaluation
 
-Compare yesterday's Layer 0–Layer 4 calls with what the market actually did:
-- Which calls worked?
-- Which calls failed?
-- What was missed?
-- What should change today?
-
-Write the self-review into `vault/journal/YYYY-MM-DD-review.md`.
-Log any reusable mistake or process lesson through `tools/trader/journal.py`.
+Compare yesterday's L0–L4 calls vs actual outcomes via `skills/trader/portfolio-self-review.md`. Write to `vault/journal/YYYY-MM-DD-review.md`. Log lessons via `tools/trader/journal.py`.
 
 ## Tools
 
@@ -107,26 +57,11 @@ Log any reusable mistake or process lesson through `tools/trader/journal.py`.
 5. **Portfolio state update** — `vault/data/portfolio-state.json`
 6. **PortfolioLog sync candidate** — prepare a clean summary for Airtable once that table exists
 
-## Telegram Notify (Scarlett)
+## Telegram Notify
 
-Send once per scheduled Layer 0 run.
+Send `layer0` via `skills/trader/telegram-notify.md`.
 
-**Trigger conditions:**
-- Always send on scheduled 04:30 WIB run
-- Urgent if drawdown > 5% from HWM
-- Urgent if any hold is marked `exit-candidate`
-
-**Send via Bash:**
-```bash
-python3 tools/trader/telegram_client.py layer0 \
-  --date "$(TZ='Asia/Jakarta' date +%Y-%m-%d)" \
-  --equity "{total equity}" \
-  --mtd-return "{mtd return %}" \
-  --dd "{drawdown %}" \
-  --open-risk "{open risk or 'n/a'}" \
-  --top-exposure "{top position / sector}" \
-  --action "{one-line action summary}"
-```
+Triggers: scheduled 04:30 run; urgent if DD > 5% from HWM or any hold flagged `exit-candidate`.
 
 ## Skills To Load
 

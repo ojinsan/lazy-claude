@@ -64,7 +64,7 @@ Get `total_capital` from `api.get_cash_info()` → `trade_limit` field.
 1. Call `get_cash_info()` — verify sufficient balance
 2. Call `get_orders()` — verify no duplicate open order for ticker
 3. Calculate shares using sizing formula above
-4. Send Telegram via `tools/trader/telegram_client.py order-placing` using the matching BUY/SELL template. Include ticker, shares, price, and any stop/risk/reason fields available.
+4. Send `order-placing` via `skills/trader/telegram-notify.md`
 
 **Place order:**
 ```python
@@ -76,10 +76,10 @@ api.place_sell_order(symbol, price=exit_price, shares=shares)
 **After placing:**
 1. Log order_id to `runtime/orders/YYYY-MM-DD.jsonl`
 2. Update Airtable `Superlist` — set Status to `Hold` (buy) or `Sold` (sell)
-3. Send Telegram via `tools/trader/telegram_client.py order-confirmed` with order_id, ticker, side, shares, and price
+3. Send `order-confirmed` via `skills/trader/telegram-notify.md`
 
 **On error:**
-- Log error, send Telegram via `tools/trader/telegram_client.py order-failed --ticker "{TICKER}" --side "{BUY/SELL}" --error "{error}"`
+- Log error, send `order-failed` via `skills/trader/telegram-notify.md`
 - Do NOT retry automatically
 
 ---
@@ -112,11 +112,11 @@ When a layer other than L5 reaches high confidence, it may execute inline instea
 
 **Inline execution sequence (L2/L3/L4):**
 1. Confirm confidence gate above is met
-2. Send Telegram `intent`: `python3 tools/trader/telegram_client.py intent --layer {N} --ticker {T} --action BUY --price {P} --shares {N} --reason "{reason}"`
+2. Send `intent` via `skills/trader/telegram-notify.md`
 3. Wait 60 seconds — if Boss O cancels, abort
 4. Re-read `api.get_orders()` — abort if duplicate order exists
 5. Place via `api.place_buy_order()` / `api.place_sell_order()`
-6. Send `order-confirmed` or `order-failed`
+6. Send `order-confirmed` or `order-failed` via telegram-notify skill
 
 ---
 

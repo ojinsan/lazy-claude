@@ -140,6 +140,7 @@ Load only what the current layer or task needs. Unload after use.
 | Skill | Purpose | Load when |
 |-------|---------|-----------|
 | `airtable-trading.md` | Insights + Superlist operations | Any layer posting to Airtable |
+| `telegram-notify.md` | Single source of truth for every telegram subcommand + trigger rule | Any layer sending Telegram |
 | `broker-flow.md` | Deep broker flow reading | L2/L3 ambiguous flow |
 | `sid-tracker.md` | SID accumulation/distribution detail | L2 when SID signal is key |
 | `insight-crawling.md` | Web/RAG/Threads intel | L1 context fetch |

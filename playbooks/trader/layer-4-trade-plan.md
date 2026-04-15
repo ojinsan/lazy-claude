@@ -31,34 +31,15 @@ Monitoring: [what to watch — wall behavior / volume / tape]
 Invalidation signal: [one clear thing that says exit now]
 ```
 
-## Sizing Rules
+## Sizing & Exit
 
-- Max single position: 20% of capital
-- Max total exposure: 80% of capital
-- Risk per trade: 1–3% of capital (match to aggression posture from Layer 1)
-- Higher conviction (L3 manipulation signal + L1 narrative fit): allow up to 3%
-- Lower conviction (only L2 screen, no L3 confirmation): cap at 1%
+Apply sizing formula + caps from `skills/trader/execution.md` (`## Sizing Formula`).
+Apply exit rules from `skills/trader/execution.md` (`## Exit Rules`).
+Risk-per-trade tier: 1% low conv | 2% med | 3% high (L3 signal + L1 narrative). Cap at L1 aggression posture.
 
-## Exit Discipline
+## Execution Trigger
 
-- Time-based: if thesis doesn't play in [X] market days, cut
-- Price-based: hit T1 → reduce 50%, trail the rest
-- Thesis-break: exit same session, no holding hoping
-
-## Execution Trigger (Integrated)
-
-Inline execution allowed if ALL of:
-- Plan marked `urgent` (entry window is live now, not just anticipated)
-- Current price is within the entry zone defined in this plan
-- Portfolio DD < 5% from HWM
-
-**If all conditions met:**
-1. Send Telegram `intent`: `python3 tools/trader/telegram_client.py intent --layer 4 --ticker {T} --action BUY --price {P} --shares {N} --reason "{thesis one-liner}"`
-2. Wait 60 seconds
-3. Place order via `api.place_buy_order(ticker, price, qty)`
-4. Send `order-confirmed` or `order-failed`
-
-Otherwise: plan is queued for the scheduled L5 window at 08:30 WIB.
+L4 inline gate: plan marked `urgent` + current price in entry zone + DD < 5%. If met → invoke `skills/trader/execution.md` (`## Confidence Gate`). Otherwise → queue for 08:30 L5.
 
 ## Output (Required)
 
@@ -74,38 +55,11 @@ Apply three output levels per plan:
 2. **Priority ranking**: which name to act on first today
 3. **Superlist update**: post final plans to Airtable `Superlist` when warranted
 
-## Telegram Notify (Scarlett)
+## Telegram Notify
 
-Send one message per final trade plan. This is the most important notification layer.
+Send `layer4` via `skills/trader/telegram-notify.md` — one message per finalized plan, urgent plans send before Airtable post.
 
-**Trigger conditions:**
-- Always send when a trade plan is finalized
-- For urgent/immediate-action plans: send first before posting to Airtable
-
-**Send via Bash (one message per ticker):**
-```bash
-python3 tools/trader/telegram_client.py layer4 \
-  --date "$(TZ='Asia/Jakarta' date +%Y-%m-%d)" \
-  --ticker "{TICKER}" \
-  --thesis "{one sentence}" \
-  --entry-low "{X,XXX}" \
-  --entry-high "{X,XXX}" \
-  --stop "{X,XXX}" \
-  --stop-pct "{X}%" \
-  --target1 "{X,XXX}" \
-  --target1-pct "{X}%" \
-  --size-amount "{XX,XXX,XXX}" \
-  --size-pct "{X}%" \
-  --risk "{X}%" \
-  --trigger "{what to see before buying}"
-# add --urgent for immediate-action plans
-```
-
-**Format:** emoji header + bold title + short takeaway + structured `<pre>` block.
-
-**Required env:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-
-**Anti-spam:** One message per trade plan. Do not resend on plan edits unless entry/SL changes significantly (>1 tick).
+Trigger: every finalized plan. Skip resends unless entry/SL changes >1 tick.
 
 ## Skills To Load
 

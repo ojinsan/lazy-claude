@@ -38,20 +38,9 @@ If hold still passes → confirm thesis intact, carry forward.
 | SID tracker | `skills/trader/sid-tracker.md` |
 | Psychology at levels | `tools/trader/psychology.py` — call when price near key support/resistance to judge who is absorbing vs fleeing |
 
-## Execution Trigger (Integrated)
+## Execution Trigger
 
-Inline execution allowed only if a name in the shortlist meets ALL of:
-- All 5 screening criteria aligned (5/5)
-- Price is inside an open entry window right now
-- Portfolio DD < 5% from HWM (check `vault/data/portfolio-state.json`)
-
-**If all conditions met:**
-1. Send Telegram `intent` message: `python3 tools/trader/telegram_client.py intent --layer 2 --ticker {T} --action BUY --price {P} --shares {N} --reason "{reason}"`
-2. Wait 60 seconds
-3. Place limit order via `api.place_buy_order(ticker, price, qty)`
-4. Send `order-confirmed` or `order-failed`
-
-Otherwise: pass name to L4 for a full trade plan.
+L2 inline gate: 5/5 criteria + price in open entry window + DD < 5%. If met → invoke `skills/trader/execution.md` (`## Confidence Gate`). Otherwise → pass to L4.
 
 ## Output (Required)
 
@@ -60,29 +49,11 @@ Otherwise: pass name to L4 for a full trade plan.
 3. **Superlist updates**: promote strong names to Airtable `Superlist`
 4. **Post to Airtable** `Insights` for any strong screening signal
 
-## Telegram Notify (Scarlett)
+## Telegram Notify
 
-Send once after shortlist is finalized. Skip if shortlist is empty or all names low-conviction.
+Send `layer2` via `skills/trader/telegram-notify.md`.
 
-**Trigger conditions (any one):**
-- Shortlist has ≥1 high-conviction name (≥4/5 criteria aligned)
-- Any name promoted to Superlist
-
-**Send via Bash:**
-```bash
-python3 tools/trader/telegram_client.py layer2 \
-  --date "$(TZ='Asia/Jakarta' date +%Y-%m-%d)" \
-  --shortlist "{TICK1, TICK2, ...}" \
-  --top-pick "{TICKER}" \
-  --top-reason "{one-line reason}" \
-  --watch "{any names borderline or to watch}"
-```
-
-**Format:** emoji header + bold title + short takeaway + structured `<pre>` block.
-
-**Required env:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-
-**Anti-spam:** One message per L2 run. Do not resend if L2 re-run produces no new names.
+Triggers: shortlist has ≥1 high-conviction name (≥4/5 criteria); or any name promoted to Superlist. Skip if empty.
 
 ## Skills To Load
 

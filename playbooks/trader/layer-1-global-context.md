@@ -45,31 +45,11 @@ Build the top-down market map before touching any stock.
 5. **Initial candidates**: tickers that fit the narrative
 6. **Post to Airtable** `Insights` for any strong context insight
 
-## Telegram Notify (Scarlett)
+## Telegram Notify
 
-Send once per session after L1 output is complete. Skip if already sent for today's L1.
+Send `layer1` via `skills/trader/telegram-notify.md`.
 
-**Trigger conditions (any one):**
-- Aggression posture ≤ 2 (cautious/risk-off)
-- Regime changed vs yesterday (e.g., risk-on → risk-off)
-- Critical macro event detected (Fed, BI rate, geopolitics)
-- Always send when completing scheduled 05:00 L1 run
-
-**Send via Bash:**
-```bash
-python3 tools/trader/telegram_client.py layer1 \
-  --date "$(TZ='Asia/Jakarta' date +%Y-%m-%d)" \
-  --regime "{risk-on/cautious/risk-off}" \
-  --posture "{N}/5" \
-  --sectors "{active themes, comma-separated}" \
-  --key-risk "{one sentence if any, else 'none'}"
-```
-
-**Format:** emoji header + bold title + short takeaway + structured `<pre>` block.
-
-**Required env:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-
-**Anti-spam:** Do not send more than once per L1 session. Do not re-send for L3/L4 re-runs.
+Triggers: scheduled 05:00 run; or aggression posture ≤ 2; or regime flipped vs yesterday; or critical macro event (Fed, BI rate, geopolitics).
 
 ## Skills To Load
 

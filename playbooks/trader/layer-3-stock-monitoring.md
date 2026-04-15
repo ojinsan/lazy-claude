@@ -54,19 +54,9 @@ Output per hold: `intact | reduce | exit | watch`
 | Psychology at levels | `tools/trader/psychology.py` — use when price hits wall or key level, judge bandar intent |
 | Realtime listener | `tools/trader/realtime_listener.py --tickers X Y --interval 30` — continuous crossing/flow events → `runtime/monitoring/realtime/` |
 
-## Execution Trigger (Integrated)
+## Execution Trigger
 
-Inline execution allowed if ALL of:
-- Signal is `accumulation_setup` (not just `watch` or `distribution_setup`)
-- Price is inside the entry zone from the L4 plan (or within 0.5% of support if no L4 plan yet)
-- Thesis intact (no invalidation signal)
-- Portfolio DD < 5% from HWM
-
-**If all conditions met:**
-1. Send Telegram `intent`: `python3 tools/trader/telegram_client.py intent --layer 3 --ticker {T} --action BUY --price {P} --shares {N} --reason "accumulation_setup confirmed"`
-2. Wait 60 seconds
-3. Place order via `api.place_buy_order()`
-4. Send `order-confirmed` or `order-failed`
+L3 inline gate: signal = `accumulation_setup` + price in L4 entry zone (or within 0.5% of support if no L4 plan) + thesis intact + DD < 5%. If met → invoke `skills/trader/execution.md` (`## Confidence Gate`).
 
 ## Output (Required)
 
@@ -86,31 +76,11 @@ Per ticker:
 3. **Promotion**: move to Layer 4 if golden setup appears
 4. **Demotion**: remove from watchlist if thesis breaks
 
-## Telegram Notify (Scarlett)
+## Telegram Notify
 
-Send only on new signal detection. Do NOT send on every 30-min tick — only when something changes.
+Send `layer3` via `skills/trader/telegram-notify.md`.
 
-**Trigger conditions (any one):**
-- New `accumulation_setup` or `shakeout_trap` detected for any shortlisted ticker
-- `wick_shakeout` with whale bids holding — high-priority alert
-- Thesis break: any tracked name invalidated → demotion
-- Name promoted to Layer 4 (golden setup)
-
-**Send via Bash:**
-```bash
-python3 tools/trader/telegram_client.py layer3 \
-  --timestamp "$(TZ='Asia/Jakarta' date '+%Y-%m-%d %H:%M WIB')" \
-  --ticker "{TICKER}" \
-  --signal "{signal_type}" \
-  --note "{one-line description of what was detected}" \
-  --action "{watch/promote to L4/demote}"
-```
-
-**Format:** emoji header + bold title + short takeaway + structured `<pre>` block.
-
-**Required env:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
-
-**Anti-spam:** One message per new signal per ticker per session. Same signal on same ticker = no repeat. Batch multiple signals in one message if detected together.
+Triggers (any new event, NOT every 30-min tick): new `accumulation_setup` / `shakeout_trap` / `wick_shakeout` with whale bids holding; thesis break (demotion); promotion to L4.
 
 ## Skills To Load
 
