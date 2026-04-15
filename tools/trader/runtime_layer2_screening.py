@@ -12,7 +12,7 @@ from airtable_client import create_record, load_env, list_records
 WIB = ZoneInfo('Asia/Jakarta')
 OUTDIR = RUNTIME / 'notes' / 'layer_2_stock_screening'
 OUTDIR.mkdir(parents=True, exist_ok=True)
-STOCKLIST = Path('/home/lazywork/workspace/tools/data-persistance/stocklist.csv')
+STOCKLIST = Path('/home/lazywork/workspace/tools/data-persistence/stocklist.csv')
 LAYER1_DIR = RUNTIME / 'notes' / 'layer_1_global_context'
 TICKER_RE = re.compile(r'\b[A-Z]{4}\b')
 

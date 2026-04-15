@@ -33,7 +33,7 @@ Business logic scripts. Import from connectors/, called by playbooks/ or directl
 | `tradeplan.py`              | Trade plan generator                                 |
 | `indicators.py`             | Technical indicators                                 |
 | `tick_walls.py`             | Tick wall / orderbook depth analysis                 |
-| `monitor.py`                | Runtime monitoring                                   |
+| `runtime_monitoring.py`     | Intraday monitoring runtime job                      |
 | `config.py`                 | Config loader (env, paths, tokens)                   |
 | `airtable_client.py`        | Airtable client for trader data                      |
 | `stockbit_auth.py`          | Stockbit session auth                                |
@@ -43,7 +43,6 @@ Business logic scripts. Import from connectors/, called by playbooks/ or directl
 | `orderbook_*.py`            | Orderbook poller and WebSocket listener              |
 | `realtime_listener.py`      | Realtime price/tick listener                         |
 | `running_trade_poller.py`   | Active trade position poller                         |
-| `read_alerts.py`            | Alert reader                                         |
 | `watchlist_4group_scan.py`  | 4-group watchlist scanner                            |
 | `think.py`                  | Reasoning/analysis helper                            |
 

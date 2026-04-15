@@ -12,6 +12,7 @@ Learned from: ~/bitstock/waterseven/skills/stockbit_client.py
 import httpx
 import json
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
@@ -80,18 +81,104 @@ def _load_carina_token() -> Optional[str]:
     return None
 
 
-def save_carina_token(token: str, expires_at: int = 0):
+def save_carina_token(token: str, expires_at: int = 0, refresh_token: str = ""):
     """Save Carina Bearer token to cache.
-    
+
     Usage: save_carina_token("eyJ...", expires_at=1773052731)
     """
     CARINA_TOKEN_CACHE.parent.mkdir(parents=True, exist_ok=True)
     CARINA_TOKEN_CACHE.write_text(json.dumps({
         "token": token,
         "expires_at": expires_at,
+        "refresh_token": refresh_token,
         "saved_at": int(time.time()),
     }))
     log.info("Carina token saved")
+
+
+def refresh_carina_token() -> str:
+    """Refresh Carina trading token via PIN-based login.
+
+    Flow (from HAR analysis):
+      POST carina.stockbit.com/auth/v2/login
+      Body: {"login_token": <main_stockbit_token>, "pin": <STOCKBIT_TRADING_PIN>}
+      Response: {"data": {"access_token": "eyJ..."}}
+
+    Falls back to account/switch if PIN not configured.
+    Saves new token to carina_token.json.
+    Raises RuntimeError on failure.
+    """
+    from config import load_env
+    load_env()
+    trading_pin = os.environ.get("STOCKBIT_TRADING_PIN", "")
+    stockbit_token = get_stockbit_token()
+    if not stockbit_token:
+        raise RuntimeError("No Stockbit token — cannot refresh Carina token")
+
+    if trading_pin:
+        # Primary: PIN-based login (2-step)
+        # Step 1: get login_token from sekuritas (exodus)
+        # GET exodus.stockbit.com/sekuritas/auth/token → {"data": {"token": "d673...", "target": "2"}}
+        EXODUS_BASE_URL = "https://exodus.stockbit.com"
+        r1 = httpx.get(
+            f"{EXODUS_BASE_URL}/sekuritas/auth/token",
+            headers={
+                **STOCKBIT_BROWSER_HEADERS,
+                "authorization": f"Bearer {stockbit_token}",
+                "origin": "https://stockbit.com",
+            },
+            timeout=TIMEOUT,
+        )
+        login_token = None
+        if r1.status_code == 200:
+            login_token = r1.json().get("data", {}).get("token")
+        if not login_token:
+            log.warning(f"sekuritas/auth/token failed ({r1.status_code}: {r1.text[:100]}), trying PIN with main token")
+            login_token = stockbit_token  # fallback: try main token directly
+
+        # Step 2: POST login_token + PIN to get Carina token
+        r = httpx.post(
+            f"{CARINA_BASE_URL}/auth/v2/login",
+            json={"login_token": login_token, "pin": trading_pin},
+            headers={
+                **STOCKBIT_BROWSER_HEADERS,
+                "content-type": "application/json",
+                "origin": "https://stockbit.com",
+            },
+            timeout=TIMEOUT,
+        )
+        if r.status_code == 200:
+            data = r.json().get("data", {})
+            new_token = data.get("access_token", "")
+            if new_token:
+                refresh_tok = data.get("refresh_token", "")
+                save_carina_token(new_token, refresh_token=refresh_tok)
+                log.info("Carina token refreshed via PIN login")
+                return new_token
+        log.warning(f"PIN login failed ({r.status_code}: {r.text[:100]}), trying account/switch fallback")
+
+    # Fallback: account/switch (works if session still valid, no PIN)
+    account_number = os.environ.get("CARINA_ACCOUNT_NUMBER", "039421L")
+    r = httpx.post(
+        f"{CARINA_BASE_URL}/auth/account/switch",
+        json={"account_number": account_number},
+        headers={
+            **STOCKBIT_BROWSER_HEADERS,
+            "authorization": f"Bearer {stockbit_token}",
+            "content-type": "application/json",
+            "origin": "https://stockbit.com",
+        },
+        timeout=TIMEOUT,
+    )
+    if r.status_code != 200:
+        raise RuntimeError(f"Both PIN login and account/switch failed. Last: {r.status_code} {r.text[:200]}")
+    data = r.json().get("data", {})
+    new_token = data.get("access_token", "")
+    if not new_token:
+        raise RuntimeError(f"account/switch returned no access_token: {r.text[:200]}")
+    save_carina_token(new_token)
+    log.info("Carina token refreshed via account/switch (fallback)")
+    return new_token
 
 
 def get_portfolio() -> dict:
@@ -221,16 +308,18 @@ def _extract_token(data: dict) -> Optional[str]:
 
 def get_stockbit_token() -> Optional[str]:
     """
-    Get Stockbit bearer token from backend API (sole source of truth).
-    Token is managed and refreshed by the backend — no local fallbacks.
+    Get Stockbit bearer token.
+    Priority: in-memory cache → backend API → local file cache.
+    Local cache is written by stockbit_login.py (cron every 6h).
     """
     global _stockbit_token, _stockbit_token_expires_at
 
-    # Use cached token if still valid (5 min buffer)
+    # 1. In-memory cache (still valid)
     now_ms = int(time.time() * 1000)
     if _stockbit_token and (_stockbit_token_expires_at == 0 or now_ms < _stockbit_token_expires_at - 300000):
         return _stockbit_token
 
+    # 2. Backend API
     try:
         r = httpx.get(
             f"{BACKEND_BASE_URL}/token-store/stockbit",
@@ -240,14 +329,30 @@ def get_stockbit_token() -> Optional[str]:
         if r.status_code == 200:
             data = r.json()
             token = _extract_token(data)
-            if token:
+            exp = data.get("expires_at", 0)
+            if token and (exp == 0 or now_ms < exp - 300000):
                 _stockbit_token = token
-                _stockbit_token_expires_at = data.get("expires_at", 0)
+                _stockbit_token_expires_at = exp
                 return token
     except Exception as e:
-        log.debug(f"Token fetch failed: {e}")
+        log.debug(f"Backend token fetch failed: {e}")
 
-    log.warning("No Stockbit token available from backend")
+    # 3. Local file cache (written by stockbit_login.py)
+    try:
+        cache_path = stockbit_token_cache()
+        if cache_path.exists():
+            data = json.loads(cache_path.read_text())
+            token = _extract_token(data)
+            exp = data.get("expires_at", data.get("expiresAt", 0))
+            if token and (exp == 0 or now_ms < exp - 300000):
+                _stockbit_token = token
+                _stockbit_token_expires_at = exp
+                log.info("Stockbit token loaded from local file cache")
+                return token
+    except Exception as e:
+        log.debug(f"Local token cache read failed: {e}")
+
+    log.warning("No valid Stockbit token available (backend + local cache both miss)")
     return None
 
 
@@ -322,13 +427,12 @@ def _stockbit_post(path: str, data: dict) -> dict:
 
 
 def _carina_get(path: str, params: Optional[dict] = None) -> dict:
-    """GET request to Carina (broker/portfolio) API."""
+    """GET request to Carina (broker/portfolio) API. Auto-refreshes token on 401."""
     token = _load_carina_token()
     if not token:
-        # fallback to stockbit token
         token = get_stockbit_token()
     if not token:
-        return {"error": "No Carina token. Use save_carina_token() to store it."}
+        return {"error": "No Carina token. Use save_carina_token() or refresh_carina_token()."}
     try:
         r = httpx.get(
             f"{CARINA_BASE_URL}{path}",
@@ -337,7 +441,16 @@ def _carina_get(path: str, params: Optional[dict] = None) -> dict:
             timeout=TIMEOUT,
         )
         if r.status_code == 401:
-            return {"error": "401 Unauthorized — Carina token expired. Use save_carina_token()."}
+            try:
+                token = refresh_carina_token()
+                r = httpx.get(
+                    f"{CARINA_BASE_URL}{path}",
+                    headers={**STOCKBIT_BROWSER_HEADERS, "authorization": f"Bearer {token}", "origin": "https://stockbit.com"},
+                    params=params,
+                    timeout=TIMEOUT,
+                )
+            except Exception as refresh_err:
+                return {"error": f"401 + refresh failed: {refresh_err}"}
         r.raise_for_status()
         return r.json()
     except Exception as e:
@@ -346,12 +459,12 @@ def _carina_get(path: str, params: Optional[dict] = None) -> dict:
 
 
 def _carina_post(path: str, data: dict) -> dict:
-    """POST request to Carina (broker/portfolio) API."""
+    """POST request to Carina (broker/portfolio) API. Auto-refreshes token on 401."""
     token = _load_carina_token()
     if not token:
         token = get_stockbit_token()
     if not token:
-        return {"error": "No Carina token. Use save_carina_token() to store it."}
+        return {"error": "No Carina token. Use save_carina_token() or refresh_carina_token()."}
     try:
         r = httpx.post(
             f"{CARINA_BASE_URL}{path}",
@@ -360,7 +473,16 @@ def _carina_post(path: str, data: dict) -> dict:
             timeout=TIMEOUT,
         )
         if r.status_code == 401:
-            return {"error": "401 Unauthorized — Carina token expired. Use save_carina_token()."}
+            try:
+                token = refresh_carina_token()
+                r = httpx.post(
+                    f"{CARINA_BASE_URL}{path}",
+                    headers={**STOCKBIT_BROWSER_HEADERS, "authorization": f"Bearer {token}", "origin": "https://stockbit.com"},
+                    json=data,
+                    timeout=TIMEOUT,
+                )
+            except Exception as refresh_err:
+                return {"error": f"401 + refresh failed: {refresh_err}"}
         r.raise_for_status()
         return r.json()
     except Exception as e:

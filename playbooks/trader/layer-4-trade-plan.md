@@ -47,10 +47,38 @@ Invalidation signal: [one clear thing that says exit now]
 
 ## Output (Required)
 
+Apply three output levels per plan:
+
+| Level | When | Action |
+|-------|------|--------|
+| **local only** | Setup developing, not yet actionable | Write to tradeplans log only |
+| **Airtable Superlist** | High conviction, entry logic clear | Post/update `Superlist` record |
+| **Boss O alert** | Entry window opening, immediate action needed | Flag explicitly, send Telegram first |
+
 1. **Trade plan**: one block per ticker in the format above
 2. **Priority ranking**: which name to act on first today
-3. **Superlist update**: post final plans to Airtable `Superlist`
-4. **Alert Boss O**: any plan requiring immediate action
+3. **Superlist update**: post final plans to Airtable `Superlist` when warranted
+
+## Telegram Notify (Scarlett)
+
+Send one message per final trade plan. This is the most important notification layer.
+
+**Trigger conditions:**
+- Always send when a trade plan is finalized
+- For urgent/immediate-action plans: send first before posting to Airtable
+
+**Send via Bash (one message per ticker):**
+```bash
+curl -s -X POST "https://api.telegram.org/bot8781123769:AAHceKJY0FepJIqBCnHqd9DP3_BHro01Cgc/sendMessage" \
+  -d "chat_id=1139649438" \
+  --data-urlencode "text=L4 TRADE PLAN $(date +%Y-%m-%d) | {TICKER}
+Thesis: {one sentence}
+Entry: Rp {X,XXX}–{X,XXX} | SL: Rp {X,XXX} ({X}%) | T1: Rp {X,XXX} ({X}%)
+Size: Rp {XX,XXX,XXX} ({X}% capital) | Risk: {X}%
+Trigger: {what to see before buying}"
+```
+
+**Anti-spam:** One message per trade plan. Do not resend on plan edits unless entry/SL changes significantly (>1 tick).
 
 ## Skills To Load
 

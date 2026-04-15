@@ -8,7 +8,7 @@
 
 ## Load First
 
-- `~/.claude/skills/trader/README.md`
+- `skills/trader/CLAUDE.md`
 - `~/.claude/skills/trader/thesis-evaluation.md`
 - `~/.claude/skills/trader/orderbook-reading.md`
 - `~/.claude/skills/trader/market-structure.md`

@@ -6,7 +6,7 @@
 
 ## Load First
 
-- `~/.claude/skills/personal-assistant/README.md`
+- `skills/personal-assistant/CLAUDE.md`
 - `~/.claude/skills/personal-assistant/document-structuring.md`
 
 ## Workflow

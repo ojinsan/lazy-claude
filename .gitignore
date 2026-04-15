@@ -20,6 +20,16 @@ hooks/tool-log.txt
 # Memory (personal, managed separately)
 memory/
 
+# Local env (credentials)
+.env.local
+.env.*.local
+
+# Runtime data (logs, tokens, monitoring state)
+runtime/
+
+# Python venvs
+.venv-*/
+
 # Python bytecode
 tools/mcp-server/.venv/
 tools/**/__pycache__/

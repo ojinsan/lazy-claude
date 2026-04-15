@@ -41,6 +41,27 @@ Build the top-down market map before touching any stock.
 5. **Initial candidates**: tickers that fit the narrative
 6. **Post to Airtable** `Insights` for any strong context insight
 
+## Telegram Notify (Scarlett)
+
+Send once per session after L1 output is complete. Skip if already sent for today's L1.
+
+**Trigger conditions (any one):**
+- Aggression posture ≤ 2 (cautious/risk-off)
+- Regime changed vs yesterday (e.g., risk-on → risk-off)
+- Critical macro event detected (Fed, BI rate, geopolitics)
+- Always send when completing scheduled 05:00 L1 run
+
+**Send via Bash:**
+```bash
+curl -s -X POST "https://api.telegram.org/bot8781123769:AAHceKJY0FepJIqBCnHqd9DP3_BHro01Cgc/sendMessage" \
+  -d "chat_id=1139649438" \
+  --data-urlencode "text=L1 $(date +%Y-%m-%d) | Regime: {risk-on/cautious/risk-off} | Posture: {N}/5
+Sectors: {active themes, comma-separated}
+Key risk: {one sentence if any, else 'none'}"
+```
+
+**Anti-spam:** Do not send more than once per L1 session. Do not re-send for L3/L4 re-runs.
+
 ## Skills To Load
 
 - `skills/trader/macro-context.md`

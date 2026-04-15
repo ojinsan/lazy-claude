@@ -2,6 +2,22 @@
 
 Watch shortlisted names closely during market hours. Understand whale intent, not just price.
 
+## Portfolio Monitoring (Run First, Every Cycle)
+
+For each ticker in Airtable `Superlist` where Status = `Hold`:
+```python
+pos = api.get_position_detail(ticker)   # current qty, avg cost, P&L
+```
+Check against L4 plan:
+- Price vs invalidation level → if breached, flag for exit
+- Price vs Target 1 → if hit, flag for 50% reduce
+- `distribution_setup` or `wick_shakeout` in latest 30m data → update thesis status
+- Unrealized P&L: if ≤ -5% from avg cost AND thesis signal weakening → escalate to Boss O alert
+
+Output per hold: `intact | reduce | exit | watch`
+
+---
+
 ## What To Monitor
 
 ### Price & Volume
@@ -35,14 +51,47 @@ Watch shortlisted names closely during market hours. Understand whale intent, no
 | Orderbook WS | `tools/trader/orderbook_ws.py` |
 | Running trade | `tools/trader/running_trade_poller.py` |
 | Wyckoff | `tools/trader/wyckoff.py` |
+| Psychology at levels | `tools/trader/psychology.py` — use when price hits wall or key level, judge bandar intent |
+| Realtime listener | `tools/trader/realtime_listener.py --tickers X Y --interval 30` — continuous crossing/flow events → `runtime/monitoring/realtime/` |
 
 ## Output (Required)
 
-1. **Signal update**: per ticker — accumulating / distributing / noisy / wait
+Apply three output levels to every ticker assessed:
+
+| Level | When | Action |
+|-------|------|--------|
+| **local only** | Signal early, noisy, or developing | Write to monitoring log only |
+| **Airtable Insights** | Worth preserving — clean early accumulation, manipulation edge | Post to `Insights` |
+| **Boss O alert** | Materially actionable NOW — entry open, thesis break, stop trigger | Flag explicitly |
+
+Default to `local only`. Promote only when genuinely warranted. Do not stay silent on a name worth preserving just because it is not yet L4-ready.
+
+Per ticker:
+1. **Signal update**: accumulating / distributing / noisy / wait
 2. **Manipulation flag**: note any `accumulation_setup` or `shakeout_trap` explicitly
-3. **Promotion**: move names to Layer 4 if golden setup appears
-4. **Demotion**: remove names from watchlist if thesis breaks
-5. **Post to Airtable** `Insights` for clean early-accumulation or manipulation-edge signals
+3. **Promotion**: move to Layer 4 if golden setup appears
+4. **Demotion**: remove from watchlist if thesis breaks
+
+## Telegram Notify (Scarlett)
+
+Send only on new signal detection. Do NOT send on every 30-min tick — only when something changes.
+
+**Trigger conditions (any one):**
+- New `accumulation_setup` or `shakeout_trap` detected for any shortlisted ticker
+- `wick_shakeout` with whale bids holding — high-priority alert
+- Thesis break: any tracked name invalidated → demotion
+- Name promoted to Layer 4 (golden setup)
+
+**Send via Bash:**
+```bash
+curl -s -X POST "https://api.telegram.org/bot8781123769:AAHceKJY0FepJIqBCnHqd9DP3_BHro01Cgc/sendMessage" \
+  -d "chat_id=1139649438" \
+  --data-urlencode "text=L3 $(date +%Y-%m-%d %H:%M) | {TICKER}: {signal_type}
+{one-line description of what was detected}
+Action: {watch/promote to L4/demote}"
+```
+
+**Anti-spam:** One message per new signal per ticker per session. Same signal on same ticker = no repeat. Batch multiple signals in one message if detected together.
 
 ## Skills To Load
 

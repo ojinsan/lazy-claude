@@ -12,13 +12,10 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from skills import api
+import api
 
 WIB = ZoneInfo("Asia/Jakarta")
-OUT_DIR = Path("/home/lazywork/lazyboy/trade/data/realtime")
+OUT_DIR = Path(__file__).parent.parent.parent / "runtime" / "monitoring" / "realtime"
 OUT_FILE = OUT_DIR / "listener_events.jsonl"
 
 

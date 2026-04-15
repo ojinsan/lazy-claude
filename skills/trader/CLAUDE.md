@@ -121,6 +121,11 @@ Load only what the current layer or task needs. Unload after use.
 | `swing-trade-plan.md` | Basic swing plan template | L4 swing setups |
 | `pro-orderbook-trade-plan.md` | Execution-sensitive plan with microstructure | L4 orderbook setups |
 
+### Execution
+| Skill | Purpose | Load when |
+|-------|---------|-----------|
+| `execution.md` | Entry/exit rules, sizing formula, order protocol, safety gates | Always in execute layer |
+
 ### Support Skills (load on demand)
 | Skill | Purpose | Load when |
 |-------|---------|-----------|
@@ -142,6 +147,17 @@ Load only what the current layer or task needs. Unload after use.
 | `api.py` | Price, candles, orderbook, broker distribution, SID, running trades, RAG, market context |
 | `config.py` | Env, paths, token config |
 
+### Order execution (Carina / Stockbit broker)
+| Function | What it does |
+|----------|-------------|
+| `api.get_cash_info()` | Trade limit, buying power, available balance |
+| `api.get_position_detail(ticker)` | Current qty, avg cost, unrealized P&L per stock |
+| `api.get_orders(ticker)` | Open/today orders — check for duplicates before placing |
+| `api.place_buy_order(symbol, price, shares)` | Place limit buy — **REAL order** |
+| `api.place_sell_order(symbol, price, shares)` | Place limit sell — **REAL order** |
+| `api.cancel_order(order_id)` | Cancel open order |
+| `api.amend_orders([{order_id, price, shares}])` | Bulk amend open orders |
+
 ### Analysis scripts
 | Script | What it gives | Use in |
 |--------|--------------|--------|
@@ -150,10 +166,12 @@ Load only what the current layer or task needs. Unload after use.
 | `market_structure.py` | Support/resistance, trend, BOS/CHoCH | L2, L4 |
 | `indicators.py` | RSI, EMA, ATR, golden cross, cycle signal | L2, L4 |
 | `wyckoff.py` | Wyckoff phase detection | L2 |
+| `psychology.py` | Behavior at key price levels — WHO is doing WHAT at support/resistance (bandar absorbing vs retail fleeing) | L2, L3 |
 | `tick_walls.py` | Orderbook wall analysis, large threshold | L3, L4 |
 | `orderbook_poller.py` | Live orderbook polling loop | L3 live |
 | `orderbook_ws.py` | WebSocket orderbook stream | L3 live |
 | `running_trade_poller.py` | Live tape / running trades | L3 live |
+| `realtime_listener.py` | Waterseven-style poll — running trade patterns + orderbook deltas, writes to `runtime/monitoring/realtime/` | L3 live |
 | `tradeplan.py` | Trade plan generator | L4 |
 | `screener.py` | Full screener pipeline | L2 bulk scan |
 | `eval_pipeline.py` | Watchlist evaluation | L2 |

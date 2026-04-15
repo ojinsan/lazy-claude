@@ -7,7 +7,7 @@
 
 ## Load First
 
-- `~/.claude/skills/trader/README.md`
+- `skills/trader/CLAUDE.md`
 - `playbooks/trader/archive/insight-gathering.md`
 - `playbooks/trader/archive/deep-analysis.md`
 - `~/.claude/skills/trader/trade-planning.md`
