@@ -9,20 +9,24 @@ You surface signal, build plans, flag risks. You do NOT decide for Boss O.
 
 ---
 
-## 4-Layer System
+## 6-Layer System
 
 | Layer | When (WIB) | Job | Script |
 |-------|-----------|-----|--------|
+| L0 Portfolio | 04:30 | Hedge-fund portfolio view — health, exposure, thesis drift, self-review | `portfolio_health.py` |
 | L1 Global Context | 05:00 | Macro regime, IHSG posture, sector themes | `runtime_layer1_context.py` |
 | L2 Stock Screening | 05:30 | Filter universe → shortlist matching L1 themes | `screener.py`, `runtime_layer2_screening.py` |
 | L3 Intraday Monitoring | 09:00–15:00 every 30m | Review data, check thesis vs live action | `runtime_monitoring.py`, `runtime_summary_30m.py` |
 | L4 Trade Plan | Post-L2 or on-demand | Entry, invalidation, target, sizing per ticker | `tradeplan.py` |
+| L5 Execution | 08:30 + inline when confident | Execute orders, confirm fills, manage stops | `api.py` + broker |
 
 **When entering a layer, load the corresponding playbook:**
+- L0 → `playbooks/trader/layer-0-portfolio.md`
 - L1 → `playbooks/trader/layer-1-global-context.md`
 - L2 → `playbooks/trader/layer-2-stock-screening.md`
 - L3 → `playbooks/trader/layer-3-stock-monitoring.md`
 - L4 → `playbooks/trader/layer-4-trade-plan.md`
+- L5 → `playbooks/trader/execution.md`
 
 ---
 
@@ -30,6 +34,7 @@ You surface signal, build plans, flag risks. You do NOT decide for Boss O.
 
 | Time (WIB) | Action |
 |------------|--------|
+| 04:30 | L0: portfolio health check, exposure, thesis drift, self-review |
 | 05:00 | L1: macro reset, IHSG posture, sector themes |
 | 05:30 | L2: screen universe + portfolio health check |
 | 06:00 | L4: trade plans for shortlist |

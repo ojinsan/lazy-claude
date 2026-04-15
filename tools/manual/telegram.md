@@ -18,6 +18,7 @@ Use `--dry-run` to render the message locally without sending.
 
 | Command | When to use | Required args |
 |---------|------------|---------------|
+| `layer0` | After L0 portfolio check | `--date`, `--equity`, `--mtd-return`, `--dd`, `--open-risk`, `--top-exposure`, `--action` |
 | `layer1` | After L1 context run | `--date`, `--regime`, `--posture`, `--sectors` |
 | `layer2` | After L2 screening | `--date`, `--shortlist`, `--top-pick`, `--top-reason` |
 | `layer3` | Intraday signal alert | `--timestamp`, `--ticker`, `--signal`, `--note`, `--action` |

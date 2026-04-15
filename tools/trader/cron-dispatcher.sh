@@ -31,8 +31,14 @@ run_claude_job() {
 
 log "tick — WIB ${WIB_HOUR}:$(printf '%02d' "$WIB_MIN")"
 
+# ── Portfolio window: 04:30 WIB ─────────────────────────────────────────────
+if [[ $WIB_HOUR -eq 4 && $WIB_MIN -eq 30 ]]; then
+    log "→ PORTFOLIO (L0) start"
+    run_claude_job "$COMMAND_DIR/portfolio.md"
+    log "← PORTFOLIO done"
+
 # ── Screening window: 05:00, 05:30 WIB ─────────────────────────────────────
-if [[ $WIB_HOUR -eq 5 ]]; then
+elif [[ $WIB_HOUR -eq 5 ]]; then
     log "→ SCREENING (L1+L2) start"
     run_claude_job "$COMMAND_DIR/screening.md"
     log "← SCREENING done"

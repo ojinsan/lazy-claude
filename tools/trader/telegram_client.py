@@ -223,6 +223,25 @@ def build_order_failed(args: argparse.Namespace) -> str:
     )
 
 
+def build_layer0(args: argparse.Namespace) -> str:
+    dd = _number(args.dd)
+    dd_flag = " ⚠️ DD>5%" if (dd is not None and dd >= 5) else ""
+    return _render_message(
+        "🏦",
+        f"L0 Portfolio — {args.date}",
+        f"Portfolio health check complete.{dd_flag} Action: {_compact(args.action)}.",
+        [
+            ("Equity",       _format_idr(args.equity)),
+            ("MTD return",   _format_percent(args.mtd_return)),
+            ("Drawdown",     _format_percent(args.dd)),
+            ("Open risk",    _format_percent(args.open_risk)),
+            ("Top exposure", _compact(args.top_exposure)),
+            ("Action",       _compact(args.action)),
+        ],
+        footer="Scarlett trader · L0",
+    )
+
+
 def build_execution_summary(args: argparse.Namespace) -> str:
     return _render_message(
         "📦",
@@ -315,6 +334,16 @@ def build_parser() -> argparse.ArgumentParser:
     layer4.add_argument("--trigger", required=True)
     layer4.add_argument("--urgent", action="store_true")
     layer4.set_defaults(builder=build_layer4)
+
+    layer0 = sub.add_parser("layer0")
+    layer0.add_argument("--date", required=True)
+    layer0.add_argument("--equity", required=True)
+    layer0.add_argument("--mtd-return", required=True)
+    layer0.add_argument("--dd", required=True)
+    layer0.add_argument("--open-risk", required=True)
+    layer0.add_argument("--top-exposure", required=True)
+    layer0.add_argument("--action", required=True)
+    layer0.set_defaults(builder=build_layer0)
 
     placing = sub.add_parser("order-placing")
     placing.add_argument("--side", choices=["BUY", "SELL"], required=True)

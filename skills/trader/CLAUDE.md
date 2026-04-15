@@ -88,6 +88,16 @@ All six should align. Fewer than 4 aligned = skip or low conviction only.
 
 Load only what the current layer or task needs. Unload after use.
 
+### Layer 0 — Portfolio (Hedge-Fund View)
+| Skill | Purpose | Load when |
+|-------|---------|-----------|
+| `portfolio-management.md` | Position sizing, concentration limits, drawdown thresholds | Always in L0 |
+| `sector-exposure.md` | Sector bucket mapping, max exposure rules, rotation triggers | Always in L0 |
+| `probability-measurement.md` | Win rate, expectancy, Kelly fraction for sizing decisions | L0 calibration step |
+| `money-flow-analysis.md` | Aggregate foreign flow, smart-money direction across holds | L0 portfolio flow check |
+| `portfolio-self-review.md` | Daily self-review protocol, lesson logging template | L0 self-evaluation step |
+| `thesis-drift-check.md` | Re-check thesis validity for each hold | L0 per-hold thesis review |
+
 ### Layer 1 — Global Context
 | Skill | Purpose | Load when |
 |-------|---------|-----------|
@@ -142,6 +152,11 @@ Load only what the current layer or task needs. Unload after use.
 ## Tools
 
 For the full script index, connectors, and manuals → `tools/CLAUDE.md`
+
+Trader skill doc rule:
+- Stockbit, Airtable, Telegram, browser/profile-based tools, and other service-heavy tools should point to `tools/manual/*.md` first, then the exact script.
+- Local analysis helpers like `market_structure.py`, `indicators.py`, `wyckoff.py`, `tradeplan.py`, `broker_profile.py`, and similar trader-local scripts can stay direct in the skill MD.
+- Keep exact script paths visible in every skill even when manual is primary.
 
 ---
 

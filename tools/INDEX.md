@@ -21,7 +21,8 @@
 | `journal.py`              | Trade journal read/write and lesson search                   | L4    |
 | `airtable_client.py`      | Airtable read/write for trader tables                        | Any   |
 | `stockbit_screener.py`    | Stockbit native screener wrapper with pre-built filter sets  | L2    |
-| `telegram_client.py`      | Telegram alert sender for L1–L4 + execution events          | Any   |
+| `telegram_client.py`      | Telegram alert sender for L0–L4 + execution + intent events | Any   |
+| `portfolio_health.py`     | L0 portfolio state: equity, MTD, drawdown, exposure, flags   | L0    |
 | `watchlist_4group_scan.py`| 4-group universe scanner                                     | L2    |
 | `stockbit_auth.py`        | Stockbit auth — token ensure + refresh                       | Infra |
 | `stockbit_login.py`       | Auto-login to Stockbit mobile API, saves token               | Infra |
