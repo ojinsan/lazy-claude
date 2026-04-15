@@ -4,12 +4,12 @@
 Open modern web pages with Playwright Firefox, extract rendered text, collect links, and capture screenshots.
 
 ## Tool Path
-`~/.claude/tools/general/browser/web_browse.py`
+`~/workspace/tools/general/browser/web_browse.py`
 
 ## Usage
 ```bash
-python3 ~/.claude/tools/general/browser/web_browse.py open --url https://example.com --extract all
-python3 ~/.claude/tools/general/browser/web_browse.py search --query "IHSG outlook"
+python3 ~/workspace/tools/general/browser/web_browse.py open --url https://example.com --extract all
+python3 ~/workspace/tools/general/browser/web_browse.py search --query "IHSG outlook"
 ```
 
 ## When to use

@@ -4,7 +4,7 @@
 Capture screenshots from browser pages and hand them off for OCR / vision analysis when text is embedded in images.
 
 ## Tool Path
-`~/.claude/tools/general/browser/browser_base.py`
+`~/workspace/tools/general/browser/browser_base.py`
 
 ## Usage
 - use browser tools with screenshot flags

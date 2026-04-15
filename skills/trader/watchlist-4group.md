@@ -29,13 +29,8 @@ For each kept ticker, record:
 ## Rule
 
 If a ticker is not justified, remove it. A shorter watchlist is better than a noisy one.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/watchlist_4group_scan.py` — 4-group universe scanner (merge, dedup, tag)
+- `~/workspace/tools/trader/api.py` — fetch backend watchlist group
 

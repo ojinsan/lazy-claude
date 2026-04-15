@@ -16,13 +16,11 @@ Translate analysis into a structured plan Boss O can act on.
 ## Rule
 
 No plan is complete without risk. Entry without invalidation is not a plan.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/tradeplan.py` — trade plan generator (entry, SL, targets, sizing)
+- `~/workspace/tools/trader/market_structure.py` — key levels and invalidation points
+- `~/workspace/tools/trader/indicators.py` — ATR for stop sizing, RSI/EMA for entry context
+- `~/workspace/tools/trader/api.py` — live price and cash info for sizing calculations
+- `~/workspace/tools/trader/telegram_client.py` — send L4 trade plan alert (`layer4` template)
 

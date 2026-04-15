@@ -84,12 +84,17 @@ Send only on new signal detection. Do NOT send on every 30-min tick — only whe
 
 **Send via Bash:**
 ```bash
-curl -s -X POST "https://api.telegram.org/bot8781123769:AAHceKJY0FepJIqBCnHqd9DP3_BHro01Cgc/sendMessage" \
-  -d "chat_id=1139649438" \
-  --data-urlencode "text=L3 $(date +%Y-%m-%d %H:%M) | {TICKER}: {signal_type}
-{one-line description of what was detected}
-Action: {watch/promote to L4/demote}"
+python3 tools/trader/telegram_client.py layer3 \
+  --timestamp "$(TZ='Asia/Jakarta' date '+%Y-%m-%d %H:%M WIB')" \
+  --ticker "{TICKER}" \
+  --signal "{signal_type}" \
+  --note "{one-line description of what was detected}" \
+  --action "{watch/promote to L4/demote}"
 ```
+
+**Format:** emoji header + bold title + short takeaway + structured `<pre>` block.
+
+**Required env:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
 **Anti-spam:** One message per new signal per ticker per session. Same signal on same ticker = no repeat. Batch multiple signals in one message if detected together.
 

@@ -22,13 +22,9 @@ Check whether a thesis is working, weakening, or broken.
 ## Rule
 
 Do not protect your old idea. Protect Boss O's capital and attention.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/api.py` — current price, broker flow, SID for live thesis check
+- `~/workspace/tools/trader/airtable_client.py` — read original trade plan and entry notes from Superlist
+- `~/workspace/tools/trader/journal.py` — past lessons on similar thesis patterns
 

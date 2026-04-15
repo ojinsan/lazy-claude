@@ -27,13 +27,10 @@ Explain:
 - what the book suggests
 - how confident that read is
 - what price behavior would confirm it
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/orderbook_poller.py` — live orderbook polling loop
+- `~/workspace/tools/trader/orderbook_ws.py` — WebSocket orderbook stream
+- `~/workspace/tools/trader/tick_walls.py` — wall detection and analysis
+- `~/workspace/tools/trader/api.py` — snapshot orderbook data (`get_orderbook`)
 

@@ -38,18 +38,18 @@ from zoneinfo import ZoneInfo
 # Add parent dir to path for skills imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from skills import api
-from skills.broker_profile import analyze_players, format_analysis as fmt_players, save_snapshot
-from skills.psychology import analyze_psychology, format_analysis as fmt_psych
-from skills.sid_tracker import check_sid, format_analysis as fmt_sid
-from skills.wyckoff import analyze_wyckoff, format_wyckoff
-from skills.macro import (
+from _lib import api
+from _lib.broker_profile import analyze_players, format_analysis as fmt_players, save_snapshot
+from _lib.psychology import analyze_psychology, format_analysis as fmt_psych
+from _lib.sid_tracker import check_sid, format_analysis as fmt_sid
+from _lib.wyckoff import analyze_wyckoff, format_wyckoff
+from _lib.macro import (
     assess_regime, detect_sector_rotation, get_active_theses,
     save_thesis, SectorThesis, get_sector,
     format_regime, format_sector_rotation,
 )
-from skills.market_structure import analyze_market_structure, format_analysis as fmt_structure
-from skills.narrative import generate, format_narrative, format_compact
+from _lib.market_structure import analyze_market_structure, format_analysis as fmt_structure
+from _lib.narrative import generate, format_narrative, format_compact
 
 logging.basicConfig(
     level=logging.WARNING,

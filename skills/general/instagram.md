@@ -4,12 +4,12 @@
 Browse Instagram profiles, posts, stories, feed, search, and reels through the logged-in Firefox profile.
 
 ## Tool Path
-`~/.claude/tools/general/browser/instagram_browser.py`
+`~/workspace/tools/general/browser/instagram_browser.py`
 
 ## Usage
 ```bash
-python3 ~/.claude/tools/general/browser/instagram_browser.py profile --username nasa
-python3 ~/.claude/tools/general/browser/instagram_browser.py stories --username nasa --screenshot-all
+python3 ~/workspace/tools/general/browser/instagram_browser.py profile --username nasa
+python3 ~/workspace/tools/general/browser/instagram_browser.py stories --username nasa --screenshot-all
 ```
 
 ## When to use

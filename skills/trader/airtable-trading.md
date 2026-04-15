@@ -66,4 +66,4 @@ Current fields:
 
 Use Airtable helpers from:
 
-- `~/.claude/tools/trader/airtable_client.py`
+- `~/workspace/tools/trader/airtable_client.py`

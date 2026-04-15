@@ -5,7 +5,7 @@ description: Scrape or collect market-relevant information from Threads using Fi
 
 # Threads Scraping
 
-Uses the existing Threads Playwright tools and can later share the common browser foundation patterns in `~/.claude/tools/general/browser/`.
+Uses the existing Threads Playwright tools and can later share the common browser foundation patterns in `~/workspace/tools/general/browser/`.
 
 ## Purpose
 
@@ -29,15 +29,15 @@ This is a skill. A first Playwright workflow now exists and should be used conse
 
 ## Tool Paths
 
-- Active: `~/.claude/tools/general/playwright/threads-scraper.js`
-- Compatibility wrapper (deprecated entrypoint): `~/.claude/tools/general/playwright/threads_search.py`
+- Active: `~/workspace/tools/general/playwright/threads-scraper.js`
+- Compatibility wrapper (deprecated entrypoint): `~/workspace/tools/general/playwright/threads_search.py`
 
 The Python wrapper exists only so old calls do not break. Preferred usage is the JS scraper.
 
 ## Run Pattern
 
 ```bash
-cd ~/.claude/tools/general/playwright
+cd ~/workspace/tools/general/playwright
 node threads-scraper.js --query "IDX Indonesia MSCI" --limit 10
 ```
 
@@ -51,7 +51,7 @@ node threads-scraper.js --query "IDX Indonesia MSCI" --limit 10 --headed
 
 Default persistent profile for Threads tooling:
 
-- `~/.claude/tools/general/playwright/.firefox-profile-threads`
+- `~/workspace/tools/general/playwright/.firefox-profile-threads`
 
 Rule:
 - if Boss O refreshes login/session in the original Firefox profile, sync the copied Scarlett profile again

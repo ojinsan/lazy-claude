@@ -14,13 +14,9 @@ Convert market experience into reusable lessons.
 ## Rule
 
 Be honest. The journal is useless if it only records flattering stories.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/journal.py` — trade journal read/write and lesson search
+- `~/workspace/tools/trader/airtable_client.py` — read trade history from Airtable Insights/Superlist
+- `~/workspace/tools/trader/api.py` — fetch historical position/order data
 

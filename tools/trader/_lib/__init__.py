@@ -1,4 +1,4 @@
-# Shim: makes trader/ modules importable as skills.<module>
+# Shim: makes trader/ modules importable as _lib.<module>
 import sys
 from pathlib import Path
 _trader = str(Path(__file__).parent.parent)

@@ -16,10 +16,9 @@ Read orderbook, bid-offer pressure, wall behavior, fake liquidity, and suspiciou
 ## Tool Resolution
 
 Primary tools:
-- `~/.claude/tools/trader/orderbook_poller.py`
-- `~/.claude/tools/trader/orderbook_ws.py`
-- `~/.claude/tools/trader/read_alerts.py`
-- `~/.claude/tools/trader/api.py`
+- `~/workspace/tools/trader/orderbook_poller.py`
+- `~/workspace/tools/trader/orderbook_ws.py`
+- `~/workspace/tools/trader/api.py`
 
 ## Rule
 

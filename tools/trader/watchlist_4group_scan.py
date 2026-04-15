@@ -5,9 +5,9 @@ from pathlib import Path
 
 sys.path.insert(0, "/home/lazywork/lazyboy/trade")
 
-from skills.api import get_price, get_volume_ratio, get_support_resistance
-from skills.wyckoff import analyze_wyckoff
-from skills.broker_profile import analyze_players
+from _lib.api import get_price, get_volume_ratio, get_support_resistance
+from _lib.wyckoff import analyze_wyckoff
+from _lib.broker_profile import analyze_players
 
 WATCH = Path('/home/lazywork/lazyboy/trade/watchlist/active.json')
 

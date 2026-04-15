@@ -25,13 +25,9 @@ Summarize the flow in plain language:
 - distribution
 - mixed
 - unclear
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/broker_profile.py` — player intent: smart money vs retail, accumulation/distribution detection
+- `~/workspace/tools/trader/running_trade_poller.py` — live tape / running trades
+- `~/workspace/tools/trader/api.py` — broker flow data (`get_broker_flow`, `get_broker_summary`)
 

@@ -4,12 +4,12 @@
 List, create, complete, and delete Google Tasks using the unified Google Workspace tool.
 
 ## Tool Path
-`~/.claude/tools/general/scripts/google_workspace.py`
+`~/workspace/tools/general/scripts/google_workspace.py`
 
 ## Usage
 ```bash
-python3 ~/.claude/tools/general/scripts/google_workspace.py tasks list
-python3 ~/.claude/tools/general/scripts/google_workspace.py tasks create --title "Follow up"
+python3 ~/workspace/tools/general/scripts/google_workspace.py tasks list
+python3 ~/workspace/tools/general/scripts/google_workspace.py tasks create --title "Follow up"
 ```
 
 ## When to use

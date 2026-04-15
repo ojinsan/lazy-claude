@@ -3,9 +3,9 @@
 Use Google Maps + Calendar + research notes to plan routes, stops, and timing.
 
 ## Tools
-- `~/.claude/tools/general/scripts/google_maps.py`
-- `~/.claude/tools/general/scripts/google_workspace.py calendar ...`
-- `~/.claude/tools/general/browser/web_browse.py`
+- `~/workspace/tools/general/scripts/google_maps.py`
+- `~/workspace/tools/general/scripts/google_workspace.py calendar ...`
+- `~/workspace/tools/general/browser/web_browse.py`
 
 ## Use This When
 - Boss O wants route planning

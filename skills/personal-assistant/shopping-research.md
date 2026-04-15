@@ -3,9 +3,9 @@
 Compare products across Shopee and Tokopedia, capture screenshots, and summarize tradeoffs.
 
 ## Tools
-- `~/.claude/tools/general/browser/shopee_browser.py`
-- `~/.claude/tools/general/browser/tokopedia_browser.py`
-- `~/.claude/tools/general/browser/web_browse.py`
+- `~/workspace/tools/general/browser/shopee_browser.py`
+- `~/workspace/tools/general/browser/tokopedia_browser.py`
+- `~/workspace/tools/general/browser/web_browse.py`
 
 ## Use This When
 - comparing products and prices

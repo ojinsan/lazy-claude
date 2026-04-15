@@ -11,11 +11,11 @@ Add content-creator skills only after Boss O defines:
 - quality bar
 ## Tool Resolution
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
+When a skill needs code or helper scripts, resolve them from `~/workspace/tools` using the matching role folder first, then `other` if needed.
 
 Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- trader skills -> `~/workspace/tools/trader`
+- personal-assistant skills -> `~/workspace/tools/personal-assistance`
+- content-creator skills -> `~/workspace/tools/content-creator`
+- shared helpers -> `~/workspace/tools/general`
 

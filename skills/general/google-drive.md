@@ -4,12 +4,12 @@
 Search, list, upload, and download files in Google Drive through the unified Google Workspace tool.
 
 ## Tool Path
-`~/.claude/tools/general/scripts/google_workspace.py`
+`~/workspace/tools/general/scripts/google_workspace.py`
 
 ## Usage
 ```bash
-python3 ~/.claude/tools/general/scripts/google_workspace.py drive search --query "tradeplan"
-python3 ~/.claude/tools/general/scripts/google_workspace.py drive upload --file ./note.txt
+python3 ~/workspace/tools/general/scripts/google_workspace.py drive search --query "tradeplan"
+python3 ~/workspace/tools/general/scripts/google_workspace.py drive upload --file ./note.txt
 ```
 
 ## When to use

@@ -19,13 +19,10 @@ Summarize:
 - what the macro backdrop favors
 - what it threatens
 - what sectors it should help or hurt
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/macro.py` — macro regime, rates, commodities, sector rotation
+- `~/workspace/tools/trader/api.py` — index data, sector performance
+- `~/workspace/tools/general/browser/web_browse.py` — news and macro source crawling
+- `~/workspace/tools/general/playwright/threads-scraper.js` — Threads market commentary
 

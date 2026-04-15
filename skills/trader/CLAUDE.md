@@ -139,64 +139,9 @@ Load only what the current layer or task needs. Unload after use.
 
 ---
 
-## Tools Map
+## Tools
 
-### Core data (always available)
-| Script | What it gives |
-|--------|--------------|
-| `api.py` | Price, candles, orderbook, broker distribution, SID, running trades, RAG, market context |
-| `config.py` | Env, paths, token config |
-
-### Order execution (Carina / Stockbit broker)
-| Function | What it does |
-|----------|-------------|
-| `api.get_cash_info()` | Trade limit, buying power, available balance |
-| `api.get_position_detail(ticker)` | Current qty, avg cost, unrealized P&L per stock |
-| `api.get_orders(ticker)` | Open/today orders — check for duplicates before placing |
-| `api.place_buy_order(symbol, price, shares)` | Place limit buy — **REAL order** |
-| `api.place_sell_order(symbol, price, shares)` | Place limit sell — **REAL order** |
-| `api.cancel_order(order_id)` | Cancel open order |
-| `api.amend_orders([{order_id, price, shares}])` | Bulk amend open orders |
-
-### Analysis scripts
-| Script | What it gives | Use in |
-|--------|--------------|--------|
-| `broker_profile.py` | Player intent, smart money vs retail, trap detection, bandar P&L | L2, L3 |
-| `sid_tracker.py` | SID accumulation/distribution signal, intent narrative | L2 |
-| `market_structure.py` | Support/resistance, trend, BOS/CHoCH | L2, L4 |
-| `indicators.py` | RSI, EMA, ATR, golden cross, cycle signal | L2, L4 |
-| `wyckoff.py` | Wyckoff phase detection | L2 |
-| `psychology.py` | Behavior at key price levels — WHO is doing WHAT at support/resistance (bandar absorbing vs retail fleeing) | L2, L3 |
-| `tick_walls.py` | Orderbook wall analysis, large threshold | L3, L4 |
-| `orderbook_poller.py` | Live orderbook polling loop | L3 live |
-| `orderbook_ws.py` | WebSocket orderbook stream | L3 live |
-| `running_trade_poller.py` | Live tape / running trades | L3 live |
-| `realtime_listener.py` | Waterseven-style poll — running trade patterns + orderbook deltas, writes to `runtime/monitoring/realtime/` | L3 live |
-| `tradeplan.py` | Trade plan generator | L4 |
-| `screener.py` | Full screener pipeline | L2 bulk scan |
-| `eval_pipeline.py` | Watchlist evaluation | L2 |
-| `narrative.py` | Narrative generation helper | L1, L2 |
-| `macro.py` | Macro context helper | L1 |
-| `journal.py` | Trade journal read/write | L4, journal review |
-| `airtable_client.py` | Airtable read/write for trader tables | Any layer |
-| `watchlist_4group_scan.py` | 4-group universe scan | L2 universe |
-| `think.py` | Reasoning helper | Any |
-
-### Runtime scripts (scheduled/automated jobs)
-| Script | Job |
-|--------|-----|
-| `runtime_layer1_context.py` | Automated L1 context collection |
-| `runtime_layer2_screening.py` | Automated L2 screening pipeline |
-| `runtime_monitoring.py` | Periodic monitoring loop |
-| `runtime_summary_30m.py` | 30-min market summary |
-| `runtime_eod_publish.py` | End-of-day Airtable publish |
-
-### Connectors / MCP
-| Tool | What it gives |
-|------|--------------|
-| Airtable MCP | Read/write Lazytrade base (Insights + Superlist) |
-| WebSearch / WebFetch | Global market news, macro data |
-| Threads scraper (`tools/general/playwright/threads-scraper.js`) | Social sentiment, operator hints |
+For the full script index, connectors, and manuals → `tools/CLAUDE.md`
 
 ---
 
@@ -221,6 +166,5 @@ Load only what the current layer or task needs. Unload after use.
 - Near distribution zone
 
 **Never:**
-- Chase a stock already +5% on the day without a pullback plan
 - Enter based on narrative alone without structure
 - Ignore SID increase as "fine because price is going up"

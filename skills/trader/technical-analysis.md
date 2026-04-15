@@ -17,10 +17,10 @@ Read price, volume, structure, momentum, and technical positioning to decide whe
 ## Tool Resolution
 
 Primary tools:
-- `~/.claude/tools/trader/market_structure.py`
-- `~/.claude/tools/trader/indicators.py`
-- `~/.claude/tools/trader/wyckoff.py`
-- `~/.claude/tools/trader/screener.py`
+- `~/workspace/tools/trader/market_structure.py`
+- `~/workspace/tools/trader/indicators.py`
+- `~/workspace/tools/trader/wyckoff.py`
+- `~/workspace/tools/trader/screener.py`
 
 ## Rule
 

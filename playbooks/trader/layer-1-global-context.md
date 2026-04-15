@@ -27,7 +27,7 @@ Build the top-down market map before touching any stock.
 | Tool | How |
 |------|-----|
 | RAG v3 | `api.rag_search(query)` — telegram + news insight from backend |
-| Threads | `tools/general/playwright/threads-scraper.js` — uses Firefox profile at `~/.claude/tools/general/playwright/.firefox-profile-threads`. **First run:** copy logged-in profile from `~/.mozilla/firefox/6btoqrgn.default-release/` |
+| Threads | `tools/general/playwright/threads-scraper.js` — uses Firefox profile at `~/workspace/tools/general/playwright/.firefox-profile-threads`. **First run:** copy logged-in profile from `~/.mozilla/firefox/6btoqrgn.default-release/` |
 | Web browse | Claude native WebFetch/WebSearch for global market news |
 | Stockbit proxies | `tools/trader/api.py` → `get_market_context()` |
 | Runtime script | `tools/trader/runtime_layer1_context.py` |
@@ -53,12 +53,17 @@ Send once per session after L1 output is complete. Skip if already sent for toda
 
 **Send via Bash:**
 ```bash
-curl -s -X POST "https://api.telegram.org/bot8781123769:AAHceKJY0FepJIqBCnHqd9DP3_BHro01Cgc/sendMessage" \
-  -d "chat_id=1139649438" \
-  --data-urlencode "text=L1 $(date +%Y-%m-%d) | Regime: {risk-on/cautious/risk-off} | Posture: {N}/5
-Sectors: {active themes, comma-separated}
-Key risk: {one sentence if any, else 'none'}"
+python3 tools/trader/telegram_client.py layer1 \
+  --date "$(TZ='Asia/Jakarta' date +%Y-%m-%d)" \
+  --regime "{risk-on/cautious/risk-off}" \
+  --posture "{N}/5" \
+  --sectors "{active themes, comma-separated}" \
+  --key-risk "{one sentence if any, else 'none'}"
 ```
+
+**Format:** emoji header + bold title + short takeaway + structured `<pre>` block.
+
+**Required env:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
 **Anti-spam:** Do not send more than once per L1 session. Do not re-send for L3/L4 re-runs.
 

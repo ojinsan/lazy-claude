@@ -4,12 +4,12 @@
 Open Slack in the logged-in Firefox profile and read channels, threads, DMs, and search results.
 
 ## Tool Path
-`~/.claude/tools/general/browser/slack_reader.py`
+`~/workspace/tools/general/browser/slack_reader.py`
 
 ## Usage
 ```bash
-python3 ~/.claude/tools/general/browser/slack_reader.py channels
-python3 ~/.claude/tools/general/browser/slack_reader.py search --query "launch"
+python3 ~/workspace/tools/general/browser/slack_reader.py channels
+python3 ~/workspace/tools/general/browser/slack_reader.py search --query "launch"
 ```
 
 ## When to use

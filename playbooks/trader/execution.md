@@ -36,11 +36,11 @@ For each flagged hold from Step 1, apply exit rules from `skills/trader/executio
 
 If exit triggered:
 1. Calculate sell shares (partial or full per exit rules)
-2. Telegram: "PLACING SELL: {TICKER} {shares}@{price} — reason: {thesis break / target hit / SID dist}"
+2. Send Telegram via `python3 tools/trader/telegram_client.py order-placing --side SELL --ticker "{TICKER}" --shares "{shares}" --price "{price}" --reason "{thesis break / target hit / SID dist}"`
 3. `api.place_sell_order(symbol, price, shares)`
 4. Log to `runtime/orders/YYYY-MM-DD.jsonl`
 5. Update Airtable `Superlist` Status → `Sold` (full exit) or update qty (partial)
-6. Telegram confirmation with order_id
+6. Send Telegram confirmation via `python3 tools/trader/telegram_client.py order-confirmed --order-id "{order_id}" --side SELL --ticker "{TICKER}" --shares "{shares}" --price "{price}"`
 
 ---
 
@@ -52,11 +52,11 @@ For each ticker in today's L4 plan (`runtime/tradeplans/YYYY-MM-DD.md`) with lev
 2. Check cash: `api.get_cash_info()` → `trade_limit`
 3. Apply all entry rules from `skills/trader/execution.md`
 4. If all pass → calculate shares using sizing formula
-5. Telegram: "PLACING BUY: {TICKER} {shares}@{price} | SL {stop} | Risk {pct}%"
+5. Send Telegram via `python3 tools/trader/telegram_client.py order-placing --side BUY --ticker "{TICKER}" --shares "{shares}" --price "{price}" --stop "{stop}" --risk "{pct}%" --reason "{entry rationale}"`
 6. `api.place_buy_order(symbol, price, shares)`
 7. Log to `runtime/orders/YYYY-MM-DD.jsonl`
 8. Update Airtable `Superlist` Status → `Hold`, add entry fields
-9. Telegram confirmation with order_id
+9. Send Telegram confirmation via `python3 tools/trader/telegram_client.py order-confirmed --order-id "{order_id}" --side BUY --ticker "{TICKER}" --shares "{shares}" --price "{price}"`
 
 ---
 
@@ -67,12 +67,16 @@ Append to `runtime/orders/YYYY-MM-DD.jsonl`:
 {"ts": "...", "action": "BUY|SELL", "ticker": "...", "shares": 0, "price": 0, "order_id": "...", "reason": "..."}
 ```
 
-Send Telegram summary:
+Send Telegram summary via:
+```bash
+python3 tools/trader/telegram_client.py execution-summary \
+  --timestamp "{date} {time} WIB" \
+  --exits "{list or 'none'}" \
+  --entries "{list or 'none'}" \
+  --holds "{n}" \
+  --cash "{remaining}"
 ```
-EXECUTION SUMMARY {date} {time}
-Exits: {list or 'none'}
-Entries: {list or 'none'}
-Portfolio: {n} holds | Cash: Rp{remaining}
-```
+
+Format: emoji header + bold title + short takeaway + structured `<pre>` block.
 
 Do NOT post to Airtable beyond Superlist updates — scripts handle Insights.

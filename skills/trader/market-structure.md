@@ -22,13 +22,9 @@ Describe:
 - the risk if the level fails
 
 Structure matters more than storytelling.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/market_structure.py` — support/resistance, trend, BOS/CHoCH, invalidation
+- `~/workspace/tools/trader/indicators.py` — RSI, EMA, ATR for structural confirmation
+- `~/workspace/tools/trader/api.py` — OHLCV price data
 

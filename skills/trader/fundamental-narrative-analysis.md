@@ -15,11 +15,11 @@ Turn raw business, thematic, macro, and catalyst information into a usable narra
 ## Tool Resolution
 
 Primary tools:
-- `~/.claude/tools/trader/narrative.py`
-- `~/.claude/tools/trader/macro.py`
-- `~/.claude/tools/trader/api.py`
-- `~/.claude/tools/trader/journal.py`
-- `~/.claude/tools/trader/airtable_client.py`
+- `~/workspace/tools/trader/narrative.py`
+- `~/workspace/tools/trader/macro.py`
+- `~/workspace/tools/trader/api.py`
+- `~/workspace/tools/trader/journal.py`
+- `~/workspace/tools/trader/airtable_client.py`
 
 ## Rule
 

@@ -85,3 +85,18 @@ Env vars: `BACKEND_URL`, `BACKEND_TOKEN`, `STOCKBIT_TOKEN` (fallback)
 - `rag_search(question, ticker)` — RAG query for stock context
 - `get_market_context()` — market regime context
 - `get_watchlist()` — backend watchlist (strategy state)
+
+## Screener Wrapper (`stockbit_screener.py`)
+
+Higher-level wrapper around `api.py` screener functions with pre-built filters and universe shortcuts.
+
+```python
+from stockbit_screener import run_screen, run_template, COMMON_FILTERS, UNIVERSE
+
+results = run_screen(filters=COMMON_FILTERS["undervalued"], universe=UNIVERSE["lq45"])
+results = run_template(template_id=12345)
+```
+
+**COMMON_FILTERS**: `volume_breakout`, `undervalued`, `growth`, `low_pb_roe`
+**UNIVERSE shortcuts**: `all` (IHSG), `lq45`, `idx30`, `idx80`, `idxsmc`
+**search_metrics(keyword)** — find fitem_ids by name for building custom filters

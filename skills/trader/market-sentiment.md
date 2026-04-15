@@ -29,13 +29,9 @@ State:
 - what could invalidate it
 
 Do not oversell weak evidence.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/api.py` — index OHLCV, foreign flow, market stats
+- `~/workspace/tools/trader/narrative.py` — sentiment narrative generation
+- `~/workspace/tools/general/browser/web_browse.py` — news tone and catalyst scanning
 

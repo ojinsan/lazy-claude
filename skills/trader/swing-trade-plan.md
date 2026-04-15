@@ -16,10 +16,10 @@ Create a basic swing plan using price, volume, structure, and narrative alignmen
 ## Tool Resolution
 
 Primary tools:
-- `~/.claude/tools/trader/tradeplan.py`
-- `~/.claude/tools/trader/market_structure.py`
-- `~/.claude/tools/trader/indicators.py`
-- `~/.claude/tools/trader/api.py`
+- `~/workspace/tools/trader/tradeplan.py`
+- `~/workspace/tools/trader/market_structure.py`
+- `~/workspace/tools/trader/indicators.py`
+- `~/workspace/tools/trader/api.py`
 
 ## Rule
 

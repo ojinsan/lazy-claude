@@ -15,13 +15,8 @@ Turn rough material into a clean, readable document.
 ## Rule
 
 If the reader cannot scan it quickly, the structure is still wrong.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/general/scripts/google_workspace.py` — create/append to Google Docs for structured output
+- No scripts required for cognitive structuring — Claude-native analysis
 

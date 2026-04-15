@@ -22,11 +22,11 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import screener
-from skills import api
-from skills.broker_profile import analyze_players
-from skills.psychology import analyze_psychology
-from skills.sid_tracker import get_sid_trend, check_sid
-from skills.wyckoff import analyze_wyckoff
+from _lib import api
+from _lib.broker_profile import analyze_players
+from _lib.psychology import analyze_psychology
+from _lib.sid_tracker import get_sid_trend, check_sid
+from _lib.wyckoff import analyze_wyckoff
 
 WIB = ZoneInfo("Asia/Jakarta")
 DATA_DIR = Path("/home/lazywork/lazyboy/trade/data/eval")

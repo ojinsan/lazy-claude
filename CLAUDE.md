@@ -12,47 +12,33 @@
 - Do NOT bulk-read docs/ — grep or glob first, then read specific files.
 - Keep context narrow: one task, one area at a time.
 
-## Architecture (4 Layers)
+## Architecture (3 Layers)
 
 ```
-plugins/     → Claude Code extensions: hooks, MCP registry, slash commands
-connectors/  → External service clients: one per service, no business logic
-tools/       → Business logic scripts: import from connectors, called by playbooks/skills
+tools/       → Service connectors + business logic scripts
 skills/      → Role playbooks: context + rules for how to think per role
+playbooks/   → Workflow guides: step-by-step context for active tasks
 ```
 
-Dependency direction: `skills → tools → connectors → external services`
+Dependency direction: `playbooks/skills → tools → external services`
+Within tools/: connectors (thin service clients) are imported by business logic scripts.
 
-**MCP server** (`tools/mcp-server/`) is a separate self-hosted SSE server running on this machine,
-accessible by other Claude instances (e.g. MacBook Air) over Tailscale as native MCP tools.
-It is NOT part of the 4-layer stack above — it exposes workspace tools directly to remote Claudes.
+**MCP servers + connectors + hooks**: see `tools/CLAUDE.md`
 
 ## Directory Map
 | Dir          | Purpose                                                     |
 |--------------|-------------------------------------------------------------|
-| plugins/     | Hooks, MCP registry, command docs — see plugins/CLAUDE.md   |
-| connectors/  | Service clients (stockbit, airtable, notion, google, …)     |
-| tools/       | Business logic scripts (trader/, general/, other/)          |
+| tools/       | Connectors + business logic scripts (trader/, general/)     |
 | skills/      | Role playbooks (trader/, personal-assistant/, general/, …)  |
 | playbooks/   | Workflow guides for Claude (trader/, personal-assistant/, adhoc/, …) |
-| schedule/    | Cron/trigger definitions                                    |
 | hooks/       | Hook scripts executed by settings.json                      |
-| code/        | Active code projects                                        |
-| docs/        | Reference documentation                                     |
 
 ## code/ Rules
 - Each project lives in its own subdirectory with its own CLAUDE.md.
 - Do not read across project boundaries unless explicitly asked.
 - Check for existing venv/requirements before installing dependencies.
 
-## schedule/ Rules
-- Cron definitions reference scripts in tools/ or playbooks/ commands.
-- Format: one .md file per scheduled task.
-- Use `claude schedule` skill to register remote triggers.
-
 ## Importing Context
 - For trading tasks: read playbooks/trader/CLAUDE.md FIRST (mission, schedule, 4-layer structure, data pipeline), then load skills/trader/CLAUDE.md (philosophy, SID rules, broker rules, skills+tools index). Load individual layer skills only when that layer is active.
 - For personal assistant tasks: see skills/personal-assistant/CLAUDE.md
-- For tool usage and file index: see tools/CLAUDE.md
-- For connector details: see connectors/CLAUDE.md
-- For hooks/MCP/commands: see plugins/CLAUDE.md
+- For tool usage, connectors, and file index: see tools/CLAUDE.md

@@ -3,7 +3,7 @@
 Use Gmail for search, triage, reading, and drafting.
 
 ## Tools
-- `~/.claude/tools/general/scripts/google_workspace.py gmail ...`
+- `~/workspace/tools/general/scripts/google_workspace.py gmail ...`
 
 ## Use This When
 - Boss O wants inbox triage

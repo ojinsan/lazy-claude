@@ -14,13 +14,8 @@ Reduce large inputs into one clear view Boss O can act on.
 ## Rule
 
 Synthesis is not summary alone. It must change raw information into usable judgment.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- No scripts required — Claude-native synthesis
+- `~/workspace/tools/general/scripts/google_workspace.py` — if output needs to be written to Docs/Sheets
 

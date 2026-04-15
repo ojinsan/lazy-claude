@@ -58,7 +58,7 @@ Get `total_capital` from `api.get_cash_info()` → `trade_limit` field.
 1. Call `get_cash_info()` — verify sufficient balance
 2. Call `get_orders()` — verify no duplicate open order for ticker
 3. Calculate shares using sizing formula above
-4. Send Telegram notification: "PLACING ORDER: BUY/SELL {TICKER} {shares} shares @ Rp{price} | SL {stop} | Risk {pct}%"
+4. Send Telegram via `tools/trader/telegram_client.py order-placing` using the matching BUY/SELL template. Include ticker, shares, price, and any stop/risk/reason fields available.
 
 **Place order:**
 ```python
@@ -70,10 +70,10 @@ api.place_sell_order(symbol, price=exit_price, shares=shares)
 **After placing:**
 1. Log order_id to `runtime/orders/YYYY-MM-DD.jsonl`
 2. Update Airtable `Superlist` — set Status to `Hold` (buy) or `Sold` (sell)
-3. Send Telegram confirmation: "ORDER PLACED: {order_id} | {TICKER} {side} {shares}@{price}"
+3. Send Telegram via `tools/trader/telegram_client.py order-confirmed` with order_id, ticker, side, shares, and price
 
 **On error:**
-- Log error, send Telegram: "ORDER FAILED: {TICKER} — {error}"
+- Log error, send Telegram via `tools/trader/telegram_client.py order-failed --ticker "{TICKER}" --side "{BUY/SELL}" --error "{error}"`
 - Do NOT retry automatically
 
 ---
@@ -94,3 +94,4 @@ Run before any new entry:
 - Never chase: if price moved >2% above entry range → skip, log "missed entry"
 - Max 2 new entries per session (posture 2) | 3 entries (posture 3+)
 - Always send Telegram BEFORE placing, not only after
+- Telegram sender requires env vars `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`

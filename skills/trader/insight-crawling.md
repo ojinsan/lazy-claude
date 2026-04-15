@@ -6,8 +6,8 @@ description: Crawl and gather market, sector, theme, and narrative insight from 
 # Insight Crawling
 
 Use real browser-based crawling now:
-- `~/.claude/tools/general/browser/web_browse.py` for general rendered browsing
-- `~/.claude/tools/general/browser/instagram_browser.py` for Instagram-based inspection
+- `~/workspace/tools/general/browser/web_browse.py` for general rendered browsing
+- `~/workspace/tools/general/browser/instagram_browser.py` for Instagram-based inspection
 - existing Threads tools for Threads-specific crawling
 
 
@@ -39,15 +39,13 @@ Claude must still do:
 
 ## Related Skills
 
-- `~/.claude/skills/general/threads-scraping.md`
-- `~/.claude/skills/general/instagram-scraping.md`
+- `~/workspace/skills/general/threads-scraping.md`
+- `~/workspace/skills/general/instagram-scraping.md`
 
 ## Placeholder / Tool Paths
 
-- MCP placeholder: `~/.claude/tools/trader/scripts/insight-crawling-mcp-placeholder.py`
-- Threads scraper: `~/.claude/tools/general/playwright/threads-scraper.js`
-- Instagram placeholder: `~/.claude/tools/general/playwright/instagram-scraper-placeholder.js`
-- Layer 1 input collector: `~/.claude/tools/trader/runtime_layer1_context.py`
+- Threads scraper: `~/workspace/tools/general/playwright/threads-scraper.js`
+- Layer 1 input collector: `~/workspace/tools/trader/runtime_layer1_context.py`
 
 ## Notes
 

@@ -15,13 +15,8 @@ Keep every trader job grounded in risk discipline.
 ## Escalation
 
 If Boss O has stored risk rules in `mem0`, those rules override any generic template here.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/api.py` — `get_cash_info()`, `get_position_detail()` for live exposure checks
+- `~/workspace/tools/trader/airtable_client.py` — read Superlist for current holds and risk exposure
 

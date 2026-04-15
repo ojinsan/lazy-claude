@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from skills.api import compute_indicators_from_price_data, get_indicators  # noqa: E402
+from _lib.api import compute_indicators_from_price_data, get_indicators  # noqa: E402
 
 
 def main() -> int:

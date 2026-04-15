@@ -55,12 +55,17 @@ Send once after shortlist is finalized. Skip if shortlist is empty or all names 
 
 **Send via Bash:**
 ```bash
-curl -s -X POST "https://api.telegram.org/bot8781123769:AAHceKJY0FepJIqBCnHqd9DP3_BHro01Cgc/sendMessage" \
-  -d "chat_id=1139649438" \
-  --data-urlencode "text=L2 $(date +%Y-%m-%d) | Shortlist: {TICK1, TICK2, ...}
-Top pick: {TICKER} — {one-line reason}
-Watch: {any names borderline or to watch}"
+python3 tools/trader/telegram_client.py layer2 \
+  --date "$(TZ='Asia/Jakarta' date +%Y-%m-%d)" \
+  --shortlist "{TICK1, TICK2, ...}" \
+  --top-pick "{TICKER}" \
+  --top-reason "{one-line reason}" \
+  --watch "{any names borderline or to watch}"
 ```
+
+**Format:** emoji header + bold title + short takeaway + structured `<pre>` block.
+
+**Required env:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
 **Anti-spam:** One message per L2 run. Do not resend if L2 re-run produces no new names.
 

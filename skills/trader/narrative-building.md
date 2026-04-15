@@ -15,13 +15,9 @@ Turn scattered signals into one coherent explanation.
 ## Rule
 
 The narrative must stay accountable to data. If the tape contradicts the story, fix the story.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/narrative.py` — narrative generation helper
+- `~/workspace/tools/trader/api.py` — price, broker, SID data to support the story
+- `~/workspace/tools/general/browser/web_browse.py` — catalyst and news context
 

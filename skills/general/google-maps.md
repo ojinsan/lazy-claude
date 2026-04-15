@@ -4,12 +4,12 @@
 Search places, get directions, geocode addresses, and plan trips using Google Maps Platform.
 
 ## Tool Path
-`~/.claude/tools/general/scripts/google_maps.py`
+`~/workspace/tools/general/scripts/google_maps.py`
 
 ## Usage
 ```bash
-python3 ~/.claude/tools/general/scripts/google_maps.py search --query "coffee near Sudirman"
-python3 ~/.claude/tools/general/scripts/google_maps.py directions --origin "Jakarta" --destination "Bandung"
+python3 ~/workspace/tools/general/scripts/google_maps.py search --query "coffee near Sudirman"
+python3 ~/workspace/tools/general/scripts/google_maps.py directions --origin "Jakarta" --destination "Bandung"
 ```
 
 ## When to use

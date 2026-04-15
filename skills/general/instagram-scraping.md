@@ -11,7 +11,7 @@ Use Firefox-session-aware browser automation to collect public or logged-in Inst
 
 ## Current Status
 
-This is a placeholder skill. The final Playwright workflow is not implemented yet.
+Basic scraper available. Firefox profile at `~/workspace/tools/general/playwright/.firefox-profile-instagram/` must be pre-seeded with a logged-in session (copy from `~/.mozilla/firefox/<profile>/` after manual login).
 
 ## Intended Use
 
@@ -25,6 +25,7 @@ This is a placeholder skill. The final Playwright workflow is not implemented ye
 - do not expose cookies, credentials, or sensitive session data
 - collect only what is needed for local analysis
 
-## Placeholder Tool Path
+## Tools
 
-- `~/.claude/tools/general/playwright/instagram-scraper-placeholder.js`
+- `~/workspace/tools/general/playwright/instagram-scraper.js` — Firefox-session-aware Instagram scraper
+- `~/workspace/tools/general/browser/instagram_browser.py` — Python Playwright Instagram automation

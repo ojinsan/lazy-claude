@@ -14,13 +14,8 @@ Find the smallest set of facts needed to support Boss O's decision.
 ## Rule
 
 More sources are not better if they do not sharpen the answer.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/general/browser/web_browse.py` — rendered page browsing and content extraction
+- `~/workspace/tools/general/scripts/google_workspace.py` — search Drive, read Docs/Sheets for internal sources
 

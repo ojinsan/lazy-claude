@@ -29,13 +29,11 @@ Track incoming alerts and live changes without letting noise dominate the workfl
 ## Rule
 
 Monitoring exists to surface changes, not to replace judgment.
-## Tool Resolution
+## Tools
 
-When a skill needs code or helper scripts, resolve them from `~/.claude/tools` using the matching role folder first, then `other` if needed.
-
-Examples:
-- trader skills -> `~/.claude/tools/trader`
-- personal-assistant skills -> `~/.claude/tools/personal-assistance`
-- content-creator skills -> `~/.claude/tools/content-creator`
-- shared helpers -> `~/.claude/tools/other`
+- `~/workspace/tools/trader/realtime_listener.py` — running trade patterns + orderbook deltas
+- `~/workspace/tools/trader/runtime_monitoring.py` — periodic L3 monitoring loop (cron-driven)
+- `~/workspace/tools/trader/orderbook_poller.py` — live orderbook polling loop
+- `~/workspace/tools/trader/running_trade_poller.py` — live tape / running trades
+- `~/workspace/tools/trader/api.py` — price, orderbook, position data
 

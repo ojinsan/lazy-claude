@@ -1,0 +1,16 @@
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://localhost:8317",
+    "ANTHROPIC_AUTH_TOKEN": "your-api-key-1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(gsettings get *)",
+      "Bash(gsettings list-keys *)",
+      "Bash(gsettings set *)",
+      "Skill(keybindings-help)",
+      "WebSearch"
+    ]
+  },
+  "model": "gpt-5.4"
+}

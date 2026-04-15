@@ -69,14 +69,26 @@ Send one message per final trade plan. This is the most important notification l
 
 **Send via Bash (one message per ticker):**
 ```bash
-curl -s -X POST "https://api.telegram.org/bot8781123769:AAHceKJY0FepJIqBCnHqd9DP3_BHro01Cgc/sendMessage" \
-  -d "chat_id=1139649438" \
-  --data-urlencode "text=L4 TRADE PLAN $(date +%Y-%m-%d) | {TICKER}
-Thesis: {one sentence}
-Entry: Rp {X,XXX}–{X,XXX} | SL: Rp {X,XXX} ({X}%) | T1: Rp {X,XXX} ({X}%)
-Size: Rp {XX,XXX,XXX} ({X}% capital) | Risk: {X}%
-Trigger: {what to see before buying}"
+python3 tools/trader/telegram_client.py layer4 \
+  --date "$(TZ='Asia/Jakarta' date +%Y-%m-%d)" \
+  --ticker "{TICKER}" \
+  --thesis "{one sentence}" \
+  --entry-low "{X,XXX}" \
+  --entry-high "{X,XXX}" \
+  --stop "{X,XXX}" \
+  --stop-pct "{X}%" \
+  --target1 "{X,XXX}" \
+  --target1-pct "{X}%" \
+  --size-amount "{XX,XXX,XXX}" \
+  --size-pct "{X}%" \
+  --risk "{X}%" \
+  --trigger "{what to see before buying}"
+# add --urgent for immediate-action plans
 ```
+
+**Format:** emoji header + bold title + short takeaway + structured `<pre>` block.
+
+**Required env:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 
 **Anti-spam:** One message per trade plan. Do not resend on plan edits unless entry/SL changes significantly (>1 tick).
 

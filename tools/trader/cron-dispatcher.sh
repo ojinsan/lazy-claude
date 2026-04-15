@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # cron-dispatcher.sh — runs trader command files on a WIB schedule.
-# Claude uses the openclaude context/settings while writing outputs into workspace.
+# Claude runs in workspace using .claude/settings.openclaude.json.
 set -euo pipefail
 
 WORKSPACE="/home/lazywork/workspace"
-CLAUDE_CONTEXT="/home/lazywork/openclaude"
-CLAUDE_SETTINGS="$CLAUDE_CONTEXT/.claude/settings.local.json"
+CLAUDE_SETTINGS="$WORKSPACE/.claude/settings.openclaude.json"
 COMMAND_DIR="$WORKSPACE/.claude/commands/trade"
 CLAUDE="/home/lazywork/.local/bin/claude"
 LOG_DIR="$WORKSPACE/runtime/cron"
@@ -19,14 +18,12 @@ log() { echo "[$(TZ='Asia/Jakarta' date '+%Y-%m-%d %H:%M')] $*" >> "$LOG"; }
 
 run_claude_job() {
     local command_file="$1"
-    local prompt="Non-interactive cron run. Use /home/lazywork/openclaude as the Claude context root and settings source. Use /home/lazywork/workspace for all reads, writes, and outputs. Read the instructions in $command_file and execute them. Run to completion and exit. Do not wait for user input."
+    local prompt="Non-interactive cron run. Read the instructions in $command_file and execute them. Run to completion and exit. Do not wait for user input."
 
     cd "$WORKSPACE"
     "$CLAUDE" \
         --dangerously-skip-permissions \
         --bare \
-        --setting-sources user \
-        --add-dir "$CLAUDE_CONTEXT" \
         --settings "$CLAUDE_SETTINGS" \
         -p "$prompt" \
         >> "$LOG" 2>&1

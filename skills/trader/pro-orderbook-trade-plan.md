@@ -16,11 +16,11 @@ Upgrade a standard trade plan with orderbook and running-trade logic for executi
 ## Tool Resolution
 
 Primary tools:
-- `~/.claude/tools/trader/tradeplan.py`
-- `~/.claude/tools/trader/orderbook_poller.py`
-- `~/.claude/tools/trader/orderbook_ws.py`
-- `~/.claude/tools/trader/running_trade_poller.py`
-- `~/.claude/tools/trader/api.py`
+- `~/workspace/tools/trader/tradeplan.py`
+- `~/workspace/tools/trader/orderbook_poller.py`
+- `~/workspace/tools/trader/orderbook_ws.py`
+- `~/workspace/tools/trader/running_trade_poller.py`
+- `~/workspace/tools/trader/api.py`
 
 ## Rule
 
