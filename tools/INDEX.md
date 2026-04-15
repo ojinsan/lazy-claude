@@ -14,7 +14,6 @@
 | `psychology.py`           | Behavior at key price levels — WHO is doing WHAT at S/R      | L2, L3 |
 | `tick_walls.py`           | Orderbook wall analysis                                      | L3, L4 |
 | `screener.py`             | Full screener pipeline (calls all analysis modules)          | L2    |
-| `eval_pipeline.py`        | Full eval pipeline: L1→screen→health→shortlist→top picks     | L2    |
 | `tradeplan.py`            | Trade plan generator                                         | L4    |
 | `narrative.py`            | Narrative generation helper                                  | L1, L2 |
 | `macro.py`                | Macro context — regime, sector rotation                      | L1    |
@@ -55,6 +54,11 @@
 ## trader/ — Legacy
 
 `think.py` — older pipeline using `remoratrader` (external). Not in current cron. May be stale.
+
+## trader/ — Archive
+
+Moved to `tools/trader/archive/` — preserved, not callable from active code:
+- `eval_pipeline.py.v1` — superseded by the `runtime_layer1_context.py` + `runtime_layer2_screening.py` split (Phase 4 audit, 2026-04-16).
 
 ## general/ — Structure
 
