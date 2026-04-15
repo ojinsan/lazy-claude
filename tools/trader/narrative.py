@@ -18,11 +18,11 @@ from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from . import api
-from .broker_profile import PlayerAnalysis
-from .psychology import PsychologyAnalysis
-from .sid_tracker import SIDAnalysis
-from .macro import MarketRegime, get_sector
+import api
+from broker_profile import PlayerAnalysis
+from psychology import PsychologyAnalysis
+from sid_tracker import SIDAnalysis
+from macro import MarketRegime, get_sector
 
 log = logging.getLogger(__name__)
 WIB = ZoneInfo("Asia/Jakarta")

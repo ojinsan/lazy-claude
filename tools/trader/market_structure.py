@@ -20,7 +20,7 @@ from typing import Optional
 from pathlib import Path
 import json
 
-from . import api
+import api
 
 log = logging.getLogger(__name__)
 

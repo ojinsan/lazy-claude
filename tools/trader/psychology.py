@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from . import api
+import api
 
 log = logging.getLogger(__name__)
 WIB = ZoneInfo("Asia/Jakarta")
