@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # cron-dispatcher.sh — runs trader command files on a WIB schedule.
-# Claude runs in workspace using .claude/settings.openclaude.json.
+# Monitoring window uses --settings openclaude.json (frequent 30-min cycles).
+# All other windows run with default Claude settings (one-shot per day).
 set -euo pipefail
 
 WORKSPACE="/home/lazywork/workspace"
-CLAUDE_SETTINGS="$WORKSPACE/.claude/settings.openclaude.json"
+MONITORING_SETTINGS="$WORKSPACE/.claude/settings.openclaude.json"
 COMMAND_DIR="$WORKSPACE/.claude/commands/trade"
 CLAUDE="/home/lazywork/.local/bin/claude"
 LOG_DIR="$WORKSPACE/runtime/cron"
@@ -16,6 +17,7 @@ WIB_MIN=$(TZ='Asia/Jakarta' date +%-M)
 
 log() { echo "[$(TZ='Asia/Jakarta' date '+%Y-%m-%d %H:%M')] $*" >> "$LOG"; }
 
+# Default: no special settings (one-shot daily jobs)
 run_claude_job() {
     local command_file="$1"
     local prompt="Non-interactive cron run. Read the instructions in $command_file and execute them. Run to completion and exit. Do not wait for user input."
@@ -24,7 +26,20 @@ run_claude_job() {
     "$CLAUDE" \
         --dangerously-skip-permissions \
         --bare \
-        --settings "$CLAUDE_SETTINGS" \
+        -p "$prompt" \
+        >> "$LOG" 2>&1
+}
+
+# Monitoring-only: uses special settings for frequent 30-min intraday cycles
+run_monitoring_job() {
+    local command_file="$1"
+    local prompt="Non-interactive cron run. Read the instructions in $command_file and execute them. Run to completion and exit. Do not wait for user input."
+
+    cd "$WORKSPACE"
+    "$CLAUDE" \
+        --dangerously-skip-permissions \
+        --bare \
+        --settings "$MONITORING_SETTINGS" \
         -p "$prompt" \
         >> "$LOG" 2>&1
 }
@@ -58,11 +73,11 @@ elif [[ $WIB_HOUR -eq 8 && $WIB_MIN -eq 30 ]]; then
 # ── Monitoring window: 09:00–15:00 WIB (inclusive) ─────────────────────────
 elif [[ $WIB_HOUR -ge 9 ]] && [[ $WIB_HOUR -lt 15 || ($WIB_HOUR -eq 15 && $WIB_MIN -eq 0) ]]; then
     log "→ MONITORING (L3+L4) start"
-    run_claude_job "$COMMAND_DIR/monitoring.md"
+    run_monitoring_job "$COMMAND_DIR/monitoring.md"
     log "← MONITORING done"
 
     log "→ EXECUTE (intraday signals) start"
-    run_claude_job "$COMMAND_DIR/execute.md"
+    run_monitoring_job "$COMMAND_DIR/execute.md"
     log "← EXECUTE done"
 
 # ── Off-hours ───────────────────────────────────────────────────────────────

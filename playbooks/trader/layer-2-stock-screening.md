@@ -40,36 +40,47 @@ If hold still passes → confirm thesis intact, carry forward.
 
 ## Advance Decision (Run After Shortlist)
 
-Three gates must pass before advancing. Each gate is a real question, not a formality. If any gate fails → document why, loop back to screening, do not force advancement.
+Three questions before advancing. Purpose: size correctly and fit portfolio, not block trades. Only hard-stop at extremes (DD > 10%, posture = risk-off).
 
 ### Gate 1 — Ada yang menarik? (Is anything genuinely compelling?)
-Not "technically fine" — actually compelling. Ask:
-- Is the setup early enough to have edge, or has the move already started?
-- Is the narrative fresh, or is this a recycled idea from last week?
-- Would you explain this trade confidently to another fund manager?
+Quick gut check:
+- Has the move already started? (late = smaller size or skip)
+- Is this the same recycled idea from last week with no new catalyst?
 
-TIDAK → stop. Document: "Nothing compelling today — [reason]." Loop back.
+TIDAK → document "nothing fresh today", stop screening. Do not force a name.
+ADA → continue.
 
-### Gate 2 — Bisa substitute atau add? (Portfolio fit check)
-Pull current L0 state (`vault/data/portfolio-state.json`):
-- Is the sector already at or above max exposure? → Block new entry in same sector
-- Is the ticker already held? → Is there room to add (conviction risen, price dipped into add-zone)?
-- Is there a weaker hold that this new name clearly substitutes? → Flag the weaker hold for reduction
+### Gate 2 — Bisa substitute atau add? (Portfolio fit)
+Pull L0 state (`vault/data/portfolio-state.json`):
 
-TIDAK → loop back, find a name with portfolio room, or note no room today.
+| Situation | Action |
+|-----------|--------|
+| Sector already at 50%+ exposure | Reduce planned size by 50%; or substitute a weaker hold instead of adding |
+| Ticker already held, conviction unchanged | Skip — don't double-add without new catalyst |
+| Ticker already held, price dipped into add-zone + conviction higher | Add allowed — flag in plan |
+| Weaker hold exists in same sector | Flag it for reduction; this name can substitute |
+| Portfolio utilization > 80% | Reduce planned size to fit within cap |
 
-### Gate 3 — OK untuk lanjut? (Final go/no-go)
-- L0 DD < 5% from HWM? (if not → reduce planned size or skip)
-- L1 aggression posture ≥ 2?
-- Portfolio has unused capacity (utilization < 80%)?
+No hard block — fit the name into the portfolio with the right size.
 
-TIDAK → loop back or stop entirely if conditions don't support new entries.
+### Gate 3 — OK untuk lanjut? (Risk state check)
+
+| L0 state | Adjustment |
+|----------|------------|
+| DD < 5% | Normal size |
+| DD 5–10% | Reduce planned size 25–50% |
+| DD > 10% | No new entries — focus on managing existing holds only |
+| Posture ≤ 1 (risk-off) | No new entries |
+| Posture = 2 | Reduced size only, high-conviction names only |
+| Posture ≥ 3 | Normal |
+
+Document the adjustment — do not silently skip. If DD > 10% or posture = 1: stop here and write the reason.
 
 ---
 
-**If all 3 gates pass → advance.** Two paths:
-- Confidence HIGH (all 5/5 criteria + clear entry zone) → go to **L4 Full Plan**
-- Confidence MED (4/5 criteria, entry zone developing) → go to **L3 Monitoring** first
+**Advance with adjusted size.** Two paths:
+- Confidence HIGH (5/5 criteria + clear entry zone) → **L4 Full Plan**
+- Confidence MED (4/5 criteria, entry zone developing) → **L3 Monitoring** first
 
 ## Execution Trigger
 
