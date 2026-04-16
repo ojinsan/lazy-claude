@@ -38,6 +38,39 @@ If hold still passes → confirm thesis intact, carry forward.
 | SID tracker | `skills/trader/sid-tracker.md` |
 | Psychology at levels | `tools/trader/psychology.py` — call when price near key support/resistance to judge who is absorbing vs fleeing |
 
+## Advance Decision (Run After Shortlist)
+
+Three gates must pass before advancing. Each gate is a real question, not a formality. If any gate fails → document why, loop back to screening, do not force advancement.
+
+### Gate 1 — Ada yang menarik? (Is anything genuinely compelling?)
+Not "technically fine" — actually compelling. Ask:
+- Is the setup early enough to have edge, or has the move already started?
+- Is the narrative fresh, or is this a recycled idea from last week?
+- Would you explain this trade confidently to another fund manager?
+
+TIDAK → stop. Document: "Nothing compelling today — [reason]." Loop back.
+
+### Gate 2 — Bisa substitute atau add? (Portfolio fit check)
+Pull current L0 state (`vault/data/portfolio-state.json`):
+- Is the sector already at or above max exposure? → Block new entry in same sector
+- Is the ticker already held? → Is there room to add (conviction risen, price dipped into add-zone)?
+- Is there a weaker hold that this new name clearly substitutes? → Flag the weaker hold for reduction
+
+TIDAK → loop back, find a name with portfolio room, or note no room today.
+
+### Gate 3 — OK untuk lanjut? (Final go/no-go)
+- L0 DD < 5% from HWM? (if not → reduce planned size or skip)
+- L1 aggression posture ≥ 2?
+- Portfolio has unused capacity (utilization < 80%)?
+
+TIDAK → loop back or stop entirely if conditions don't support new entries.
+
+---
+
+**If all 3 gates pass → advance.** Two paths:
+- Confidence HIGH (all 5/5 criteria + clear entry zone) → go to **L4 Full Plan**
+- Confidence MED (4/5 criteria, entry zone developing) → go to **L3 Monitoring** first
+
 ## Execution Trigger
 
 L2 inline gate: 5/5 criteria + price in open entry window + DD < 5%. If met → invoke `skills/trader/execution.md` (`## Confidence Gate`). Otherwise → pass to L4.

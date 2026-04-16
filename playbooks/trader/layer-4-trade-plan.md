@@ -4,10 +4,36 @@ Connect all layers into a precise, actionable trade plan. Easy to follow, no amb
 
 ## Inputs
 
-- Layer 1: market regime, sector view, aggression posture
-- Layer 2: shortlisted tickers with reasons
-- Layer 3: tape signal, manipulation detection, Wyckoff phase
+- **L0**: portfolio equity, DD, utilization, sector exposure, concentration flags (`vault/data/portfolio-state.json`)
+- **L1**: market regime, sector view, aggression posture
+- **L2**: shortlisted tickers with gate-cleared reasons
+- **L3**: tape signal, manipulation detection, Wyckoff phase (if arrived from L3)
 - Airtable `Superlist` and `Insights`: existing notes and history
+
+L0 is a required input — not optional context. Position size, sector cap, and add/substitute decision all depend on it.
+
+## Mode — Full Plan vs Sizing-Only
+
+L4 runs in one of two modes depending on how you arrived here:
+
+### Mode A — Full Trade Plan
+**Arrives from**: L2 high-confidence path (all 3 gates passed, confidence HIGH).
+
+Build the complete plan below. Use L0 data to determine position size, check sector exposure cap, and confirm substitute/add decision made in Gate 2.
+
+### Mode B — Sizing-Only
+**Arrives from**: L3 "Signal BUY NOW" decision.
+
+Tape already defines entry price. Do not rebuild the full plan — that wastes a live window. Do only:
+1. Confirm entry price from tape (current ask / best offer absorbing)
+2. Set stop: last accumulation low or invalidation from existing thesis
+3. Calculate position size using L0 equity + sizing formula (see `execution.md`)
+4. Confirm portfolio room (sector cap, utilization) from L0 state
+5. Advance directly to L5 Execution
+
+Mode B output is a one-block summary, not the full format below.
+
+---
 
 ## Trade Plan Format (Per Ticker)
 

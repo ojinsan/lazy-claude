@@ -77,6 +77,22 @@ Per ticker:
 4. **Demotion**: remove from watchlist if thesis breaks
 5. **Daily-note append** — call `journal.append_daily_layer_section('3', summary)` only when triage produces a `medium`+ event (skip noise-only cycles)
 
+### Signal BUY NOW? — Path Decision
+
+At end of each monitoring cycle, ask one question per tracked name:
+
+**"Is the signal BUY NOW — not developing, not soon, but NOW?"**
+
+Criteria for YES:
+- `accumulation_setup` or `wick_shakeout` confirmed on current cycle (not trailing)
+- Price is AT the entry zone, not approaching it
+- Bid stack genuine (see `orderbook-reading.md`), absorption visible (see `whale-retail-analysis.md`)
+- L0 DD < 5%, portfolio has room (utilization < 80%)
+
+**If YES → L4 Sizing-only mode.** Tape already defines entry price. Do not rebuild a full plan — just size and execute. Carry the signal detail forward as the plan context.
+
+**If BELUM (not yet) → loop back.** Add a note to monitoring log with what is missing. Do not invent readiness.
+
 ## Telegram Notify
 
 Send `layer3` via `skills/trader/telegram-notify.md`.
