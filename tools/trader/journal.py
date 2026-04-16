@@ -10,7 +10,9 @@ Write, search, and learn from past trades and decisions.
 
 import json
 import logging
-from datetime import datetime
+import re
+from collections import defaultdict
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -230,3 +232,460 @@ def review_trades(days: int = 30) -> dict:
         "risk_reward": abs(avg_win / avg_loss) if avg_loss != 0 else 0,
         "open_positions": len(get_open_positions()),
     }
+
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+
+def _slugify(text: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return s[:50] or "note"
+
+
+def _fm_render(fields: dict) -> str:
+    """Render Obsidian YAML frontmatter block."""
+    lines = ["---"]
+    for k, v in fields.items():
+        if isinstance(v, list):
+            rendered = ", ".join(str(x) for x in v)
+            lines.append(f"{k}: [{rendered}]")
+        else:
+            lines.append(f"{k}: {v}")
+    lines.append("---")
+    return "\n".join(lines)
+
+
+def _fm_parse(md_text: str) -> tuple[dict, str]:
+    """Extract frontmatter dict + body. Returns ({}, md_text) if no frontmatter."""
+    if not md_text.startswith("---\n"):
+        return {}, md_text
+    end = md_text.find("\n---\n", 4)
+    if end < 0:
+        return {}, md_text
+    raw = md_text[4:end]
+    body = md_text[end + 5:]
+    fm: dict = {}
+    for line in raw.splitlines():
+        if ":" not in line:
+            continue
+        k, _, v = line.partition(":")
+        v = v.strip()
+        if v.startswith("[") and v.endswith("]"):
+            v = [x.strip() for x in v[1:-1].split(",") if x.strip()]
+        fm[k.strip()] = v
+    return fm, body
+
+
+# ─── A. Lesson v2 (dual-write: JSON + Obsidian MD) ────────────────────────────
+
+def log_lesson_v2(
+    lesson: str,
+    category: str,                 # entry_timing|exit_timing|thesis_quality|sizing|psychology|missed_trade|portfolio
+    tickers: Optional[list[str]] = None,
+    severity: str = "medium",      # low|medium|high
+    pattern_tag: Optional[str] = None,
+    related_thesis: Optional[str] = None,
+    date: Optional[str] = None,
+) -> dict:
+    """Log a lesson to both vault/data/lessons.json and vault/lessons/<date>-<slug>.md.
+
+    MD includes frontmatter (category, tickers, severity, pattern_tag, related_thesis)
+    and Obsidian-style inline tags for quick filtering.
+    """
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    LESSONS_DIR.mkdir(parents=True, exist_ok=True)
+
+    date = date or datetime.now(WIB).strftime("%Y-%m-%d")
+    tickers = tickers or []
+
+    lessons: list[dict] = []
+    if LESSONS_FILE.exists():
+        try:
+            lessons = json.loads(LESSONS_FILE.read_text())
+        except json.JSONDecodeError:
+            lessons = []
+
+    entry = {
+        "id": len(lessons) + 1,
+        "date": date,
+        "category": category,
+        "severity": severity,
+        "pattern_tag": pattern_tag,
+        "tickers": tickers,
+        "related_thesis": related_thesis,
+        "lesson": lesson,
+    }
+    lessons.append(entry)
+    LESSONS_FILE.write_text(json.dumps(lessons, indent=2, ensure_ascii=False))
+
+    slug = _slugify(pattern_tag or category)
+    md_path = LESSONS_DIR / f"{date}-{slug}-{entry['id']}.md"
+    fm = {
+        "id": entry["id"],
+        "date": date,
+        "category": category,
+        "severity": severity,
+        "pattern_tag": pattern_tag or "",
+        "tickers": tickers,
+        "related_thesis": related_thesis or "",
+    }
+    tag_line_parts = [f"#severity/{severity}", f"#category/{category}"]
+    if pattern_tag:
+        tag_line_parts.append(f"#pattern/{_slugify(pattern_tag)}")
+    tag_line_parts += [f"[[{t}]]" for t in tickers]
+    related_line = f"Related thesis: [[{related_thesis}]]" if related_thesis else ""
+    body = "\n\n".join([
+        f"# Lesson {entry['id']} — {pattern_tag or category}",
+        " ".join(tag_line_parts),
+        lesson,
+        related_line,
+    ]).strip()
+    md_path.write_text(_fm_render(fm) + "\n\n" + body + "\n")
+    log.info(f"Lesson v2 logged: [{category}/{severity}] {lesson[:60]}")
+    return entry
+
+
+# ─── B. Pattern Detection ─────────────────────────────────────────────────────
+
+def detect_recurring_mistakes(days: int = 30, min_count: int = 3) -> dict[str, dict]:
+    """Group lessons by pattern_tag over the last N days.
+
+    Returns {pattern_tag: {count, tickers, severity_avg, latest_date, lesson_ids}}.
+    Only patterns with count >= min_count are returned. Caller (L0 Step 6) alerts
+    Boss O via Telegram when anything comes back.
+    """
+    if not LESSONS_FILE.exists():
+        return {}
+    lessons = json.loads(LESSONS_FILE.read_text())
+    cutoff = (datetime.now(WIB) - timedelta(days=days)).strftime("%Y-%m-%d")
+    severity_score = {"low": 1, "medium": 2, "high": 3}
+
+    groups: dict[str, dict] = defaultdict(lambda: {"count": 0, "tickers": set(), "severity_scores": [], "latest_date": "", "lesson_ids": []})
+    for row in lessons:
+        tag = row.get("pattern_tag")
+        if not tag or row.get("date", "") < cutoff:
+            continue
+        g = groups[tag]
+        g["count"] += 1
+        for t in row.get("tickers", []):
+            g["tickers"].add(t)
+        g["severity_scores"].append(severity_score.get(row.get("severity", "medium"), 2))
+        if row["date"] > g["latest_date"]:
+            g["latest_date"] = row["date"]
+        g["lesson_ids"].append(row["id"])
+
+    result: dict[str, dict] = {}
+    for tag, g in groups.items():
+        if g["count"] < min_count:
+            continue
+        scores = g["severity_scores"]
+        result[tag] = {
+            "count": g["count"],
+            "tickers": sorted(g["tickers"]),
+            "severity_avg": round(sum(scores) / len(scores), 2),
+            "latest_date": g["latest_date"],
+            "lesson_ids": g["lesson_ids"],
+        }
+    return result
+
+
+# ─── C. Per-Trade Attribution ─────────────────────────────────────────────────
+
+def attribute_trade(trade_id: int) -> dict:
+    """Score which factors drove the outcome for a closed trade.
+
+    Heuristic: thesis_quality uses conviction vs pnl; entry/exit timing use pnl_pct
+    relative to risk bands; sizing uses position size vs capital. Scores are 0.0–1.0.
+    """
+    if not TRANSACTIONS_FILE.exists():
+        return {}
+    transactions = json.loads(TRANSACTIONS_FILE.read_text())
+    trade = next((t for t in transactions if t.get("id") == trade_id), None)
+    if not trade or trade.get("pnl") is None:
+        return {}
+
+    conviction = (trade.get("conviction") or "").lower()
+    pnl_pct = float(trade.get("pnl_pct") or 0)
+    was_win = pnl_pct > 0
+
+    conviction_weight = {"high": 0.9, "med": 0.6, "medium": 0.6, "low": 0.3}.get(conviction, 0.5)
+    thesis_quality = conviction_weight if was_win else 1 - conviction_weight
+    entry_timing = min(1.0, max(0.0, 0.5 + pnl_pct / 20))
+    exit_timing = 0.7 if was_win and pnl_pct >= 5 else (0.3 if not was_win and pnl_pct <= -3 else 0.5)
+    value = float(trade.get("value") or 0)
+    sizing = 0.7 if value > 0 else 0.5
+
+    scores = {
+        "thesis_quality": round(thesis_quality, 2),
+        "entry_timing": round(entry_timing, 2),
+        "exit_timing": round(exit_timing, 2),
+        "sizing": round(sizing, 2),
+    }
+    best = max(scores, key=scores.get)
+    worst = min(scores, key=scores.get)
+    return {
+        **scores,
+        "biggest_contributor": best,
+        "biggest_detractor": worst,
+    }
+
+
+# ─── D. Confidence Calibration ────────────────────────────────────────────────
+
+def confidence_calibration(days: int = 90) -> dict[str, dict]:
+    """Compare predicted conviction vs actual outcome bucket.
+
+    Returns {HIGH|MED|LOW: {trades, predicted_hit_rate, actual_win_rate, drift}}.
+    Drift > 0.2 either direction → caller flags in L0 review.
+    """
+    if not TRANSACTIONS_FILE.exists():
+        return {}
+    transactions = json.loads(TRANSACTIONS_FILE.read_text())
+    cutoff = (datetime.now(WIB) - timedelta(days=days)).strftime("%Y-%m-%d")
+    predicted = {"high": 0.7, "med": 0.55, "medium": 0.55, "low": 0.4}
+    buckets: dict[str, dict] = defaultdict(lambda: {"trades": 0, "wins": 0})
+    for t in transactions:
+        ts = (t.get("exit_timestamp") or t.get("timestamp") or "")[:10]
+        if ts < cutoff or t.get("pnl") is None:
+            continue
+        conv = (t.get("conviction") or "med").lower()
+        key = conv if conv in predicted else "med"
+        b = buckets[key]
+        b["trades"] += 1
+        if float(t["pnl"]) > 0:
+            b["wins"] += 1
+
+    result: dict[str, dict] = {}
+    for key, b in buckets.items():
+        if b["trades"] == 0:
+            continue
+        actual = b["wins"] / b["trades"]
+        pred = predicted.get(key, 0.5)
+        result[key.upper()] = {
+            "trades": b["trades"],
+            "predicted": round(pred, 2),
+            "actual_win_rate": round(actual, 2),
+            "drift": round(actual - pred, 2),
+        }
+    return result
+
+
+# ─── E. Weekly / Monthly Auto-Reviews ─────────────────────────────────────────
+
+def _summarize_period(start: str, end: str) -> dict:
+    if not TRANSACTIONS_FILE.exists():
+        return {"trades": 0}
+    transactions = json.loads(TRANSACTIONS_FILE.read_text())
+    closed = [t for t in transactions if t.get("pnl") is not None and start <= (t.get("exit_timestamp") or "")[:10] <= end]
+    if not closed:
+        return {"trades": 0, "start": start, "end": end}
+    wins = [t for t in closed if t["pnl"] > 0]
+    losses = [t for t in closed if t["pnl"] <= 0]
+    r_multiples = [float(t.get("pnl_pct") or 0) for t in closed]
+    return {
+        "start": start,
+        "end": end,
+        "trades": len(closed),
+        "wins": len(wins),
+        "losses": len(losses),
+        "win_rate": round(len(wins) / len(closed) * 100, 1),
+        "total_pnl": round(sum(t["pnl"] for t in closed), 2),
+        "avg_win": round(sum(t["pnl"] for t in wins) / len(wins), 2) if wins else 0,
+        "avg_loss": round(sum(t["pnl"] for t in losses) / len(losses), 2) if losses else 0,
+        "r_min": round(min(r_multiples), 2),
+        "r_max": round(max(r_multiples), 2),
+        "top_winners": sorted(wins, key=lambda t: t["pnl"], reverse=True)[:3],
+        "top_losers": sorted(losses, key=lambda t: t["pnl"])[:3],
+    }
+
+
+def _render_review_md(title: str, summary: dict, patterns: dict, calibration: dict) -> str:
+    lines = [f"# {title}", ""]
+    if summary.get("trades", 0) == 0:
+        lines.append("No closed trades in this period.")
+        return "\n".join(lines) + "\n"
+    lines += [
+        f"**Period:** {summary['start']} → {summary['end']}",
+        f"**Trades:** {summary['trades']} ({summary['wins']}W / {summary['losses']}L, win rate {summary['win_rate']}%)",
+        f"**Total PnL:** {summary['total_pnl']}",
+        f"**Avg win / loss:** {summary['avg_win']} / {summary['avg_loss']}",
+        f"**R-multiple range:** {summary['r_min']}% to {summary['r_max']}%",
+        "",
+        "## Top 3 Winners",
+    ]
+    for t in summary["top_winners"]:
+        attr = attribute_trade(t["id"])
+        lines.append(f"- [[{t['ticker']}]] +{t['pnl']} ({t.get('pnl_pct', 0):.1f}%) — best: {attr.get('biggest_contributor', 'n/a')}")
+    lines += ["", "## Top 3 Losers"]
+    for t in summary["top_losers"]:
+        attr = attribute_trade(t["id"])
+        lines.append(f"- [[{t['ticker']}]] {t['pnl']} ({t.get('pnl_pct', 0):.1f}%) — worst: {attr.get('biggest_detractor', 'n/a')}")
+
+    lines += ["", "## Recurring Mistake Patterns"]
+    if not patterns:
+        lines.append("None with count ≥ 3 this period.")
+    else:
+        for tag, p in patterns.items():
+            lines.append(f"- **{tag}** — {p['count']}×, severity avg {p['severity_avg']}, tickers {p['tickers']}")
+
+    lines += ["", "## Confidence Calibration"]
+    if not calibration:
+        lines.append("Insufficient data.")
+    else:
+        for bucket, c in calibration.items():
+            flag = " ⚠️ drift > 0.2" if abs(c["drift"]) > 0.2 else ""
+            lines.append(f"- **{bucket}** — {c['trades']} trades, predicted {c['predicted']}, actual {c['actual_win_rate']}, drift {c['drift']:+.2f}{flag}")
+
+    return "\n".join(lines) + "\n"
+
+
+def generate_weekly_review(end_date: Optional[str] = None) -> str:
+    """Render weekly review Obsidian MD → vault/reviews/weekly/YYYY-Www.md. Returns MD text."""
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d") if end_date else datetime.now(WIB)
+    start_dt = end_dt - timedelta(days=6)
+    start, end = start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+    iso_year, iso_week, _ = end_dt.isocalendar()
+    path = VAULT / "reviews" / "weekly" / f"{iso_year}-W{iso_week:02d}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    summary = _summarize_period(start, end)
+    patterns = detect_recurring_mistakes(days=7, min_count=2)
+    calibration = confidence_calibration(days=7)
+    md = _render_review_md(f"Weekly Review — {iso_year}-W{iso_week:02d}", summary, patterns, calibration)
+    path.write_text(md)
+    log.info(f"Weekly review written to {path}")
+    return md
+
+
+def generate_monthly_review(year: Optional[int] = None, month: Optional[int] = None) -> str:
+    """Render monthly review → vault/reviews/monthly/YYYY-MM.md. Returns MD text."""
+    now = datetime.now(WIB)
+    year = year or now.year
+    month = month or now.month
+    start = f"{year:04d}-{month:02d}-01"
+    if month == 12:
+        end_dt = datetime(year + 1, 1, 1) - timedelta(days=1)
+    else:
+        end_dt = datetime(year, month + 1, 1) - timedelta(days=1)
+    end = end_dt.strftime("%Y-%m-%d")
+    path = VAULT / "reviews" / "monthly" / f"{year:04d}-{month:02d}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    summary = _summarize_period(start, end)
+    patterns = detect_recurring_mistakes(days=31, min_count=3)
+    calibration = confidence_calibration(days=31)
+    md = _render_review_md(f"Monthly Review — {year:04d}-{month:02d}", summary, patterns, calibration)
+    path.write_text(md)
+    log.info(f"Monthly review written to {path}")
+    return md
+
+
+# ─── F. Thesis-Aware Queries ──────────────────────────────────────────────────
+
+def get_thesis(ticker: str) -> dict:
+    """Read vault/thesis/<TICKER>.md, return {frontmatter: ..., sections: {name: body}}."""
+    path = THESIS_DIR / f"{ticker.upper()}.md"
+    if not path.exists():
+        return {}
+    text = path.read_text()
+    fm, body = _fm_parse(text)
+    sections: dict[str, str] = {}
+    current = "_intro"
+    buf: list[str] = []
+    for line in body.splitlines():
+        m = re.match(r"^##\s+(.+)$", line)
+        if m:
+            sections[current] = "\n".join(buf).strip()
+            current = m.group(1).strip()
+            buf = []
+        else:
+            buf.append(line)
+    sections[current] = "\n".join(buf).strip()
+    return {"ticker": ticker.upper(), "frontmatter": fm, "sections": sections}
+
+
+def append_thesis_review(ticker: str, layer: str, note: str) -> Path:
+    """Append a dated entry under the ## Review Log section of vault/thesis/<TICKER>.md.
+
+    Creates the section if missing. Never overwrites prior entries.
+    """
+    THESIS_DIR.mkdir(parents=True, exist_ok=True)
+    path = THESIS_DIR / f"{ticker.upper()}.md"
+    date = datetime.now(WIB).strftime("%Y-%m-%d")
+    new_line = f"- {date} ({layer}): {note}"
+
+    if not path.exists():
+        fm = _fm_render({
+            "ticker": ticker.upper(),
+            "created": date,
+            "layer_origin": layer,
+            "status": "active",
+        })
+        path.write_text(f"{fm}\n\n# {ticker.upper()}\n\n## Review Log\n{new_line}\n")
+        return path
+
+    text = path.read_text()
+    if "## Review Log" not in text:
+        if not text.endswith("\n"):
+            text += "\n"
+        text += f"\n## Review Log\n{new_line}\n"
+    else:
+        text = text.rstrip() + f"\n{new_line}\n"
+    path.write_text(text)
+    return path
+
+
+def thesis_status_summary() -> dict:
+    """Scan all vault/thesis/*.md → {active: [...], archived: [...], closed: [...], stale: [...]}.
+
+    Stale = status `active` with no Review Log entry in 7+ days.
+    """
+    result = {"active": [], "archived": [], "closed": [], "stale": []}
+    if not THESIS_DIR.exists():
+        return result
+    now = datetime.now(WIB)
+    for p in sorted(THESIS_DIR.glob("*.md")):
+        text = p.read_text()
+        fm, body = _fm_parse(text)
+        ticker = (fm.get("ticker") or p.stem).upper()
+        status = (fm.get("status") or "active").lower()
+        bucket = status if status in result else "active"
+        result[bucket].append(ticker)
+
+        if status == "active":
+            dates = re.findall(r"^- (\d{4}-\d{2}-\d{2})", body, flags=re.MULTILINE)
+            if dates:
+                try:
+                    last = max(datetime.strptime(d, "%Y-%m-%d") for d in dates)
+                    if (now.replace(tzinfo=None) - last).days >= 7:
+                        result["stale"].append(ticker)
+                except ValueError:
+                    pass
+    return result
+
+
+# ─── Daily-Note Auto-Append (Phase 5.6 helper) ───────────────────────────────
+
+def append_daily_layer_section(layer: str, content: str, date: Optional[str] = None) -> Path:
+    """Append a layer section under `## Auto-Appended` in today's vault/daily/YYYY-MM-DD.md.
+
+    Creates the section the first time. Each call appends `### L{layer} — HH:MM\n{content}\n`.
+    """
+    DAILY_DIR.mkdir(parents=True, exist_ok=True)
+    date = date or datetime.now(WIB).strftime("%Y-%m-%d")
+    time = datetime.now(WIB).strftime("%H:%M")
+    path = DAILY_DIR / f"{date}.md"
+
+    section = f"### L{layer} — {time}\n{content.strip()}\n"
+    if not path.exists():
+        path.write_text(f"# {date}\n\n## Auto-Appended\n\n{section}\n")
+        return path
+
+    text = path.read_text()
+    if "## Auto-Appended" not in text:
+        if not text.endswith("\n"):
+            text += "\n"
+        text += f"\n## Auto-Appended\n\n{section}\n"
+    else:
+        text = text.rstrip() + f"\n\n{section}"
+    path.write_text(text)
+    return path

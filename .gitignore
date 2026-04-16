@@ -41,3 +41,8 @@ tools/**/*.backup
 tools/general/playwright/car_comparison_rows.json
 tools/general/playwright/.firefox-profile-threads/
 tools/general/playwright/.pw-firefox-*/
+
+# Vault — machine-generated transient data (Boss O's IP in daily/thesis/themes/lessons/journal stays tracked)
+vault/data/*.json
+vault/layer-output/**/*.md
+vault/reviews/**/*.md
