@@ -42,9 +42,7 @@ REDIS_DB = int(os.getenv("REDIS_DB", 0))
 ORDERBOOK_KEY_PREFIX = "lazyboy:orderbook:"
 ORDERBOOK_TTL = 300  # 5 minutes
 
-# Token refresh
-TOKEN_URL = "http://43.173.164.222:8080/token-store/stockbit"
-TOKEN_HEADER = {"Authorization": "Bearer 6697ed8a65e1bf92bdbe4cd1aa2d64dcbeb91a0d9c39a35d0a245b830524fe92"}
+# Token: use api.py local-cache loader
 
 
 @dataclass
@@ -99,13 +97,10 @@ class OrderbookWSListener:
                 self.redis_client = None
     
     def get_token(self) -> Optional[str]:
-        """Fetch Stockbit token from backend."""
-        import httpx
+        """Delegate to api.py local-cache loader."""
         try:
-            r = httpx.get(TOKEN_URL, headers=TOKEN_HEADER, timeout=10)
-            if r.status_code == 200:
-                data = r.json()
-                return data.get("token")
+            import api as trader_api
+            return trader_api.get_stockbit_token()
         except Exception as e:
             log.error(f"Failed to fetch token: {e}")
         return None
@@ -261,7 +256,7 @@ async def main():
     import sys
     from pathlib import Path
     
-    watchlist_file = Path("/home/lazywork/lazyboy/trade/watchlist/active.json")
+    watchlist_file = Path("/home/lazywork/workspace/vault/data/watchlist.json")
     tickers = []
     
     if watchlist_file.exists():

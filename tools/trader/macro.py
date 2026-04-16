@@ -25,7 +25,7 @@ import api
 log = logging.getLogger(__name__)
 WIB = ZoneInfo("Asia/Jakarta")
 
-DATA_DIR = Path("/home/lazywork/lazyboy/trade/data")
+DATA_DIR = Path("/home/lazywork/workspace/vault/data")
 REGIME_FILE = DATA_DIR / "regime.json"
 THESIS_FILE = DATA_DIR / "sector_thesis.json"
 

@@ -27,7 +27,7 @@ import api
 log = logging.getLogger(__name__)
 WIB = ZoneInfo("Asia/Jakarta")
 
-DATA_DIR = Path("/home/lazywork/lazyboy/trade/data")
+DATA_DIR = Path("/home/lazywork/workspace/vault/data")
 SID_FILE = DATA_DIR / "sid_history.json"
 
 

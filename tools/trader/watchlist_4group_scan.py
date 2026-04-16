@@ -3,13 +3,13 @@ import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, "/home/lazywork/lazyboy/trade")
+sys.path.insert(0, "/home/lazywork/workspace/tools/trader")
 
 from _lib.api import get_price, get_volume_ratio, get_support_resistance
 from _lib.wyckoff import analyze_wyckoff
 from _lib.broker_profile import analyze_players
 
-WATCH = Path('/home/lazywork/lazyboy/trade/watchlist/active.json')
+WATCH = Path('/home/lazywork/workspace/vault/data/watchlist.json')
 
 
 def group_name(v: dict):

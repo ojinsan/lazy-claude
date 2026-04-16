@@ -59,13 +59,13 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 WIB = ZoneInfo("Asia/Jakarta")
-WATCHLIST_FILE = Path("/home/lazywork/lazyboy/trade/watchlist/active.json")
+WATCHLIST_FILE = Path("/home/lazywork/workspace/vault/data/watchlist.json")
 STOCKLIST_FILE = Path("/home/lazywork/bitstock/waterseven/stocklist.csv")
-OUTPUT_DIR = Path("/home/lazywork/lazyboy/trade/data")
+OUTPUT_DIR = Path("/home/lazywork/workspace/vault/data")
 MONITOR_INSIGHTS_FILE = OUTPUT_DIR / "monitor_insights.jsonl"
 
 # Alert queue for sending to Mr O via heartbeat
-ALERT_QUEUE = "/tmp/lazyboy_alert_queue.jsonl"
+ALERT_QUEUE = "/tmp/trader_alert_queue.jsonl"
 
 
 def load_watchlist() -> list[str]:
@@ -697,7 +697,7 @@ def load_yesterday_recap() -> dict:
     WIB = ZoneInfo("Asia/Jakarta")
     yesterday = (datetime.now(WIB) - timedelta(days=1)).strftime("%Y-%m-%d")
     
-    recap_file = f"/home/lazywork/lazyboy/trade/data/daily_recap_{yesterday}.json"
+    recap_file = f"/home/lazywork/workspace/vault/data/daily_recap_{yesterday}.json"
     
     if not Path(recap_file).exists():
         print(f"⚠️ No daily recap found for {yesterday}", flush=True)

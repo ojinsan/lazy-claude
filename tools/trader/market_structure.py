@@ -24,7 +24,7 @@ import api
 
 log = logging.getLogger(__name__)
 
-DATA_DIR = Path("/home/lazywork/lazyboy/trade/data")
+DATA_DIR = Path("/home/lazywork/workspace/vault/data")
 
 
 @dataclass

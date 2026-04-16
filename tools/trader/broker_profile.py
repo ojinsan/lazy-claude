@@ -26,8 +26,8 @@ import api
 log = logging.getLogger(__name__)
 WIB = ZoneInfo("Asia/Jakarta")
 
-DATA_DIR = Path("/home/lazywork/lazyboy/trade/data")
-PROFILES_FILE = DATA_DIR / "broker_profiles.json"
+DATA_DIR = Path("/home/lazywork/workspace/vault/data")
+PROFILES_FILE = DATA_DIR / "broker-profiles.json"
 
 
 # ─── Data Models ──────────────────────────────────────────────────────────────

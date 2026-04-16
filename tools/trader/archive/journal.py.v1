@@ -18,42 +18,36 @@ from zoneinfo import ZoneInfo
 log = logging.getLogger(__name__)
 WIB = ZoneInfo("Asia/Jakarta")
 
-VAULT = Path("/home/lazywork/workspace/vault")
-DAILY_DIR = VAULT / "daily"
-JOURNAL_DIR = VAULT / "journal"
-LESSONS_DIR = VAULT / "lessons"
-THESIS_DIR = VAULT / "thesis"
-DATA_DIR = VAULT / "data"
-TRANSACTIONS_FILE = DATA_DIR / "transactions.json"
-LESSONS_FILE = DATA_DIR / "lessons.json"
-THESIS_INDEX = DATA_DIR / "thesis-index.json"
+JOURNAL_DIR = Path("/home/lazywork/lazyboy/trade/journal")
+TRANSACTIONS_FILE = JOURNAL_DIR / "transactions.json"
+LESSONS_FILE = JOURNAL_DIR / "lessons.json"
 
 
 # ─── Daily Journal ────────────────────────────────────────────────────────────
 
 def write_journal(content: str, date: Optional[str] = None):
-    """Append to daily note (vault/daily/YYYY-MM-DD.md)."""
+    """Append to daily journal."""
     if date is None:
         date = datetime.now(WIB).strftime("%Y-%m-%d")
-
-    DAILY_DIR.mkdir(parents=True, exist_ok=True)
-    path = DAILY_DIR / f"{date}.md"
-
+    
+    JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
+    path = JOURNAL_DIR / f"{date}.md"
+    
     now = datetime.now(WIB).strftime("%H:%M")
     entry = f"\n### {now}\n{content}\n"
-
+    
     with open(path, "a") as f:
         f.write(entry)
-
-    log.info(f"Daily note written to {path}")
+    
+    log.info(f"Journal entry written to {path}")
 
 
 def read_journal(date: Optional[str] = None) -> str:
-    """Read daily note (vault/daily/YYYY-MM-DD.md)."""
+    """Read daily journal."""
     if date is None:
         date = datetime.now(WIB).strftime("%Y-%m-%d")
-
-    path = DAILY_DIR / f"{date}.md"
+    
+    path = JOURNAL_DIR / f"{date}.md"
     if path.exists():
         return path.read_text()
     return ""
@@ -71,8 +65,8 @@ def log_trade(
     notes: str = "",
 ):
     """Log a trade to transactions.json."""
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-
+    JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
+    
     transactions = []
     if TRANSACTIONS_FILE.exists():
         try:
@@ -151,8 +145,8 @@ def log_lesson(
     date: Optional[str] = None,
 ):
     """Log a lesson learned."""
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-
+    JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
+    
     lessons = []
     if LESSONS_FILE.exists():
         try:
