@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # cron-dispatcher.sh — runs trader command files on a WIB schedule.
-# Monitoring window uses --settings openclaude.json (frequent 30-min cycles).
-# All other windows run with default Claude settings (one-shot per day).
+# Monitoring window: tries --settings openclaude.json first, falls back to default Claude.
+# All other windows: default Claude only (no --settings).
 set -euo pipefail
 
 WORKSPACE="/home/lazywork/workspace"
@@ -17,31 +17,24 @@ WIB_MIN=$(TZ='Asia/Jakarta' date +%-M)
 
 log() { echo "[$(TZ='Asia/Jakarta' date '+%Y-%m-%d %H:%M')] $*" >> "$LOG"; }
 
-# Default: no special settings (one-shot daily jobs)
+# Default: no special settings (one-shot daily jobs — L0, screening, tradeplan, 08:30 execute)
 run_claude_job() {
     local command_file="$1"
     local prompt="Non-interactive cron run. Read the instructions in $command_file and execute them. Run to completion and exit. Do not wait for user input."
-
     cd "$WORKSPACE"
-    "$CLAUDE" \
-        --dangerously-skip-permissions \
-        --bare \
-        -p "$prompt" \
-        >> "$LOG" 2>&1
+    "$CLAUDE" --dangerously-skip-permissions --bare -p "$prompt" >> "$LOG" 2>&1
 }
 
-# Monitoring-only: uses special settings for frequent 30-min intraday cycles
+# Monitoring: try --settings first; if it fails, fall back to default Claude
 run_monitoring_job() {
     local command_file="$1"
     local prompt="Non-interactive cron run. Read the instructions in $command_file and execute them. Run to completion and exit. Do not wait for user input."
-
     cd "$WORKSPACE"
-    "$CLAUDE" \
-        --dangerously-skip-permissions \
-        --bare \
-        --settings "$MONITORING_SETTINGS" \
-        -p "$prompt" \
-        >> "$LOG" 2>&1
+    if "$CLAUDE" --dangerously-skip-permissions --bare --settings "$MONITORING_SETTINGS" -p "$prompt" >> "$LOG" 2>&1; then
+        return 0
+    fi
+    log "⚠ --settings run failed — falling back to default Claude"
+    "$CLAUDE" --dangerously-skip-permissions --bare -p "$prompt" >> "$LOG" 2>&1
 }
 
 log "tick — WIB ${WIB_HOUR}:$(printf '%02d' "$WIB_MIN")"
