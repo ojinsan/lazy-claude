@@ -35,6 +35,8 @@ Append per-order to `runtime/orders/YYYY-MM-DD.jsonl`:
 
 Send `execution-summary` via `skills/trader/telegram-notify.md` at session end.
 
+After each order placed or cut: call `journal.append_daily_layer_section('5', summary)` with side + ticker + shares + price + order_id so the daily timeline captures the fill.
+
 Do NOT post to Airtable beyond Superlist updates — scripts handle Insights.
 
 ## Skills To Load

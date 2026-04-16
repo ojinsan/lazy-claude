@@ -75,6 +75,7 @@ Per ticker:
 2. **Manipulation flag**: note any `accumulation_setup` or `shakeout_trap` explicitly
 3. **Promotion**: move to Layer 4 if golden setup appears
 4. **Demotion**: remove from watchlist if thesis breaks
+5. **Daily-note append** — call `journal.append_daily_layer_section('3', summary)` only when triage produces a `medium`+ event (skip noise-only cycles)
 
 ## Telegram Notify
 

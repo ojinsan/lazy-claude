@@ -56,6 +56,7 @@ Compare yesterday's L0–L4 calls vs actual outcomes via `skills/trader/portfoli
 4. **Self-review note** — `vault/journal/YYYY-MM-DD-review.md`
 5. **Portfolio state update** — `vault/data/portfolio-state.json`
 6. **PortfolioLog sync candidate** — prepare a clean summary for Airtable once that table exists
+7. **Daily-note append** — call `journal.append_daily_layer_section('0', summary)` with a compact one-liner (equity + DD + top action) so today's `vault/daily/YYYY-MM-DD.md` has a running timeline
 
 ## Telegram Notify
 

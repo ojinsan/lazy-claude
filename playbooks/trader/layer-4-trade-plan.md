@@ -54,6 +54,7 @@ Apply three output levels per plan:
 1. **Trade plan**: one block per ticker in the format above
 2. **Priority ranking**: which name to act on first today
 3. **Superlist update**: post final plans to Airtable `Superlist` when warranted
+4. **Daily-note append** — call `journal.append_daily_layer_section('4', summary)` with ticker + setup + entry zone for each finalized plan
 
 ## Telegram Notify
 

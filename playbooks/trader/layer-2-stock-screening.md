@@ -48,6 +48,7 @@ L2 inline gate: 5/5 criteria + price in open entry window + DD < 5%. If met → 
 2. **Rejected names**: quick note on why each screened-out candidate was skipped
 3. **Superlist updates**: promote strong names to Airtable `Superlist`
 4. **Post to Airtable** `Insights` for any strong screening signal
+5. **Daily-note append** — call `journal.append_daily_layer_section('2', summary)` with shortlist + top pick + reason
 
 ## Telegram Notify
 

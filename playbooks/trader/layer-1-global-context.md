@@ -44,6 +44,7 @@ Build the top-down market map before touching any stock.
 4. **Aggression posture**: how aggressive to be today (1–5)
 5. **Initial candidates**: tickers that fit the narrative
 6. **Post to Airtable** `Insights` for any strong context insight
+7. **Daily-note append** — call `journal.append_daily_layer_section('1', summary)` with regime + top themes
 
 ## Telegram Notify
 
