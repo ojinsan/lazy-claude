@@ -144,7 +144,7 @@ Load only what the current layer or task needs. Unload after use.
 | `broker-flow.md` | Deep broker flow reading | L2/L3 ambiguous flow |
 | `sid-tracker.md` | SID accumulation/distribution detail | L2 when SID signal is key |
 | `insight-crawling.md` | Web/RAG/Threads intel | L1 context fetch |
-| `journal-review.md` | Past lessons on similar setups | L4 before committing |
+| `journal-review.md` | Lesson protocol, pattern detection, thesis append, calibration usage | L0 Step 6, L4 pre-plan, L5 sizing, EOD sync |
 | `stockbit-access.md` | Token/auth handling | When auth issues arise |
 | `watchlist-4group.md` | Universe management | L2 universe construction |
 

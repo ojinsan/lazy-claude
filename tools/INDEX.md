@@ -17,7 +17,7 @@
 | `tradeplan.py`            | Trade plan generator                                         | L4    |
 | `narrative.py`            | Narrative generation helper                                  | L1, L2 |
 | `macro.py`                | Macro context — regime, sector rotation                      | L1    |
-| `journal.py`              | Trade journal read/write and lesson search                   | L4    |
+| `journal.py`              | Vault journaling: lesson v2, pattern detect, attribution, calibration, weekly/monthly reviews, thesis queries, daily-note append | L0, L4, EOD |
 | `airtable_client.py`      | Airtable read/write for trader tables                        | Any   |
 | `stockbit_screener.py`    | Stockbit native screener wrapper with pre-built filter sets  | L2    |
 | `telegram_client.py`      | Telegram alert sender for L0–L4 + execution + intent events | Any   |
