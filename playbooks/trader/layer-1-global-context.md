@@ -16,6 +16,11 @@ Build the top-down market map before touching any stock.
 - BI rate direction (key: property/banking sector signal when rate moves)
 - Government policy, MSCI events, dividend season, rights issues
 
+### Konglo Rotation <!-- M3.1 -->
+- Run `python tools/trader/konglo_flow.py --all` → summary by group.
+- Flag groups with `rotation_in` or `rotation_out` as today's themes.
+- Groups with `rotation_in` feed directly into L2 narrative-fit criterion.
+
 ### Sector Rotation Logic
 - Energy / coal: watch when global energy crisis or commodity spike
 - Property / construction: watch when BI cuts rate or stimulus

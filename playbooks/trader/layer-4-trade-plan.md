@@ -12,6 +12,7 @@ Connect all layers into a precise, actionable trade plan. Easy to follow, no amb
 - **L1 intraday**: `journal.get_intraday_posture()` — if set and posture < morning posture, apply the lower value.
 - **L2**: shortlisted tickers with gate-cleared reasons
 - **L3**: tape signal, manipulation detection, Wyckoff phase (if arrived from L3)
+- **Konglo state** <!-- M3.1 -->: `tools/trader/data/konglo_list.json` + `konglo_flow.group_flow_today(group_id)` for target ticker's group.
 - Airtable `Superlist` and `Insights`: existing notes and history
 
 L0 is a required input — not optional context. Position size, sector cap, and add/substitute decision all depend on it.
@@ -45,6 +46,7 @@ Mode B output is a one-block summary, not the full format below.
 Ticker: XXXX
 Thesis: [one sentence — why this stock, why now]
 Catalyst: [what triggers the move]
+Konglo: [group name + verdict from group_flow_today, or N/A if not in any group]
 Setup type: [accumulation / breakout / shakeout-recovery / swing]
 
 Entry: Rp X,XXX – X,XXX (trigger: [what to see before buying])

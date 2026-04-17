@@ -34,10 +34,12 @@ If hold still passes → confirm thesis intact, carry forward.
 
 1. **Narrative fit** — does the stock match an active Layer 1 theme?
 2. **Technical structure** — base formation, trend, near support, not extended
+2.5. **Volume-price state** <!-- M3.2 --> — `vp_analyzer.classify(ticker, '1d')`. Drop if `weak_rally` or `distribution` without offset signal (spring or shakeout).
 3. **Volume / liquidity** — adequate volume, no illiquid traps
 3.5. **Relative strength** — in top 5 of sector RS (`relative_strength.py`)? If bottom 5 without strong accumulation → skip.
 4. **Broker / whale signal** — accumulation pattern in broker flow or SID
 5. **Orderbook quality** — is there real bid support, or just noise?
+6. **Konglo fit** <!-- M3.1 --> — `konglo_loader.group_for(ticker)`. If ticker belongs to a group in today's L1 `rotation_in` list → +1 conviction bucket. If portfolio already holds a peer in the same group → either substitute (if weaker peer exists) or skip.
 
 ## Tools
 

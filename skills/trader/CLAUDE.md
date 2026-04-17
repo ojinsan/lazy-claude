@@ -112,6 +112,7 @@ Load only what the current layer or task needs. Unload after use.
 | `whale-retail-analysis.md` | Broker flow + SID + player intent | Always in L2 |
 | `technical-analysis.md` | Structure, trend, support/resistance | Always in L2 |
 | `wyckoff-lens.md` | Accumulation/distribution phase | L2 when structure unclear |
+| `volume-price-rules.md` | 4-quadrant VP state, thresholds, sizing caps | L2 criterion 2.5, L3 every cycle | <!-- M3.2 -->
 | `market-structure.md` | BOS/CHoCH, key levels, invalidation | L2 for each candidate |
 | `narrative-building.md` | Why this stock now | L2 for shortlist candidates |
 
@@ -147,6 +148,11 @@ Load only what the current layer or task needs. Unload after use.
 | `journal-review.md` | Lesson protocol, kill-switch, hit_rate_by, thesis actions, intraday posture, calibration | L0 Step 0+6, L4 pre-plan, L5 sizing, EOD sync |
 | `stockbit-access.md` | Token/auth handling | When auth issues arise |
 | `watchlist-4group.md` | Universe management | L2 universe construction |
+
+### Ownership & Flow (M3.1 — load when checking konglo)
+| Skill | Purpose | Load when |
+|-------|---------|-----------|
+| `konglo-ownership.md` | Conglomerate group mapping, leader-laggard rotation, size cap rules | L1 group rotation scan, L2 criterion 6, L4 plan |
 
 ### New Capabilities (M1 additions — load when relevant)
 | Function | Where | When |

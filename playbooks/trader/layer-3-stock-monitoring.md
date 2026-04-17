@@ -35,6 +35,7 @@ Other cycles: skip this block entirely.
 ### Price & Volume
 - Running trades: are real buyers/sellers stepping in?
 - Volume surge vs price action — accumulation or distribution?
+- Every cycle: `vp_analyzer.classify(ticker, '30m')` → attach state to cycle log. <!-- M3.2 -->
 - Tape speed: slow grind up = controlled; spike with panic = retail-driven
 
 ### Orderbook (Bid/Offer Shape)
