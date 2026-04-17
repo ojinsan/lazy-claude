@@ -17,6 +17,10 @@ func SignalsRoutes(r chi.Router, s *store.Store, c *cache.Cache) {
 	r.Post("/signals", createSignal(s, c))
 	r.Get("/signals/recent", recentSignals(s))
 	r.Get("/signals/stream", signalStream(c))
+	r.Get("/kill-switch", getKillSwitch(c))
+	r.Put("/kill-switch", putKillSwitch(c))
+	r.Get("/regime/intraday", getRegime(c))
+	r.Put("/regime/intraday", putRegime(c))
 
 	r.Get("/layer-outputs", listLayerOutputs(s))
 	r.Post("/layer-outputs", createLayerOutput(s))
@@ -123,4 +127,47 @@ func putDailyNote(s *store.Store) http.HandlerFunc {
 
 func jsonWrite(w http.ResponseWriter, v any) error {
 	return json.NewEncoder(w).Encode(v)
+}
+
+func getKillSwitch(c *cache.Cache) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var v map[string]any
+		if err := c.Get(r.Context(), "kill_switch", &v); err != nil {
+			writeJSON(w, 200, map[string]any{"active": false}); return
+		}
+		writeJSON(w, 200, v)
+	}
+}
+
+func putKillSwitch(c *cache.Cache) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := decode(r, &body); err != nil { writeError(w, 400, err.Error()); return }
+		if err := c.Set(r.Context(), "kill_switch", body, 0); err != nil {
+			writeError(w, 500, err.Error()); return
+		}
+		writeJSON(w, 200, body)
+	}
+}
+
+func getRegime(c *cache.Cache) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var v map[string]any
+		if err := c.Get(r.Context(), "regime:intraday", &v); err != nil {
+			writeJSON(w, 200, map[string]any{}); return
+		}
+		writeJSON(w, 200, v)
+	}
+}
+
+func putRegime(c *cache.Cache) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := decode(r, &body); err != nil { writeError(w, 400, err.Error()); return }
+		_ = time.Now() // keep time import
+		if err := c.Set(r.Context(), "regime:intraday", body, 0); err != nil {
+			writeError(w, 500, err.Error()); return
+		}
+		writeJSON(w, 200, body)
+	}
 }
