@@ -8,25 +8,22 @@ from pathlib import Path
 from config import LOCAL_NOTES_DIR, WATCHLIST_FILE, load_env
 import time
 import api
-import airtable_client
+import sys as _sys; _sys.path.insert(0, str(Path(__file__).parent.parent))
+from tools.fund_api import api as _fund_api
 
 WIB = ZoneInfo('Asia/Jakarta')
 
 
 def load_hold_tickers(limit: int = 5) -> list[str]:
+    # Read from fund-manager API (portfolio holdings)
     try:
-        airtable_client.load_env()
-        data = airtable_client.list_records('Superlist', max_records=100)
-        out = []
-        for rec in data.get('records', []):
-            fields = rec.get('fields', {})
-            if fields.get('Status') == 'Hold' and fields.get('Ticker'):
-                ticker = str(fields['Ticker']).upper()
-                if ticker not in out:
-                    out.append(ticker)
-            if len(out) >= limit:
-                break
-        return out
+        today = datetime.now(WIB).strftime("%Y-%m-%d")
+        holdings = _fund_api.get_holdings(date=today)
+        if not holdings:
+            # Try latest available date
+            holdings = _fund_api.get_holdings()
+        out = [h["ticker"] for h in holdings if h.get("shares", 0) > 0]
+        return out[:limit]
     except Exception:
         return []
 

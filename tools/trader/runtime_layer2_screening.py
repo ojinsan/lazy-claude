@@ -7,7 +7,8 @@ from zoneinfo import ZoneInfo
 
 from config import RUNTIME, WATCHLIST_FILE
 import api
-from airtable_client import create_record, load_env, list_records
+import sys as _sys; _sys.path.insert(0, '/home/lazywork/workspace')
+from tools.fund_api import api as _fund_api
 
 WIB = ZoneInfo('Asia/Jakarta')
 OUTDIR = RUNTIME / 'notes' / 'layer_2_stock_screening'
@@ -105,14 +106,10 @@ def extract_backend_watchlist(valid: set[str], limit: int = 80) -> list[str]:
 def extract_hold_priority(valid: set[str], limit: int = 30) -> list[str]:
     out: list[str] = []
     try:
-        load_env()
-        data = list_records('Superlist', max_records=100)
-        for rec in data.get('records', []):
-            fields = rec.get('fields', {})
-            if fields.get('Status') != 'Hold':
-                continue
-            ticker = str(fields.get('Ticker') or '').upper().strip()
-            if ticker in valid and ticker not in out:
+        holdings = _fund_api.get_holdings()
+        for h in holdings:
+            ticker = str(h.get('ticker') or '').upper().strip()
+            if ticker in valid and ticker not in out and int(h.get('shares', 0)) > 0:
                 out.append(ticker)
             if len(out) >= limit:
                 break
@@ -170,7 +167,6 @@ def score_ticker(code: str) -> dict | None:
 
 
 def main():
-    load_env()
     tickers, meta = candidate_universe(max_total=120)
     names = [x for x in (score_ticker(c) for c in tickers) if x]
     names = sorted(names, key=lambda x: x['score'], reverse=True)
@@ -188,12 +184,28 @@ def main():
     path = OUTDIR / f"{datetime.now(WIB).strftime('%Y-%m-%d')}.jsonl"
     with path.open('a') as f:
         f.write(json.dumps(payload, ensure_ascii=False) + '\n')
+    today = datetime.now(WIB).strftime('%Y-%m-%d')
+    ts_now = datetime.now(WIB).isoformat()
+    # Post layer output summary
+    _fund_api.post_layer_output({
+        'run_date': today, 'layer': 'L2', 'ts': ts_now,
+        'summary': f"L2 screen: {meta['selected_count']} candidates, top {len(top)} scored",
+        'body_md': json.dumps({'top': top[:10], 'meta': meta}, indent=2),
+        'severity': 'info', 'tickers': ','.join(r['ticker'] for r in top[:10]),
+    })
+    # Post each top ticker as a signal
     for row in top[:5]:
-        create_record('Insights', {
-            'Name': f"Layer 2 screen - {row['ticker']}",
-            'Ticker': row['ticker'],
-            'Status': 'High Confidence' if row['score'] >= 15 else 'Low Confidence',
-            'Content': f"Layer 2 candidate feed. Price {row['price']:.0f}; change {row['change_pct']}%; bid-offer {row['bor']}x; turnover {row['value']:.0f}; score {row['score']}."
+        _fund_api.post_signal({
+            'ts': ts_now, 'ticker': row['ticker'], 'layer': 'L2',
+            'kind': 'screening_hit',
+            'severity': 'high' if row['score'] >= 15 else 'low',
+            'price': row['price'],
+            'payload_json': json.dumps({'score': row['score'], 'change_pct': row['change_pct'], 'bor': row['bor'], 'value': row['value']}),
+        })
+        _fund_api.post_watchlist({
+            'ticker': row['ticker'], 'first_added': today,
+            'status': 'active', 'conviction': 'high' if row['score'] >= 15 else 'low',
+            'updated_at': ts_now,
         })
     print(json.dumps({'path': str(path), 'candidate_meta': meta, 'top5': top[:5]}, indent=2))
 

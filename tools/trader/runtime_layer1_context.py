@@ -8,7 +8,8 @@ from zoneinfo import ZoneInfo
 
 from config import RUNTIME
 import api
-from airtable_client import create_record, load_env
+import sys as _sys; _sys.path.insert(0, '/home/lazywork/workspace')
+from tools.fund_api import api as _fund_api
 
 WIB = ZoneInfo('Asia/Jakarta')
 LAYER1_DIR = RUNTIME / 'notes' / 'layer_1_global_context'
@@ -215,24 +216,26 @@ def save_local(payload: dict) -> Path:
 
 
 def publish_airtable(payload: dict) -> list[str]:
-    load_env()
+    today = datetime.now(WIB).strftime('%Y-%m-%d')
+    ts_now = datetime.now(WIB).isoformat()
     ids = []
-    rec = create_record('Insights', {
-        'Name': 'Layer 1 context fetch - reusable workflow',
-        'Ticker': 'IHSG',
-        'Status': 'High Confidence',
-        'Content': payload['content'],
+    # Main L1 context → layer_output
+    r = _fund_api.post_layer_output({
+        'run_date': today, 'layer': 'L1', 'ts': ts_now,
+        'summary': payload.get('content', '')[:300],
+        'body_md': payload.get('content', ''),
+        'severity': 'info', 'tickers': 'IHSG',
     })
-    ids.append(rec['id'])
+    if r: ids.append(str(r.get('id', '')))
+    # Threads narratives → signals
     threads_texts = [x.get('text', '') for x in payload.get('threads', {}).get('captured', [])[:2] if x.get('text')]
-    for idx, txt in enumerate(threads_texts, start=1):
-        rec2 = create_record('Insights', {
-            'Name': f'Threads narrative capture {idx}',
-            'Ticker': 'Theme',
-            'Status': 'Low Confidence',
-            'Content': txt[:1000],
+    for txt in threads_texts:
+        r2 = _fund_api.post_signal({
+            'ts': ts_now, 'ticker': 'IHSG', 'layer': 'L1',
+            'kind': 'narrative_capture', 'severity': 'low',
+            'payload_json': json.dumps({'text': txt[:500]}),
         })
-        ids.append(rec2['id'])
+        if r2: ids.append(str(r2.get('id', '')))
     return ids
 
 
