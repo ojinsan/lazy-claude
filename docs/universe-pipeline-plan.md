@@ -507,3 +507,22 @@ Phase 5 (services + verification) — after 1-4, ensures persistence
 - Embedding-based RAG — FTS5 is the MVP; upgrade later
 - Airtable removal — gradually reduce dependency, don't delete; some skills still use it
 - Stockbit scraper (`~/bitstock/scrapper_client/stockbit/`) — separate concern, already works
+
+---
+
+## Status (2026-04-18)
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1 | ✅ done | POST /feed/telegram/insight, GET /api/v1/insights/positive-candidates, POST /api/v1/rag/search — all tested. Telegram scraper service linked (needs TG creds to start). |
+| Phase 2 | ✅ done | Lark client ported, GET /watchlist merges Lark + SQLite. fund_manager_client.py live. |
+| Phase 3 | ✅ done | --username mode in threads-scraper.js. candidate_universe() rebuilt: 4 sources, no fill. Tested: 26 signal-driven tickers. |
+| Phase 4 | ✅ done | fund-manager binary rebuilt, fund-manager.service enabled as user systemd unit. |
+| Phase 5 | ⏳ pending | TG creds in .env → enable telegram-scraper service. Lark env vars when ready. |
+
+## Pending for Boss O
+
+1. **Telegram creds**: add `TG_API_ID`, `TG_API_HASH`, `TG_PHONE` to `services/telegram-scraper/.env` (copy from `.env.template`), then `systemctl --user start telegram-scraper`.
+2. **Lark creds**: add `LARK_APP_ID`, `LARK_APP_SECRET`, `LARK_WIKI_TOKEN` to `workspace/.env.local` → restart fund-manager → `GET /api/v1/watchlist` will return full Lark list.
+3. **Threads accounts**: add more rows to `tools/data-persistence/threads-accounts.csv` as needed.
+4. **Superlist holds**: currently 0 because watchlist status = 'active' not 'hold'. Promote active holds to status='hold' via `POST /api/v1/watchlist` or update existing rows.
