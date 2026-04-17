@@ -113,33 +113,6 @@ Every whale–retail read returns:
 4. **Trap?** — yes/no + evidence (specific codes + days)
 5. **Verdict** — `sponsored` / `distributed` / `unclear`
 
-## Multi-Day Consistency Score
-
-Single-day broker data is noisy. Score consistency over 5–10 trading days:
-
-```
-For each smart-money broker code found in top-10 buyers:
-  consistency = buy_days / (buy_days + sell_days)
-  score = "committed" if consistency >= 0.7
-          "mixed"     if 0.4 <= consistency < 0.7
-          "exiting"   if consistency < 0.4
-```
-
-| Combined score | Verdict |
-|----------------|---------|
-| ≥ 2 "committed" smart-money codes | Strong sponsor — size up |
-| 1 "committed" + no "exiting" | Moderate sponsor — normal size |
-| Only "mixed" codes | Unclear — wait or small size |
-| Any "exiting" smart-money code | Distribution risk — reduce size or skip |
-
-## Bandar Avg Cost vs Current Price
-
-Use `broker_profile.py` to estimate smart-money average cost:
-- **Smart money underwater + still buying**: highest-conviction accumulation signal. Operator will NOT exit at a loss — markup is coming.
-- **Smart money at breakeven + buying accelerating**: sponsor consolidating position before markup.
-- **Smart money comfortably above cost + sell_days rising**: primary distribution phase. Exit or skip.
-- **Smart money at cost + neutral**: no edge either direction. Wait.
-
 ## Hard Rules
 
 - "Smart money buying" requires consistent high `buy_days` from a known smart-money code. One day proves nothing.

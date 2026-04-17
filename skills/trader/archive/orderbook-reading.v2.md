@@ -77,31 +77,6 @@ Each orderbook read returns:
 4. **Confidence** — `clean read` / `partial` / `no read` (no read = abstain)
 5. **Confirmation cue** — what next price action would validate the read
 
-## Session Context
-
-Book behavior is different by session phase. Adjust interpretation:
-
-| Session phase | What to watch | What to ignore |
-|---------------|--------------|----------------|
-| Pre-open (08:30–09:00) | Opening auction queue size + side imbalance | Bid/ask ratio (no crossing yet) |
-| First 30 min (09:00–09:30) | Aggressive crosses at offer (markup) or bid (markdown) | Any individual refresh in isolation |
-| Midday (11:00–13:30) | Depth ratio trend over 10+ polls | Single-snapshot imbalance (lunch hour book is thin) |
-| Power hour (14:00–15:00) | Refresh pattern at support/resistance | Noise crosses — lots < 10 are institutional algos not direction |
-| Closing auction (15:45–16:00) | Final queue direction; large orders arrive here | Book during pre-close is illiquid and easily spoofed |
-
-## Pre-Entry Checklist
-
-Before calling a read "entry-ready" based on orderbook alone:
-
-1. Stack quality is `genuine` (not `thin` or `spoofed`)
-2. Depth ratio trending in favor of entry direction for ≥ 5 consecutive polls
-3. Refresh shows `chasing` or `patient` (NOT `exhausted` or `spoof`)
-4. Tape crossing confirms at entry side (offer crosses for buys, bid crosses for sells)
-5. At least one of the above confirmed via `realtime_listener.py`, not just snapshot
-
-If 3 of 5 → `partial read`. Still use, but reduce size by 50%.
-If < 3 → no read. Abstain.
-
 ## Hard Rules
 
 - Book is not perfect truth. Always confirm with tape (running trade) before sizing.

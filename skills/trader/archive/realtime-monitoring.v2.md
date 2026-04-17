@@ -65,31 +65,6 @@ For each tracked ticker, produce:
 | Live tape | `tools/trader/running_trade_poller.py` |
 | Snapshot | `tools/trader/api.py` (`get_price`, `get_orderbook`, `get_running_trade`) |
 
-## Pre-Open Protocol (08:30–09:00 WIB)
-
-Before market opens, run a lightweight pre-open check on all tracked tickers (not the full 10-min loop):
-
-1. `api.get_price(ticker)` → compare pre-open quote vs yesterday close. Gap > 2% up or down = flag.
-2. Check opening auction queue direction if available. Large buy queue = early strength.
-3. Read last overnight broker flow (from `broker_profile.py` on yesterday's session). Still accumulating?
-4. Flag any position where overnight gap breached the invalidation level → pre-market exit decision to L5.
-
-Output: per-ticker `pre-open status` = `gap-up-watch | gap-down-flag | flat | invalidated`. Feed into the first L3 cycle at 09:00.
-
-## Active Queue Management
-
-Never monitor all tickers at maximum intensity. Tier the queue dynamically:
-
-| Tier | Who goes here | Tools running |
-|------|--------------|---------------|
-| **Active** (up to 3 tickers) | Current holds + any L4 plan in entry window | `realtime_listener.py` + `orderbook_poller.py` (5s) |
-| **Watchlist** (up to 10 tickers) | Shortlisted names from L2 with developing signals | `runtime_monitoring.py` (10m) |
-| **Background** (rest) | No current signal, thesis check only | 30-min summary only |
-
-Promote to Active: when any watchlist ticker hits `medium` or `high` triage label.
-Demote from Active: when entry window closes, order fills, or 45 min elapsed with no signal change.
-Remove from queue entirely: when thesis is `broken` or `L3 demoted`.
-
 ## Hard Rules
 
 - Monitoring surfaces changes; it does not replace judgment. Every `high` alert still passes through the relevant analysis skill before action.

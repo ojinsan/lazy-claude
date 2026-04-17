@@ -29,41 +29,6 @@ A wall is likely **real** when ALL of:
 
 Unclear → label `unclear`, do not act.
 
-## Absorption Patterns (Bandar Eating Retail)
-
-### Near Resistance — Break Likely
-
-Signature:
-- Thick offer wall above (classify via Wall Size section)
-- Whale bids underneath, refreshing as retail sells hit them
-- Offer wall slowly thins — hidden buy orders eating through it
-- Running trade: sell-side lots are small (retail < 100 lots), buy-side lots are large (≥ 500 lots) hitting at the bid
-
-Read: smart money accumulating through the resistance wall. The wall is theirs — meant to scare retail, not block themselves.
-Action hint: `break likely`. Pre-place entry limit just inside or at the wall.
-
-### Near Support — Bounce Likely
-
-Signature:
-- Thick bid wall below price
-- Wall holds despite panic retail sells hitting it
-- Offer side thinning — sellers exhausting
-- Running trade: small lot sellers + large lot buyers = absorption, not distribution
-
-Read: bandar holding the floor. Retail selling INTO smart money's accumulation.
-Action hint: `bounce likely`. Do not sell into this wall.
-
-### Critical Distinction — Absorption vs Distribution
-
-When a thick bid wall sits below a rising price, it can be EITHER:
-
-| Running trade signature | Verdict |
-|-------------------------|---------|
-| Large lot SELLER + small lot BUYER at bid | **Distribution** — whale unloading into retail FOMO. Exit or skip. |
-| Small lot SELLER + large lot BUYER at bid | **Accumulation** — whale absorbing retail panic. Ride or enter. |
-
-Never decide from wall shape alone. The lot-size breakdown from `running_trade_poller.py` is mandatory before calling absorption.
-
 ## Pressure Imbalance Metrics
 
 Compute from a single snapshot (`api.get_stockbit_orderbook(ticker)`):
@@ -103,24 +68,6 @@ Read: likely fake wall (size + 1 broker), buyer pressure underneath. If wall per
 > Price 2,400. Bid wall at 2,380, `keseluruhan`, 4 brokers, holding 8 minutes. Offer side thinning.
 
 Read: real wall (depth + multiple brokers + persistence). Bid/ask ratio likely > 1.5. Action: bounce likely from 2,380.
-
-## Example Prompts
-
-> "Price 1,250. Thick offer at 1,260 (`satu papan`, 500k lot, 1 broker). Running trade shows 10k-lot buys hitting the bid continuously."
->
-> Read: likely fake wall (1 broker, large single order). Buyer pressure underneath. If wall persists < 2 min with shrinking size → `break likely`. Pre-place limit at 1,255–1,258.
-
----
-
-> "Price 2,400. Bid wall at 2,380 (`keseluruhan`, 4 brokers, holding 8 minutes). Offer side thinning. Running trade: 5k-lot retail sellers, 200k-lot buyer refreshing at 2,380."
->
-> Read: real wall (depth + multi-broker + persistence). Large lot buyer = whale defending. `bounce likely` from 2,380.
-
----
-
-> "Price 850. Thick bid wall at 820. Price rising. Running trade: 500k-lot seller + 10k-lot buyers."
->
-> Read: Distribution disguised as support. Whale unloading into retail bids. `exit` if holding. `skip` if considering entry.
 
 ## Hard Rules
 

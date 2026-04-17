@@ -76,36 +76,6 @@ Append to `vault/thesis/<TICKER>.md` Review Log section. Never overwrite origina
 | Original plan + notes | Airtable `Superlist` via `airtable_client.py` |
 | Past lessons on similar setup | `tools/trader/journal.py` |
 
-## Catalyst Expiry (Catalyst-Driven Thesis Only)
-
-For theses dependent on a specific catalyst (BI rate cut, dividend, rights issue, government contract):
-
-1. **Pre-catalyst**: score all 6 criteria. Confirm catalyst date/timeline still active.
-2. **Catalyst window** (T-2 to T+1 days): apply a tighter test. If price hasn't moved AND broker flow is still net buy → wait. If price hasn't moved AND broker flow flipped to sell → catalyst already priced in or failed. Mark `broken`.
-3. **Post-catalyst** (T+2 or later): re-score from scratch. Catalyst is over. Is the structural thesis (broker + SID + technical) still intact without the catalyst? No → mark `broken`.
-
-Special rule: "waiting for catalyst" is not a thesis. If the 6 structural criteria are below 4 and you're only holding for the catalyst → mark `weakening`. Reduce exposure 50%.
-
-## Journal Protocol
-
-Every thesis re-check must produce a journal entry. Use `tools/trader/journal.py`:
-
-```python
-# After each re-check, append to the vault thesis file:
-journal.append_thesis_review(ticker, layer="L0" or "L3", note=f"score={N}/6, {status}: {one_line_reason}")
-
-# If thesis is broken and trade closed:
-journal.log_lesson_v2(
-    lesson=f"Exit {ticker}: {reason}",
-    category="thesis_quality",     # or "exit_timing" if timing was the issue
-    tickers=[ticker],
-    severity="medium",             # high if SID flip was missed early
-    pattern_tag="thesis-break",    # or "catalyst-failed", "late-exit" etc.
-)
-```
-
-This creates the feedback loop that catches recurring mistakes in L0 Step 6 (`detect_recurring_mistakes`).
-
 ## Hard Rules
 
 - Do not protect the old idea. Protect Boss O's capital.
