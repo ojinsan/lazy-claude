@@ -8,7 +8,7 @@ from pathlib import Path
 from config import LOCAL_NOTES_DIR, WATCHLIST_FILE, load_env
 import time
 import api
-import sys as _sys; _sys.path.insert(0, str(Path(__file__).parent.parent))
+import sys as _sys; _sys.path.insert(0, '/home/lazywork/workspace')
 from tools.fund_api import api as _fund_api
 
 WIB = ZoneInfo('Asia/Jakarta')

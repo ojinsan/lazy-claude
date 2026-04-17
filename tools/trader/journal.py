@@ -65,8 +65,8 @@ def read_journal(date: Optional[str] = None) -> str:
 
 def _fund_api():
     try:
-        import sys as _sys, os as _os
-        _sys.path.insert(0, str(Path(__file__).parent.parent))
+        import sys as _sys
+        _sys.path.insert(0, '/home/lazywork/workspace')
         from tools.fund_api import api
         return api
     except Exception:

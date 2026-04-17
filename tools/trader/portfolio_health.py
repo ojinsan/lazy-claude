@@ -7,6 +7,11 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from api import get_cash_info, get_emitten_info, get_portfolio
+import sys as _sys; _sys.path.insert(0, '/home/lazywork/workspace')
+try:
+    from tools.fund_api import api as _fund_api
+except Exception:
+    _fund_api = None
 
 WIB = ZoneInfo("Asia/Jakarta")
 STATE_PATH = Path("/home/lazywork/workspace/vault/data/portfolio-state.json")
@@ -51,29 +56,48 @@ def save_state(state: dict[str, Any]) -> None:
     STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False))
     # M2.5 dual-write
     try:
-        import sys as _sys; _sys.path.insert(0, str(Path(__file__).parent.parent))
-        from tools.fund_api import api as _api
+        _api = _fund_api
+        if not _api:
+            raise RuntimeError("fund_api not available")
+        exposure = state.get("exposure") or {}
+        equity = exposure.get("total_equity") or state.get("total_equity") or state.get("equity") or 0
+        cash = exposure.get("cash") or state.get("cash") or 0
+        deployed = equity - cash
         snap = {
             "date": state.get("date", ""),
-            "equity": state.get("total_equity", 0),
-            "cash": state.get("cash", 0),
-            "deployed": state.get("deployed", 0),
-            "utilization": state.get("utilization_pct", 0),
+            "equity": equity,
+            "cash": cash,
+            "deployed": deployed,
+            "utilization": state.get("utilization_pct") or (deployed / equity * 100 if equity else 0),
             "drawdown": state.get("drawdown_pct", 0),
-            "hwm": state.get("high_water_mark", 0),
-            "posture": state.get("posture", ""),
-            "raw_json": json.dumps(state),
+            "hwm": state.get("high_water_mark") or equity,
+            "posture": str(state.get("posture") or "balanced"),
+            "raw_json": json.dumps({
+                "date": state.get("date"), "equity": equity, "cash": cash,
+                "utilization_pct": state.get("utilization_pct"), "drawdown_pct": state.get("drawdown_pct"),
+                "top_exposure": state.get("top_exposure"), "positions": state.get("positions"),
+            }),
         }
         _api.post_portfolio_snapshot(snap)
-        holdings = state.get("positions", [])
-        if holdings:
-            batch = [{"date": snap["date"], "ticker": h.get("ticker", ""), "shares": h.get("shares", 0),
-                      "avg_cost": h.get("avg_cost", 0), "last_price": h.get("last_price", 0),
-                      "market_value": h.get("market_value", 0), "unrealized_pnl": h.get("unrealized_pnl", 0),
-                      "unrealized_pct": h.get("unrealized_pct", 0), "sector": h.get("sector", ""),
-                      "action": h.get("action", ""), "thesis_status": h.get("thesis_status", "")}
-                     for h in holdings]
-            _api.post_holdings(batch)
+        # Holdings are in exposure.by_ticker (keyed by symbol)
+        by_ticker = exposure.get("by_ticker") or []
+        if by_ticker:
+            date = snap["date"]
+            batch = [{
+                "date": date,
+                "ticker": h.get("symbol") or h.get("ticker", ""),
+                "shares": int(h.get("shares") or h.get("volume") or 0),
+                "avg_cost": float(h.get("avg_cost") or h.get("avg_price") or 0),
+                "last_price": float(h.get("last_price") or h.get("price") or 0),
+                "market_value": float(h.get("market_value") or 0),
+                "unrealized_pnl": float(h.get("unrealized_pnl") or h.get("pnl") or 0),
+                "unrealized_pct": float(h.get("gain_pct") or h.get("unrealized_pct") or 0),
+                "sector": str(h.get("sector_bucket") or h.get("sector") or ""),
+                "action": str(h.get("action") or "hold"),
+                "thesis_status": str(h.get("thesis_status") or ""),
+            } for h in by_ticker if h.get("symbol") or h.get("ticker")]
+            if batch:
+                _api.post_holdings(batch)
     except Exception as _e:
         import logging; logging.getLogger(__name__).warning(f"fund_api dual-write failed: {_e}")
 
