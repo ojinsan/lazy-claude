@@ -1,12 +1,16 @@
 # Google Docs
 
-## What This Does
-Create, read, and append text to Google Docs using the unified Google Workspace tool.
+## Purpose
+Create, read, and append text to Google Docs through Google Workspace tooling.
 
-## Tool Path
-`~/workspace/tools/general/scripts/google_workspace.py`
+## Primary Tooling
+- Manual: `~/workspace/tools/manual/google.md`
+- Script: `~/workspace/tools/general/scripts/google_workspace.py`
 
-## Usage
+## Usage Path
+Read `tools/manual/google.md` first for auth and Workspace scope. Then use Docs commands from `google_workspace.py`.
+
+## Common Calls
 ```bash
 python3 ~/workspace/tools/general/scripts/google_workspace.py docs create --title "Draft"
 python3 ~/workspace/tools/general/scripts/google_workspace.py docs append --document-id DOC_ID --text "Hello"

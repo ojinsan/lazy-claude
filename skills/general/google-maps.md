@@ -1,12 +1,16 @@
 # Google Maps
 
-## What This Does
-Search places, get directions, geocode addresses, and plan trips using Google Maps Platform.
+## Purpose
+Search places, get directions, geocode addresses, and plan trips using Google Maps tooling.
 
-## Tool Path
-`~/workspace/tools/general/scripts/google_maps.py`
+## Primary Tooling
+- Manual: `~/workspace/tools/manual/google.md`
+- Script: `~/workspace/tools/general/scripts/google_maps.py`
 
-## Usage
+## Usage Path
+Read `tools/manual/google.md` first for auth and Google setup. Then use `google_maps.py` for map queries.
+
+## Common Calls
 ```bash
 python3 ~/workspace/tools/general/scripts/google_maps.py search --query "coffee near Sudirman"
 python3 ~/workspace/tools/general/scripts/google_maps.py directions --origin "Jakarta" --destination "Bandung"

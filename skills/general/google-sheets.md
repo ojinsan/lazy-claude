@@ -1,12 +1,16 @@
 # Google Sheets
 
-## What This Does
-Read, write, append, and create Google Sheets through the unified Google Workspace tool.
+## Purpose
+Read, write, append, and create Google Sheets through Google Workspace tooling.
 
-## Tool Path
-`~/workspace/tools/general/scripts/google_workspace.py`
+## Primary Tooling
+- Manual: `~/workspace/tools/manual/google.md`
+- Script: `~/workspace/tools/general/scripts/google_workspace.py`
 
-## Usage
+## Usage Path
+Read `tools/manual/google.md` first for auth and Workspace scope. Then use Sheets commands from `google_workspace.py`.
+
+## Common Calls
 ```bash
 python3 ~/workspace/tools/general/scripts/google_workspace.py sheets read --spreadsheet-id ID --range "Sheet1!A1:C10"
 python3 ~/workspace/tools/general/scripts/google_workspace.py sheets append --spreadsheet-id ID --range "Sheet1!A:C" --values '[["a","b","c"]]'

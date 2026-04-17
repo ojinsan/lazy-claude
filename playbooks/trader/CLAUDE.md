@@ -26,7 +26,7 @@ You surface signal, build plans, flag risks. You do NOT decide for Boss O.
 - L2 → `playbooks/trader/layer-2-stock-screening.md`
 - L3 → `playbooks/trader/layer-3-stock-monitoring.md`
 - L4 → `playbooks/trader/layer-4-trade-plan.md`
-- L5 → `playbooks/trader/execution.md`
+- L5 → `playbooks/trader/layer-5-execution.md`
 
 ---
 

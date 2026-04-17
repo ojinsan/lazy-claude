@@ -1,12 +1,17 @@
 # Instagram
 
-## What This Does
+## Purpose
 Browse Instagram profiles, posts, stories, feed, search, and reels through the logged-in Firefox profile.
 
-## Tool Path
-`~/workspace/tools/general/browser/instagram_browser.py`
+## Primary Tooling
+- Manual: `~/workspace/tools/manual/instagram.md`
+- Browser script: `~/workspace/tools/general/browser/instagram_browser.py`
+- Scraper script: `~/workspace/tools/general/playwright/instagram-scraper.js`
 
-## Usage
+## Usage Path
+Read `tools/manual/instagram.md` first for profile/session setup. Use `instagram_browser.py` for browser-style inspection and screenshots. Use `instagram-scraper.js` when scraper flow fits better.
+
+## Common Calls
 ```bash
 python3 ~/workspace/tools/general/browser/instagram_browser.py profile --username nasa
 python3 ~/workspace/tools/general/browser/instagram_browser.py stories --username nasa --screenshot-all

@@ -1,12 +1,16 @@
 # Google Tasks
 
-## What This Does
-List, create, complete, and delete Google Tasks using the unified Google Workspace tool.
+## Purpose
+List, create, complete, and delete Google Tasks through Google Workspace tooling.
 
-## Tool Path
-`~/workspace/tools/general/scripts/google_workspace.py`
+## Primary Tooling
+- Manual: `~/workspace/tools/manual/google.md`
+- Script: `~/workspace/tools/general/scripts/google_workspace.py`
 
-## Usage
+## Usage Path
+Read `tools/manual/google.md` first for auth and Workspace scope. Then use Tasks commands from `google_workspace.py`.
+
+## Common Calls
 ```bash
 python3 ~/workspace/tools/general/scripts/google_workspace.py tasks list
 python3 ~/workspace/tools/general/scripts/google_workspace.py tasks create --title "Follow up"

@@ -1,12 +1,16 @@
 # Google Calendar
 
-## What This Does
-Read, create, update, and delete Google Calendar events through the unified Google Workspace tool.
+## Purpose
+Read, create, update, and delete Google Calendar events through Google Workspace tooling.
 
-## Tool Path
-`~/workspace/tools/general/scripts/google_workspace.py`
+## Primary Tooling
+- Manual: `~/workspace/tools/manual/google.md`
+- Script: `~/workspace/tools/general/scripts/google_workspace.py`
 
-## Usage
+## Usage Path
+Read `tools/manual/google.md` first for auth and Workspace scope. Then use Calendar commands from `google_workspace.py`.
+
+## Common Calls
 ```bash
 python3 ~/workspace/tools/general/scripts/google_workspace.py calendar list --days 7
 python3 ~/workspace/tools/general/scripts/google_workspace.py calendar create --title "Meeting" --start "2026-04-02T09:00:00+07:00" --end "2026-04-02T10:00:00+07:00"

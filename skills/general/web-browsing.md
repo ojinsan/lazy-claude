@@ -1,12 +1,16 @@
 # Web Browsing
 
-## What This Does
+## Purpose
 Open modern web pages with Playwright Firefox, extract rendered text, collect links, and capture screenshots.
 
-## Tool Path
-`~/workspace/tools/general/browser/web_browse.py`
+## Primary Tooling
+- Manual: `~/workspace/tools/manual/browser.md`
+- Script: `~/workspace/tools/general/browser/web_browse.py`
 
-## Usage
+## Usage Path
+Read `tools/manual/browser.md` first for browser-automation pattern. Then use `web_browse.py` for rendered browsing.
+
+## Common Calls
 ```bash
 python3 ~/workspace/tools/general/browser/web_browse.py open --url https://example.com --extract all
 python3 ~/workspace/tools/general/browser/web_browse.py search --query "IHSG outlook"

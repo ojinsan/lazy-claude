@@ -1,16 +1,22 @@
 # Airtable Trading
 
-Trading Airtable now supports:
-- paginated `list-all`
-- `bulk-delete`
-- `bulk-create`
-- `upsert`
-- `cleanup` with keep-latest / keep-filter behavior
-
-
 ## Purpose
 
 Use Airtable as the operating store for trading insights and the active execution watchlist.
+
+## Primary Tooling
+
+- Manual: `tools/manual/airtable.md` — auth, MCP vs script path, base IDs
+- Script: `tools/trader/airtable_client.py`
+- MCP: `mcp__claude_ai_Airtable__*` tools (preferred for Claude-native tasks)
+
+## Usage Path
+
+Read `tools/manual/airtable.md` first. Use MCP for interactive Claude tasks; use `airtable_client.py` for scheduled/automated jobs.
+
+## Supported Operations
+
+`airtable_client.py` supports: paginated `list-all`, `bulk-delete`, `bulk-create`, `upsert`, `cleanup` (keep-latest / keep-filter).
 
 ## Tables
 

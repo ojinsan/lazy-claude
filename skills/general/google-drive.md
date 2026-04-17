@@ -1,12 +1,16 @@
 # Google Drive
 
-## What This Does
-Search, list, upload, and download files in Google Drive through the unified Google Workspace tool.
+## Purpose
+Search, list, upload, and download files in Google Drive through Google Workspace tooling.
 
-## Tool Path
-`~/workspace/tools/general/scripts/google_workspace.py`
+## Primary Tooling
+- Manual: `~/workspace/tools/manual/google.md`
+- Script: `~/workspace/tools/general/scripts/google_workspace.py`
 
-## Usage
+## Usage Path
+Read `tools/manual/google.md` first for auth and Workspace scope. Then use Drive commands from `google_workspace.py`.
+
+## Common Calls
 ```bash
 python3 ~/workspace/tools/general/scripts/google_workspace.py drive search --query "tradeplan"
 python3 ~/workspace/tools/general/scripts/google_workspace.py drive upload --file ./note.txt
