@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from tools.trader.telegram_client import send_telegram
+from tools.trader.telegram_client import send_message as _tg_send
 
 VAULT_DIR = Path(__file__).parent.parent.parent / "vault" / "data"
 TRIGGER_LOG = VAULT_DIR / "auto_trigger_log.jsonl"
@@ -147,7 +147,7 @@ def trigger(ticker: str, signal_kind: str, context: dict, dry_run: bool = False)
     )
     if not dry_run:
         try:
-            send_telegram(msg, subcommand="auto_trigger_detected")
+            _tg_send(msg)
         except Exception:
             pass
 
