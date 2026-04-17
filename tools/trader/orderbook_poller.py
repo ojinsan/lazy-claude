@@ -19,11 +19,8 @@ log = logging.getLogger(__name__)
 
 STOCKBIT_BASE_URL = "https://exodus.stockbit.com"
 POLL_INTERVAL = 60
-from config import load_env, backend_url, backend_token
+from config import load_env
 load_env()
-BACKEND_URL = backend_url()
-BACKEND_TOKEN = backend_token()
-BACKEND_HEADERS = {"Authorization": f"Bearer {BACKEND_TOKEN}"} if BACKEND_TOKEN else {}
 
 REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
@@ -34,11 +31,10 @@ ORDERBOOK_TTL = 300
 WATCHLIST = ["ESSA", "ITMG", "BUMI", "PTRO", "BULL", "VKTR", "ENRG", "BIPI", "KETR", "INCO", "CLEO", "AADI"]
 
 def get_stockbit_token():
-    """Get token from backend."""
+    """Delegate to api.py local-cache loader."""
     try:
-        r = httpx.get(f"{BACKEND_URL}/token-store/stockbit", headers=BACKEND_HEADERS, timeout=10)
-        if r.status_code == 200:
-            return r.json().get("token")
+        import api as trader_api
+        return trader_api.get_stockbit_token()
     except Exception as e:
         log.error(f"Failed to get token: {e}")
     return None

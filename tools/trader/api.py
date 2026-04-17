@@ -2,13 +2,14 @@
 Lazyboy Shared API Layer
 ========================
 Follows Waterseven architecture:
-- Token priority: Backend API /token-store/stockbit → local cache
+- Token priority: in-memory → local file cache (written by stockbit_login.py)
 - Stockbit direct: index/regime, realtime needs
 - Backend API: cached stock data, broker analysis, RAG
 
 Learned from: ~/bitstock/waterseven/skills/stockbit_client.py
 """
 
+import base64
 import httpx
 import json
 import logging
@@ -67,6 +68,19 @@ CARINA_BASE_URL = "https://carina.stockbit.com"
 CARINA_TOKEN_CACHE = Path(stockbit_token_cache().parent / "carina_token.json")
 
 
+def _jwt_exp(token: str) -> int:
+    """Decode JWT and return exp as Unix seconds (0 if undecodable)."""
+    try:
+        parts = token.split(".")
+        if len(parts) < 2:
+            return 0
+        pad = parts[1] + "=" * (-len(parts[1]) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(pad).decode())
+        return int(payload.get("exp", 0))
+    except Exception:
+        return 0
+
+
 def _load_carina_token() -> Optional[str]:
     """Load Carina (portfolio) Bearer token from cache."""
     if CARINA_TOKEN_CACHE.exists():
@@ -74,7 +88,7 @@ def _load_carina_token() -> Optional[str]:
             data = json.loads(CARINA_TOKEN_CACHE.read_text())
             token = data.get("token", "")
             exp = data.get("expires_at", 0)
-            if token and (exp == 0 or exp > time.time()):
+            if token and exp > time.time():
                 return token
         except Exception:
             pass
@@ -152,7 +166,8 @@ def refresh_carina_token() -> str:
             new_token = data.get("access_token", "")
             if new_token:
                 refresh_tok = data.get("refresh_token", "")
-                save_carina_token(new_token, refresh_token=refresh_tok)
+                exp = _jwt_exp(new_token) or int(time.time()) + 3600
+                save_carina_token(new_token, expires_at=exp, refresh_token=refresh_tok)
                 log.info("Carina token refreshed via PIN login")
                 return new_token
         log.warning(f"PIN login failed ({r.status_code}: {r.text[:100]}), trying account/switch fallback")
@@ -176,7 +191,8 @@ def refresh_carina_token() -> str:
     new_token = data.get("access_token", "")
     if not new_token:
         raise RuntimeError(f"account/switch returned no access_token: {r.text[:200]}")
-    save_carina_token(new_token)
+    exp = _jwt_exp(new_token) or int(time.time()) + 3600
+    save_carina_token(new_token, expires_at=exp)
     log.info("Carina token refreshed via account/switch (fallback)")
     return new_token
 
@@ -192,44 +208,10 @@ def get_portfolio() -> dict:
       - summary: {cash, invested, equity, unrealised_pl, gain_pct}
       - positions: [{symbol, lots, shares, avg_price, latest_price, market_value, pl, gain_pct}]
     """
-    # Try tokens in priority order
-    tokens_to_try = []
-    
-    # 1. Carina-specific v2 token (most likely to work for portfolio)
-    carina_token = _load_carina_token()
-    if carina_token:
-        tokens_to_try.append(("carina_v2", carina_token))
-    
-    # 2. Backend API token (v1, may or may not work for Carina)
-    try:
-        backend_token = get_stockbit_token()
-        if backend_token:
-            tokens_to_try.append(("backend_v1", backend_token))
-    except Exception:
-        pass
-    
-    if not tokens_to_try:
-        raise RuntimeError("No Stockbit token available. Ask Mr O for Bearer token → save_carina_token()")
-    
-    last_error = None
-    for token_name, token in tokens_to_try:
-        r = httpx.get(
-            f"{CARINA_BASE_URL}/portfolio/v2/list",
-            headers={
-                **STOCKBIT_BROWSER_HEADERS,
-                "authorization": f"Bearer {token}",
-                "origin": "https://stockbit.com",
-            },
-            timeout=TIMEOUT,
-        )
-        if r.status_code == 200:
-            log.info(f"Portfolio fetched with {token_name}")
-            break
-        last_error = f"{token_name}: {r.status_code} {r.text[:100]}"
-        log.warning(f"Portfolio {last_error}")
-    else:
-        raise RuntimeError(f"All tokens failed for Carina portfolio. Last: {last_error}. Ask Mr O for new v2 Bearer token → save_carina_token()") 
-    data = r.json().get("data", {})
+    result = _carina_get("/portfolio/v2/list")
+    if "error" in result:
+        raise RuntimeError(f"Portfolio fetch failed: {result['error']}")
+    data = result.get("data", {})
     
     summary_raw = data.get("summary", {})
     results_raw = data.get("results", [])
@@ -309,35 +291,15 @@ def _extract_token(data: dict) -> Optional[str]:
 def get_stockbit_token() -> Optional[str]:
     """
     Get Stockbit bearer token.
-    Priority: in-memory cache → backend API → local file cache.
+    Priority: in-memory cache → local file cache.
     Local cache is written by stockbit_login.py (cron every 6h).
     """
     global _stockbit_token, _stockbit_token_expires_at
 
-    # 1. In-memory cache (still valid)
     now_ms = int(time.time() * 1000)
     if _stockbit_token and (_stockbit_token_expires_at == 0 or now_ms < _stockbit_token_expires_at - 300000):
         return _stockbit_token
 
-    # 2. Backend API
-    try:
-        r = httpx.get(
-            f"{BACKEND_BASE_URL}/token-store/stockbit",
-            headers=BACKEND_HEADERS,
-            timeout=10,
-        )
-        if r.status_code == 200:
-            data = r.json()
-            token = _extract_token(data)
-            exp = data.get("expires_at", 0)
-            if token and (exp == 0 or now_ms < exp - 300000):
-                _stockbit_token = token
-                _stockbit_token_expires_at = exp
-                return token
-    except Exception as e:
-        log.debug(f"Backend token fetch failed: {e}")
-
-    # 3. Local file cache (written by stockbit_login.py)
     try:
         cache_path = stockbit_token_cache()
         if cache_path.exists():
@@ -352,7 +314,7 @@ def get_stockbit_token() -> Optional[str]:
     except Exception as e:
         log.debug(f"Local token cache read failed: {e}")
 
-    log.warning("No valid Stockbit token available (backend + local cache both miss)")
+    log.warning("No valid Stockbit token — run stockbit_login.py")
     return None
 
 

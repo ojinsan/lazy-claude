@@ -35,7 +35,7 @@ from typing import Optional
 
 import httpx
 
-from config import load_env, backend_url, backend_token, stockbit_token_cache
+from config import load_env, stockbit_token_cache
 
 log = logging.getLogger(__name__)
 
@@ -125,33 +125,6 @@ def save_token_cache(data: dict) -> None:
     TOKEN_CACHE.parent.mkdir(parents=True, exist_ok=True)
     TOKEN_CACHE.write_text(json.dumps(data, indent=2))
     log.info(f"Token saved to {TOKEN_CACHE}")
-
-
-def push_to_backend(data: dict) -> bool:
-    """POST token to backend /token-store/stockbit."""
-    base = backend_url()
-    api_tok = backend_token()
-    if not base:
-        return False
-    try:
-        payload = {
-            "token":         data.get("token", ""),
-            "refresh_token": data.get("refresh_token", ""),
-            "expires_at":    data.get("expires_at", 0),
-            "user":          data.get("user", {}),
-        }
-        headers = {"Content-Type": "application/json"}
-        if api_tok:
-            headers["Authorization"] = f"Bearer {api_tok}"
-        r = httpx.post(f"{base}/token-store/stockbit", json=payload, headers=headers, timeout=15)
-        if r.status_code in (200, 201):
-            log.info("Token pushed to backend successfully")
-            return True
-        log.warning(f"Backend push returned {r.status_code}: {r.text[:120]}")
-        return False
-    except Exception as e:
-        log.warning(f"Backend push failed: {e}")
-        return False
 
 
 # ─── Login flow ───────────────────────────────────────────────────────────────
@@ -311,7 +284,6 @@ def login(force: bool = False) -> dict:
     }
 
     save_token_cache(token_data)
-    push_to_backend(token_data)
 
     exp_str = time.strftime("%Y-%m-%d %H:%M WIB", time.localtime(exp_ms / 1000))
     print(f"[stockbit_login] Login successful. Token expires: {exp_str}")
