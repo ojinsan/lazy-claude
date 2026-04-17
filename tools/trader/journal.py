@@ -61,6 +61,37 @@ def read_journal(date: Optional[str] = None) -> str:
     return ""
 
 
+# ─── fund_api dual-write helpers ─────────────────────────────────────────────
+
+def _fund_api():
+    try:
+        import sys as _sys, os as _os
+        _sys.path.insert(0, str(Path(__file__).parent.parent))
+        from tools.fund_api import api
+        return api
+    except Exception:
+        return None
+
+def _api_post_transaction(entry: dict) -> None:
+    api = _fund_api()
+    if not api: return
+    try:
+        api.post_transaction({
+            "ts": entry.get("timestamp", ""),
+            "ticker": entry.get("ticker", ""),
+            "side": entry.get("action", "").upper(),
+            "shares": entry.get("shares", 0),
+            "price": entry.get("price", 0),
+            "value": entry.get("value", 0),
+            "order_id": entry.get("order_id", ""),
+            "thesis": entry.get("thesis", ""),
+            "conviction": entry.get("conviction", ""),
+            "layer_origin": entry.get("layer_origin", ""),
+            "notes": entry.get("notes", ""),
+        })
+    except Exception as e:
+        log.warning(f"fund_api post_transaction: {e}")
+
 # ─── Transaction Log ─────────────────────────────────────────────────────────
 
 def log_trade(
@@ -101,6 +132,8 @@ def log_trade(
     transactions.append(entry)
     TRANSACTIONS_FILE.write_text(json.dumps(transactions, indent=2, ensure_ascii=False))
     log.info(f"Trade logged: {action} {ticker} @ {price}")
+    # M2.5 dual-write
+    _api_post_transaction(entry)
     return entry
 
 
@@ -126,6 +159,12 @@ def close_trade(trade_id: int, exit_price: float, lesson: str = "") -> dict:
     TRANSACTIONS_FILE.write_text(json.dumps(transactions, indent=2, ensure_ascii=False))
     pnl_pct = float(t.get("pnl_pct") or 0)
     t["suggested_lesson"] = _draft_lesson_from_close(t, pnl_pct)
+    # M2.5 dual-write
+    try:
+        from tools.fund_api import api as _api
+        _api.put_transaction(trade_id, t.get("pnl", 0), pnl_pct)
+    except Exception as _e:
+        log.warning(f"fund_api put_transaction failed: {_e}")
     return t
 
 
@@ -344,6 +383,17 @@ def log_lesson_v2(
     ]).strip()
     md_path.write_text(_fm_render(fm) + "\n\n" + body + "\n")
     log.info(f"Lesson v2 logged: [{category}/{severity}] {lesson[:60]}")
+    # M2.5 dual-write
+    try:
+        api = _fund_api()
+        if api:
+            api.post_lesson({
+                "date": entry.get("date", ""), "category": category, "severity": severity,
+                "pattern_tag": pattern_tag or "", "tickers": ",".join(tickers or []),
+                "related_thesis": related_thesis or "", "lesson_text": lesson,
+            })
+    except Exception as _e:
+        log.warning(f"fund_api post_lesson: {_e}")
     return entry
 
 
@@ -634,6 +684,13 @@ def append_thesis_review(ticker: str, layer: str, note: str) -> Path:
     else:
         text = text.rstrip() + f"\n{new_line}\n"
     path.write_text(text)
+    # M2.5 dual-write
+    try:
+        api = _fund_api()
+        if api:
+            api.post_thesis_review(ticker.upper(), datetime.now(WIB).strftime("%Y-%m-%d"), layer, note)
+    except Exception as _e:
+        log.warning(f"fund_api post_thesis_review: {_e}")
     return path
 
 
@@ -691,6 +748,13 @@ def append_daily_layer_section(layer: str, content: str, date: Optional[str] = N
     else:
         text = text.rstrip() + f"\n\n{section}"
     path.write_text(text)
+    # M2.5 dual-write
+    try:
+        api = _fund_api()
+        if api:
+            api.put_daily_note(date, path.read_text())
+    except Exception as _e:
+        log.warning(f"fund_api put_daily_note: {_e}")
     return path
 
 
@@ -775,6 +839,13 @@ def set_intraday_posture(posture: int, reason: str) -> None:
     }
     REGIME_INTRADAY_FILE.write_text(json.dumps(entry, indent=2, ensure_ascii=False))
     log.info(f"Intraday posture set to {posture}: {reason}")
+    # M2.5 dual-write
+    try:
+        api = _fund_api()
+        if api:
+            api.put_regime_intraday(posture, reason)
+    except Exception as _e:
+        log.warning(f"fund_api put_regime_intraday: {_e}")
 
 
 def get_intraday_posture() -> dict:

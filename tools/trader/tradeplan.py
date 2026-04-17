@@ -208,6 +208,29 @@ def _update_watchlist(ticker, narr, entry, cl, tp, shares):
     })
     
     WATCHLIST_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+    # M2.5 dual-write
+    try:
+        import sys as _sys; _sys.path.insert(0, str(Path(__file__).parent.parent))
+        from tools.fund_api import api as _api
+        from datetime import datetime
+        tp_plan = data[-1]
+        _api.post_tradeplan({
+            "plan_date": datetime.now().strftime("%Y-%m-%d"),
+            "ticker": tp_plan.get("ticker", ""),
+            "mode": "full",
+            "entry_low": tp_plan.get("trade_plan", {}).get("entry_zone", [0, 0])[0],
+            "entry_high": tp_plan.get("trade_plan", {}).get("entry_zone", [0, 0])[1],
+            "stop": tp_plan.get("trade_plan", {}).get("cut_loss", 0),
+            "target_1": tp_plan.get("trade_plan", {}).get("target", 0),
+            "size_shares": tp_plan.get("trade_plan", {}).get("shares", 0),
+            "conviction": tp_plan.get("trade_plan", {}).get("conviction", ""),
+            "level": "local",
+            "status": tp_plan.get("status", "draft"),
+            "raw_md": str(tp_plan),
+            "created_at": datetime.now().isoformat(),
+        })
+    except Exception as _e:
+        pass
 
 
 def main():

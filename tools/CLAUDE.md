@@ -24,6 +24,16 @@ Business logic scripts and service connectors. Called by playbooks/, skills/, or
 | `trader/relative_strength.py` | RS vs IHSG rank within a sector | stdout table |
 | `trader/overnight_macro.py` | Prefetch global market closes (03:00 WIB) | `vault/data/overnight-YYYY-MM-DD.json` |
 
+## Fund Manager API Client (M2.5)
+
+| Script | Purpose | Usage |
+|--------|---------|-------|
+| `fund_api.py` | Thin HTTP client for Go backend at 127.0.0.1:8787 | `from tools.fund_api import api; api.post_signal({...})` |
+| `fund_backfill.py` | One-time backfill: vault/data/* → SQLite via API | `python tools/fund_backfill.py --source all` |
+
+`fund_api` is imported by `portfolio_health.py`, `journal.py`, `tradeplan.py`, `runtime_monitoring.py` for dual-write.
+On network error: logs warning, returns None — never raises.
+
 ## Connectors (service clients)
 
 | Connector   | Type              | MCP | Manual |

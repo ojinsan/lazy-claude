@@ -49,6 +49,33 @@ def load_state() -> dict[str, Any]:
 def save_state(state: dict[str, Any]) -> None:
     STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     STATE_PATH.write_text(json.dumps(state, indent=2, ensure_ascii=False))
+    # M2.5 dual-write
+    try:
+        import sys as _sys; _sys.path.insert(0, str(Path(__file__).parent.parent))
+        from tools.fund_api import api as _api
+        snap = {
+            "date": state.get("date", ""),
+            "equity": state.get("total_equity", 0),
+            "cash": state.get("cash", 0),
+            "deployed": state.get("deployed", 0),
+            "utilization": state.get("utilization_pct", 0),
+            "drawdown": state.get("drawdown_pct", 0),
+            "hwm": state.get("high_water_mark", 0),
+            "posture": state.get("posture", ""),
+            "raw_json": json.dumps(state),
+        }
+        _api.post_portfolio_snapshot(snap)
+        holdings = state.get("positions", [])
+        if holdings:
+            batch = [{"date": snap["date"], "ticker": h.get("ticker", ""), "shares": h.get("shares", 0),
+                      "avg_cost": h.get("avg_cost", 0), "last_price": h.get("last_price", 0),
+                      "market_value": h.get("market_value", 0), "unrealized_pnl": h.get("unrealized_pnl", 0),
+                      "unrealized_pct": h.get("unrealized_pct", 0), "sector": h.get("sector", ""),
+                      "action": h.get("action", ""), "thesis_status": h.get("thesis_status", "")}
+                     for h in holdings]
+            _api.post_holdings(batch)
+    except Exception as _e:
+        import logging; logging.getLogger(__name__).warning(f"fund_api dual-write failed: {_e}")
 
 
 def compute_drawdown(equity_history: list[dict[str, Any]]) -> float:
