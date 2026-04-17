@@ -689,3 +689,261 @@ def append_daily_layer_section(layer: str, content: str, date: Optional[str] = N
         text = text.rstrip() + f"\n\n{section}"
     path.write_text(text)
     return path
+
+
+# ─── G. Previous-Day Orders (M1.2 Gap 1) ─────────────────────────────────────
+
+def load_previous_orders(days_back: int = 1) -> list[dict]:
+    """Return all order rows from the last N trading days (reverse chronological).
+
+    Reads runtime/orders/YYYY-MM-DD.jsonl files. Returns [] if none found.
+    """
+    from pathlib import Path
+    orders_dir = Path("/home/lazywork/workspace/runtime/orders")
+    if not orders_dir.exists():
+        return []
+    results: list[dict] = []
+    today = datetime.now(WIB).date()
+    for i in range(1, days_back + 2):
+        candidate = today - timedelta(days=i)
+        p = orders_dir / f"{candidate.strftime('%Y-%m-%d')}.jsonl"
+        if p.exists():
+            for line in p.read_text().splitlines():
+                line = line.strip()
+                if line:
+                    try:
+                        results.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        pass
+    return results
+
+
+# ─── H. Thesis-Action State Bus (M1.2 Gap 2) ─────────────────────────────────
+
+THESIS_ACTIONS_FILE = DATA_DIR / "thesis-actions.json"
+
+
+def set_thesis_action(ticker: str, action: str) -> None:
+    """Write per-ticker L0 action to vault/data/thesis-actions.json.
+
+    action in {hold, add-to, reduce, exit-candidate, stale}.
+    Idempotent: overwrites existing entry for the same ticker + date.
+    """
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    date = datetime.now(WIB).strftime("%Y-%m-%d")
+    actions: dict = {}
+    if THESIS_ACTIONS_FILE.exists():
+        try:
+            actions = json.loads(THESIS_ACTIONS_FILE.read_text())
+        except json.JSONDecodeError:
+            actions = {}
+    actions[ticker.upper()] = {"action": action, "date": date}
+    THESIS_ACTIONS_FILE.write_text(json.dumps(actions, indent=2, ensure_ascii=False))
+
+
+def get_thesis_actions(date: Optional[str] = None) -> dict[str, str]:
+    """Return {ticker: action} for today (or given date). Returns {} if file missing."""
+    if not THESIS_ACTIONS_FILE.exists():
+        return {}
+    try:
+        actions = json.loads(THESIS_ACTIONS_FILE.read_text())
+    except json.JSONDecodeError:
+        return {}
+    target = date or datetime.now(WIB).strftime("%Y-%m-%d")
+    return {t: v["action"] for t, v in actions.items() if v.get("date") == target}
+
+
+# ─── I. Intraday Regime (M1.2 Gap 3) ─────────────────────────────────────────
+
+REGIME_INTRADAY_FILE = DATA_DIR / "regime-intraday.json"
+
+
+def set_intraday_posture(posture: int, reason: str) -> None:
+    """Write intraday posture flip to vault/data/regime-intraday.json.
+
+    Called by mid-day regime check at 11:30 and 14:00 WIB.
+    """
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "posture": posture,
+        "reason": reason,
+        "ts": datetime.now(WIB).isoformat(),
+        "date": datetime.now(WIB).strftime("%Y-%m-%d"),
+    }
+    REGIME_INTRADAY_FILE.write_text(json.dumps(entry, indent=2, ensure_ascii=False))
+    log.info(f"Intraday posture set to {posture}: {reason}")
+
+
+def get_intraday_posture() -> dict:
+    """Return latest intraday posture. {} if not set today."""
+    if not REGIME_INTRADAY_FILE.exists():
+        return {}
+    try:
+        entry = json.loads(REGIME_INTRADAY_FILE.read_text())
+    except json.JSONDecodeError:
+        return {}
+    today = datetime.now(WIB).strftime("%Y-%m-%d")
+    if entry.get("date") != today:
+        return {}
+    return entry
+
+
+# ─── J. Kill-Switch (M1.4 §4.4, implemented here for M1.2 Gap 5 order) ──────
+
+def kill_switch_state(days: int = 5) -> dict:
+    """Return {'active': bool, 'reason': str}.
+
+    Active if any of:
+    - 3+ consecutive losing trades in recent history
+    - DD > 10% from HWM (reads vault/data/portfolio-state.json)
+    - Same pattern_tag lost 3+ trades in last N days
+    """
+    active = False
+    reasons: list[str] = []
+
+    # Check consecutive losses
+    if TRANSACTIONS_FILE.exists():
+        try:
+            txs = json.loads(TRANSACTIONS_FILE.read_text())
+        except json.JSONDecodeError:
+            txs = []
+        closed = [t for t in txs if t.get("pnl") is not None]
+        if len(closed) >= 3:
+            last3 = closed[-3:]
+            if all(float(t["pnl"]) <= 0 for t in last3):
+                active = True
+                reasons.append("3 consecutive losing trades")
+
+    # Check DD
+    from pathlib import Path
+    state_file = DATA_DIR / "portfolio-state.json"
+    if state_file.exists():
+        try:
+            state = json.loads(state_file.read_text())
+            dd = float(state.get("drawdown_pct") or state.get("drawdown") or 0)
+            if dd > 10:
+                active = True
+                reasons.append(f"drawdown {dd:.1f}% > 10% HWM threshold")
+        except (json.JSONDecodeError, KeyError, ValueError):
+            pass
+
+    # Check repeating pattern loss
+    if LESSONS_FILE.exists():
+        try:
+            cutoff = (datetime.now(WIB) - timedelta(days=days)).strftime("%Y-%m-%d")
+            lessons = json.loads(LESSONS_FILE.read_text())
+            pattern_losses: dict[str, int] = defaultdict(int)
+            for l in lessons:
+                if l.get("date", "") >= cutoff and l.get("severity") in {"medium", "high"} and l.get("pattern_tag"):
+                    pattern_losses[l["pattern_tag"]] += 1
+            for tag, count in pattern_losses.items():
+                if count >= 3:
+                    active = True
+                    reasons.append(f"pattern '{tag}' repeated {count}× in last {days}d")
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    return {"active": active, "reason": "; ".join(reasons) if reasons else "none"}
+
+
+# ─── K. Per-Dimension Hit Rate (M1.4 §4.1) ────────────────────────────────────
+
+def hit_rate_by(dim: str, days: int = 90) -> list[dict]:
+    """Compute hit rate by dimension.
+
+    dim in {sector, pattern_tag, setup, conviction, layer_origin}.
+    Returns [{key, trades, wins, win_rate, avg_r, expectancy}] sorted by trades desc.
+    """
+    if not TRANSACTIONS_FILE.exists():
+        return []
+    cutoff = (datetime.now(WIB) - timedelta(days=days)).strftime("%Y-%m-%d")
+    txs = json.loads(TRANSACTIONS_FILE.read_text())
+    closed = [t for t in txs if t.get("pnl") is not None and (t.get("exit_timestamp") or "")[:10] >= cutoff]
+
+    dim_map = {
+        "conviction": lambda t: (t.get("conviction") or "unknown").lower(),
+        "layer_origin": lambda t: t.get("notes", ""),  # notes may contain layer tag
+    }
+    get_key = dim_map.get(dim, lambda t: t.get(dim, "unknown"))
+
+    buckets: dict[str, dict] = defaultdict(lambda: {"trades": 0, "wins": 0, "pnl_pcts": []})
+    for t in closed:
+        key = str(get_key(t) or "unknown")
+        b = buckets[key]
+        b["trades"] += 1
+        if float(t["pnl"]) > 0:
+            b["wins"] += 1
+        b["pnl_pcts"].append(float(t.get("pnl_pct") or 0))
+
+    result = []
+    for key, b in buckets.items():
+        if b["trades"] == 0:
+            continue
+        win_rate = b["wins"] / b["trades"]
+        avg_r = sum(b["pnl_pcts"]) / len(b["pnl_pcts"]) if b["pnl_pcts"] else 0
+        losses = b["trades"] - b["wins"]
+        avg_loss = sum(x for x in b["pnl_pcts"] if x < 0) / losses if losses else -1
+        expectancy = win_rate * avg_r + (1 - win_rate) * avg_loss
+        result.append({
+            "key": key,
+            "trades": b["trades"],
+            "wins": b["wins"],
+            "win_rate": round(win_rate, 3),
+            "avg_r": round(avg_r, 2),
+            "expectancy": round(expectancy, 2),
+        })
+    return sorted(result, key=lambda x: x["trades"], reverse=True)
+
+
+# ─── L. Auto-Lesson Suggestion on Close (M1.4 §4.2) ──────────────────────────
+
+def _draft_lesson_from_close(trade: dict, pnl_pct: float) -> dict:
+    """Return a suggested lesson dict for a just-closed trade. Caller confirms + calls log_lesson_v2."""
+    if pnl_pct < -5:
+        return {"category": "exit_timing", "severity": "high", "pattern_tag": "stop-hit", "lesson_text": f"Loss of {pnl_pct:.1f}%. Review why stop was hit — thesis break, fake support, or poor entry?"}
+    if pnl_pct > 10:
+        return {"category": "thesis_quality", "severity": "low", "pattern_tag": "thesis-confirmed", "lesson_text": f"Win of {pnl_pct:.1f}%. Record what worked — narrative, broker flow, timing."}
+    if abs(pnl_pct) <= 2:
+        return {"category": "psychology", "severity": "low", "pattern_tag": "indecision-exit", "lesson_text": f"Exit at {pnl_pct:.1f}% — near-zero result. Was this premature, or disciplined stop?"}
+    if pnl_pct > 0:
+        return {"category": "exit_timing", "severity": "low", "pattern_tag": "early-exit", "lesson_text": f"Win of {pnl_pct:.1f}%. Did we leave significant upside? Check T2 vs actual exit."}
+    return {"category": "exit_timing", "severity": "medium", "pattern_tag": "managed-loss", "lesson_text": f"Managed loss {pnl_pct:.1f}%. Was the thesis wrong or just timing?"}
+
+
+# ─── CLI Entry Points ─────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    import sys
+    cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+
+    if cmd == "stale":
+        summary = thesis_status_summary()
+        print(json.dumps(summary["stale"], indent=2, ensure_ascii=False))
+
+    elif cmd == "kill-switch":
+        days = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+        print(json.dumps(kill_switch_state(days), indent=2, ensure_ascii=False))
+
+    elif cmd == "hit-rate":
+        dim = sys.argv[2] if len(sys.argv) > 2 else "conviction"
+        days = int(sys.argv[3]) if len(sys.argv) > 3 else 90
+        print(json.dumps(hit_rate_by(dim, days), indent=2, ensure_ascii=False))
+
+    elif cmd == "calibration":
+        days = int(sys.argv[2]) if len(sys.argv) > 2 else 90
+        print(json.dumps(confidence_calibration(days), indent=2, ensure_ascii=False))
+
+    elif cmd == "thesis-actions":
+        print(json.dumps(get_thesis_actions(), indent=2, ensure_ascii=False))
+
+    elif cmd == "intraday-posture":
+        print(json.dumps(get_intraday_posture(), indent=2, ensure_ascii=False))
+
+    elif cmd == "weekly":
+        print(generate_weekly_review())
+
+    elif cmd == "monthly":
+        print(generate_monthly_review())
+
+    else:
+        print("Commands: stale | kill-switch [days] | hit-rate [dim] [days] | calibration [days] | thesis-actions | intraday-posture | weekly | monthly")

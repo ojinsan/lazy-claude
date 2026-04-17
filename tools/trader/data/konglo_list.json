@@ -1,0 +1,453 @@
+{
+  "conglomerates": [
+    {
+      "id": "hh_djarum",
+      "name": "Hartono Brothers (HH) - Djarum Group",
+      "owner": "Hartono Family",
+      "description": "Keluarga Hartono / Grup Djarum – paling 'rapih' konglonya",
+      "market_power": "high",
+      "sectors": ["Banking & Financial", "Property & Hospitality", "Consumer/Packaging", "Energy/Infra"],
+      "stocks": [
+        {
+          "ticker": "BBCA",
+          "name": "Bank Central Asia",
+          "category": "Bank & Finansial"
+        },
+        {
+          "ticker": "BBHI",
+          "name": "Allo Bank",
+          "category": "Bank & Finansial",
+          "notes": "via ekosistem Djarum–CT–Emtek"
+        },
+        {
+          "ticker": "BUVA",
+          "name": "Bukit Uluwatu Villa",
+          "category": "Property & Hospitality"
+        },
+        {
+          "ticker": "CBDK",
+          "name": "Bangun Kosambi Sukses",
+          "category": "Property & Hospitality",
+          "notes": "PIK 2"
+        },
+        {
+          "ticker": "PBID",
+          "name": "Panca Budi Idaman",
+          "category": "Consumer/Packaging"
+        },
+        {
+          "ticker": "BREN",
+          "name": "Barito Renewables Energy",
+          "category": "Energy/Infra",
+          "notes": "co-control bareng Prajogo"
+        }
+      ]
+    },
+    {
+      "id": "sinar_mas",
+      "name": "Sinar Mas Group",
+      "owner": "Widjaja Family",
+      "description": "Rajanya cross-holding, kompleks tapi fundamental keras",
+      "market_power": "high",
+      "sectors": ["Holding & Finansial", "Pulp & Paper", "Energy & Infrastructure", "Agri/Plantation", "Mining"],
+      "stocks": [
+        {
+          "ticker": "SMMA",
+          "name": "Sinarmas Multiartha",
+          "category": "Holding & Finansial"
+        },
+        {
+          "ticker": "DSSA",
+          "name": "Dian Swastatika Sentosa",
+          "category": "Holding & Finansial"
+        },
+        {
+          "ticker": "INKP",
+          "name": "Indah Kiat Pulp & Paper",
+          "category": "Pulp & Paper"
+        },
+        {
+          "ticker": "TKIM",
+          "name": "Pabrik Kertas Tjiwi Kimia",
+          "category": "Pulp & Paper"
+        },
+        {
+          "ticker": "TGRA",
+          "name": "Terregra Asia Energy",
+          "category": "Energy & Infrastructure"
+        },
+        {
+          "ticker": "SMAR",
+          "name": "Smart Tbk",
+          "category": "Agri/Plantation"
+        },
+        {
+          "ticker": "SIMP",
+          "name": "Salim Ivomas",
+          "category": "Agri/Plantation",
+          "notes": "overlap venture"
+        }
+      ]
+    },
+    {
+      "id": "bakrie",
+      "name": "Bakrie Group",
+      "owner": "Bakrie Family",
+      "description": "Volatil, VKTR satu-satunya yang 'masa depan'",
+      "market_power": "medium",
+      "risk_level": "high",
+      "sectors": ["Holding", "Mining & Energy", "Infrastructure/EV", "Media", "Property"],
+      "stocks": [
+        {
+          "ticker": "BNBR",
+          "name": "Bakrie & Brothers",
+          "category": "Holding"
+        },
+        {
+          "ticker": "BUMI",
+          "name": "Bumi Resources",
+          "category": "Mining & Energy"
+        },
+        {
+          "ticker": "BRMS",
+          "name": "Bumi Resources Minerals",
+          "category": "Mining & Energy"
+        },
+        {
+          "ticker": "ENRG",
+          "name": "Energi Mega Persada",
+          "category": "Mining & Energy"
+        },
+        {
+          "ticker": "DEWA",
+          "name": "Darma Henwa",
+          "category": "Mining & Energy"
+        },
+        {
+          "ticker": "VKTR",
+          "name": "VKTR Teknologi Mobilitas",
+          "category": "Infrastructure/EV",
+          "notes": "Bakrie generasi baru (EV & bus listrik)"
+        },
+        {
+          "ticker": "JGLE",
+          "name": "Graha Andrasentra Propertindo",
+          "category": "Infrastructure/EV"
+        },
+        {
+          "ticker": "VIVA",
+          "name": "Visi Media Asia",
+          "category": "Media"
+        },
+        {
+          "ticker": "MDIA",
+          "name": "Intermedia Capital",
+          "category": "Media"
+        },
+        {
+          "ticker": "ELTY",
+          "name": "Bakrieland Development",
+          "category": "Property"
+        }
+      ]
+    },
+    {
+      "id": "prajogo_barito",
+      "name": "Prajogo Pangestu - Barito Group",
+      "owner": "Prajogo Pangestu",
+      "description": "Konglo bersih & market mover, fokus energi & petrokimia",
+      "market_power": "very_high",
+      "sectors": ["Energi", "Petrokimia", "Tambang", "EBT"],
+      "stocks": [
+        {
+          "ticker": "BRPT",
+          "name": "Barito Pacific",
+          "category": "Energi"
+        },
+        {
+          "ticker": "BREN",
+          "name": "Barito Renewables Energy",
+          "category": "EBT"
+        },
+        {
+          "ticker": "TPIA",
+          "name": "Chandra Asri Pacific",
+          "category": "Petrokimia"
+        },
+        {
+          "ticker": "PTRO",
+          "name": "Petrosea",
+          "category": "Tambang"
+        },
+        {
+          "ticker": "CUAN",
+          "name": "Petrindo Jaya Kreasi",
+          "category": "Energi"
+        }
+      ]
+    },
+    {
+      "id": "haji_isam",
+      "name": "Haji Isam - Jhonlin Group",
+      "owner": "Haji Isam",
+      "description": "Power gede tapi listing dikit, fokus batubara & infrastruktur",
+      "market_power": "high",
+      "sectors": ["Batubara", "Pelayaran", "Infrastruktur", "Perkebunan"],
+      "stocks": [
+        {
+          "ticker": "DOID",
+          "name": "Delta Dunia Makmur",
+          "category": "Batubara",
+          "notes": "lewat akuisisi, tambang global"
+        },
+        {
+          "ticker": "JATI",
+          "name": "Jaya Agra Wattie",
+          "category": "Perkebunan"
+        },
+        {
+          "ticker": "SMRU",
+          "name": "SMR Utama",
+          "category": "Jasa Tambang"
+        },
+        {
+          "ticker": "JSMR",
+          "name": "Jasa Marga",
+          "category": "Infrastruktur",
+          "notes": "strategic stake via konsorsium, bukan full control"
+        }
+      ]
+    },
+    {
+      "id": "thohir",
+      "name": "Thohir Group - Erick & Garibaldi Thohir",
+      "owner": "Erick Thohir & Garibaldi Thohir",
+      "description": "Adaro universe - energi, media, kesehatan, logistik",
+      "market_power": "high",
+      "sectors": ["Energi", "Media", "Kesehatan", "Logistik"],
+      "stocks": [
+        {
+          "ticker": "ADRO",
+          "name": "Adaro Energy Indonesia",
+          "category": "Energi"
+        },
+        {
+          "ticker": "ADMR",
+          "name": "Adaro Minerals Indonesia",
+          "category": "Energi"
+        },
+        {
+          "ticker": "ABMM",
+          "name": "ABM Investama",
+          "category": "Energi"
+        },
+        {
+          "ticker": "HEAL",
+          "name": "Medikaloka Hermina",
+          "category": "Kesehatan"
+        }
+      ]
+    },
+    {
+      "id": "emtek",
+      "name": "Emtek Group - Surya Citra",
+      "owner": "Emtek Group",
+      "description": "Media + Tech ecosystem",
+      "market_power": "medium",
+      "sectors": ["Media", "Technology", "Digital Ecosystem"],
+      "stocks": [
+        {
+          "ticker": "EMTK",
+          "name": "Elang Mahkota Teknologi",
+          "category": "Media"
+        },
+        {
+          "ticker": "SCMA",
+          "name": "Surya Citra Media",
+          "category": "Media",
+          "notes": "SCTV / Indosiar"
+        },
+        {
+          "ticker": "BUKA",
+          "name": "Bukalapak",
+          "category": "Technology"
+        },
+        {
+          "ticker": "BBHI",
+          "name": "Allo Bank",
+          "category": "Financial",
+          "notes": "bareng HH & CT"
+        }
+      ]
+    },
+    {
+      "id": "salim",
+      "name": "Salim Group - Anthoni Salim",
+      "owner": "Anthoni Salim",
+      "description": "Konglo bersih & market mover, consumer & agribisnis",
+      "market_power": "very_high",
+      "sectors": ["Consumer", "Agribisnis", "Data Center"],
+      "stocks": [
+        {
+          "ticker": "INDF",
+          "name": "Indofood Sukses Makmur",
+          "category": "Consumer"
+        },
+        {
+          "ticker": "ICBP",
+          "name": "Indofood CBP",
+          "category": "Consumer"
+        },
+        {
+          "ticker": "SIMP",
+          "name": "Salim Ivomas",
+          "category": "Agribisnis"
+        },
+        {
+          "ticker": "ROTI",
+          "name": "Nippon Indosari",
+          "category": "Consumer"
+        },
+        {
+          "ticker": "DCII",
+          "name": "DCI Indonesia",
+          "category": "Data Center"
+        }
+      ]
+    },
+    {
+      "id": "astra",
+      "name": "Astra Group - Jardine Matheson",
+      "owner": "Jardine Matheson / Astra",
+      "description": "Konglo bersih & market mover, otomotif & tambang",
+      "market_power": "very_high",
+      "sectors": ["Otomotif", "Tambang", "Agribisnis", "Finansial"],
+      "stocks": [
+        {
+          "ticker": "ASII",
+          "name": "Astra International",
+          "category": "Otomotif"
+        },
+        {
+          "ticker": "UNTR",
+          "name": "United Tractors",
+          "category": "Tambang"
+        },
+        {
+          "ticker": "AALI",
+          "name": "Astra Agro Lestari",
+          "category": "Agribisnis"
+        },
+        {
+          "ticker": "AUTO",
+          "name": "Astra Otoparts",
+          "category": "Otomotif"
+        }
+      ]
+    },
+    {
+      "id": "mnc",
+      "name": "MNC Group - Hary Tanoesoedibjo",
+      "owner": "Hary Tanoesoedibjo",
+      "description": "Media & holding",
+      "market_power": "medium",
+      "sectors": ["Media", "Holding"],
+      "stocks": [
+        {
+          "ticker": "BHIT",
+          "name": "MNC Asia Holding",
+          "category": "Holding"
+        },
+        {
+          "ticker": "MNCN",
+          "name": "Media Nusantara Citra",
+          "category": "Media"
+        },
+        {
+          "ticker": "IPTV",
+          "name": "MNC Vision Networks",
+          "category": "Media"
+        }
+      ]
+    },
+    {
+      "id": "lippo",
+      "name": "Lippo Group - Riady Family",
+      "owner": "Riady Family",
+      "description": "Debt-driven, properti & RS",
+      "market_power": "medium",
+      "risk_level": "medium_high",
+      "sectors": ["Properti", "Kesehatan", "Ritel"],
+      "stocks": [
+        {
+          "ticker": "LPKR",
+          "name": "Lippo Karawaci",
+          "category": "Properti"
+        },
+        {
+          "ticker": "LPCK",
+          "name": "Lippo Cikarang",
+          "category": "Properti"
+        },
+        {
+          "ticker": "SILO",
+          "name": "Siloam International Hospitals",
+          "category": "Kesehatan"
+        },
+        {
+          "ticker": "MLPL",
+          "name": "Multipolar",
+          "category": "Ritel"
+        },
+        {
+          "ticker": "MPMX",
+          "name": "Mitra Pinasthika Mustika",
+          "category": "Properti"
+        }
+      ]
+    },
+    {
+      "id": "agung_podomoro",
+      "name": "Agung Podomoro / Agung Sedayu",
+      "owner": "Agung Podomoro Group",
+      "description": "Properti developer",
+      "market_power": "low_medium",
+      "sectors": ["Properti"],
+      "stocks": [
+        {
+          "ticker": "APLN",
+          "name": "Agung Podomoro Land",
+          "category": "Properti"
+        },
+        {
+          "ticker": "DMAS",
+          "name": "Puradelta Lestari",
+          "category": "Properti",
+          "notes": "shared influence"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "last_updated": "2026-02-12",
+    "description": "Master list saham konglomerat di IHSG untuk analisis konglo ownership dalam framework Waterseven",
+    "usage_notes": [
+      "Banyak saham konglo = free float kecil → rawan digerakkan",
+      "Konglo tertentu (Prajogo, HH, Salim, Astra) = market mover",
+      "Yang lain (Bakrie, Lippo) = high risk, high noise",
+      "Gunakan untuk analisis 60% Bandar Intent + Narrative dalam Waterseven framework"
+    ],
+    "market_power_levels": {
+      "very_high": "Major market mover, high capitalization, clean operations",
+      "high": "Significant market influence, strong fundamentals or strategic position",
+      "medium": "Moderate market influence, mixed fundamentals",
+      "low_medium": "Limited market influence"
+    },
+    "risk_levels": {
+      "high": "High volatility, debt concerns, or corporate governance issues",
+      "medium_high": "Elevated risk from debt or market conditions",
+      "medium": "Standard market risk"
+    }
+  }
+}

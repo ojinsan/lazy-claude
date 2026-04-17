@@ -206,6 +206,7 @@ def compute_portfolio_state() -> dict[str, Any]:
 
     history = [row for row in history if row.get("date") != today]
     history.append(current_row)
+    save_state({"history": history})
 
     return {
         "date": today,

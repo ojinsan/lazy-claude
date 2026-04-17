@@ -6,6 +6,9 @@ Filter the full universe down to a high-conviction shortlist.
 
 - Layer 1 market regime, sector view, and narrative list
 - Current watchlist from Airtable `Superlist`
+- Today's thesis-action state: `journal.get_thesis_actions()` → `vault/data/thesis-actions.json`
+  - Any ticker with action `exit-candidate` must NOT be promoted or added today. Substitution in the same sector is allowed.
+- Kill-switch check (already run in L0 Step 0): if active, skip all screening. Document only.
 
 ## Portfolio Health (Run First)
 

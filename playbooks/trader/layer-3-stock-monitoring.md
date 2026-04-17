@@ -18,6 +18,18 @@ Output per hold: `intact | reduce | exit | watch`
 
 ---
 
+## Mid-Day Regime Check (11:30 and 14:00 WIB only)
+
+At these two times only, re-evaluate IHSG posture before running the normal monitoring cycle:
+
+1. Get live IHSG from `api.get_stockbit_index('IHSG')` — check Δ% vs morning baseline.
+2. If IHSG down > 1% AND foreign net flow turning more negative → posture notch down by 1.
+3. Call `journal.set_intraday_posture(new_posture, reason)` — this writes `vault/data/regime-intraday.json`.
+4. If posture dropped: flag all open tradeplans as needing size review in this cycle.
+5. Append a one-line note to `vault/daily/<date>.md` via `append_daily_layer_section('3', ...)` with the posture change.
+
+Other cycles: skip this block entirely.
+
 ## What To Monitor
 
 ### Price & Volume

@@ -39,9 +39,15 @@ If any fails → skip, log reason, do NOT place.
 
 ## Sizing Formula
 
+**Pre-checks (run before computing shares):**
+
+1. **Kill-switch**: `journal.kill_switch_state()` — if `active: true`, abort. Log reason. No order.
+2. **Calibration**: `journal.confidence_calibration(days=90)` — find the bucket matching your conviction label. If `drift > +0.2` (actual win-rate is 20+ points below declared), **force `risk_pct = 1%`** regardless of the conviction label. Note the cap in the tradeplan.
+
 ```
 capital_at_risk = total_capital × risk_pct
 risk_pct = 1% (low conv) | 2% (med) | 3% (high conv, L3 signal confirmed)
+# Cap at 1% if calibration shows over-optimism (drift > +0.2)
 
 shares_raw = capital_at_risk / (entry_price - stop_price)
 lots = floor(shares_raw / 100)          # 1 lot = 100 shares
@@ -122,6 +128,7 @@ When a layer other than L5 reaches high confidence, it may execute inline instea
 
 ## Hard Safety Rules
 
+- **Kill-switch first**: `journal.kill_switch_state()` — if active, no new entries period. See Sizing Formula.
 - Never place order if `trade_limit` from `get_cash_info()` < position_value × 1.1
 - Never exit >50% of a hold in one order without Boss O alert first
 - Never chase: if price moved >2% above entry range → skip, log "missed entry"
