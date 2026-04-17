@@ -30,9 +30,9 @@ Threads scraper (Playwright) ─────────────────
   threads-scraper.js                 GET /insights/positive-candidates       │   (GET /insights/positive-candidates)
                                        → high-confidence tickers             ├── RAG search hits
                                                                              │   (POST /rag/search)
-Lark watchlist ────────────►         GET /watchlist                           └── (NO alphabetical fill)
-  (manual curation,                    → active watchlist from Lark
-   synced to local DB)
+Lark spreadsheet ──────────►         GET /watchlist                           └── (NO alphabetical fill)
+  (other traders' watchlist,             → Lark fetched + local SQLite merged
+   read-only from Go backend)            → trader pipeline only calls GET
 ```
 
 ---
@@ -187,18 +187,21 @@ curl -X POST http://127.0.0.1:8787/rag/search \
 
 ### 2.1 Watchlist source
 
-Fund-manager already has `GET /watchlist`, `POST /watchlist`, `DELETE /watchlist/{ticker}`. Currently wired to Lark in `~/bitstock/backend`.
+`GET /watchlist` on fund-manager reads from **Lark** (spreadsheet managed by other traders). The backend fetches from Lark and serves it — trader pipeline only calls GET, never POST.
 
-Two options:
-- **(a)** Wire Lark client into fund-manager (copy `~/bitstock/backend/lark/client.go` → `code/fund-manager/backend/internal/lark/`)
-- **(b)** Manage watchlist directly in SQLite via `POST /watchlist` — no Lark dependency
+Port the Lark client from `~/bitstock/backend/lark/client.go` → `code/fund-manager/backend/internal/lark/`:
+- Copy `client.go` (Lark AppID/AppSecret/SheetToken-based fetcher)
+- Copy related models if any
+- Wire `FetchWatchlist()` into the existing `listWatchlist` handler in `internal/api/handlers/planning.go`
+- Env vars needed: `LARK_APP_ID`, `LARK_APP_SECRET`, `LARK_SHEET_TOKEN` (copy from `~/bitstock/backend/.env`)
 
-**Recommendation: (b)** for now. Boss O curates watchlist via Claude or a quick script. Lark sync can be added later as a background job.
-
-The fund-manager already has a `watchlist` table (check `0002_planning.sql`). Verify schema:
+Verify the existing handler already returns the right shape:
 ```bash
-sqlite3 code/fund-manager/backend/fund.db ".schema watchlist"
+# After wiring, test:
+curl http://127.0.0.1:8787/watchlist
 ```
+
+The `POST /watchlist` and `DELETE /watchlist/{ticker}` routes stay for local-only additions (Claude adding names during L2). These write to SQLite alongside Lark data. `GET /watchlist` should merge both sources (Lark + local SQLite), deduped by ticker.
 
 ### 2.2 Migrate Superlist holds
 
@@ -215,9 +218,11 @@ import requests
 BASE = "http://127.0.0.1:8787"
 
 def get_watchlist() -> list[dict]:
+    """GET /watchlist — reads from Lark + local SQLite merged."""
     return requests.get(f"{BASE}/watchlist").json()
 
 def upsert_watchlist(ticker: str, data: dict) -> dict:
+    """POST /watchlist — local-only addition (not Lark)."""
     return requests.post(f"{BASE}/watchlist", json={"ticker": ticker, **data}).json()
 
 def archive_watchlist(ticker: str) -> dict:
@@ -237,7 +242,7 @@ def upsert_thesis(ticker: str, data: dict) -> dict:
     return requests.put(f"{BASE}/thesis/{ticker}", json=data).json()
 
 def get_holds() -> list[dict]:
-    """Get active watchlist entries where status = 'hold'."""
+    """Get watchlist entries where status = 'hold'."""
     wl = get_watchlist()
     return [w for w in wl if (w.get("status") or "").lower() == "hold"]
 ```
@@ -281,16 +286,15 @@ New skill (not search — universe discovery):
 Scrape specific Threads accounts for fresh stock ideas. Runs during L1
 to produce today's narrative candidates — not yesterday's.
 
-## Accounts To Scrape (Boss O maintains this list)
-| Handle | Why |
-|--------|-----|
-| `ezpada_trader` | IDX flow analysis, sector rotation calls |
-| (add more) | (Boss O adds over time) |
+## Accounts List
+Read from `tools/data-persistence/threads-accounts.csv`.
+Boss O maintains this CSV — add rows over time, no code change needed.
+Format: `handle,category,notes`
 
 ## How
-For each account:
+For each row in the CSV:
 1. `node tools/general/playwright/threads-scraper.js --username "{handle}" --limit 10`
-2. Extract ticker mentions from each post (regex: 4-char uppercase)
+2. Extract ticker mentions from each post (regex: 4-char uppercase IDX tickers)
 3. Deduplicate and return as candidate list
 
 ## Output
@@ -410,15 +414,19 @@ Environment=DB_PATH=/home/lazywork/workspace/code/fund-manager/backend/fund.db
 WantedBy=default.target
 ```
 
-### 5.2 Populate initial watchlist
+### 5.2 Verify watchlist from Lark
 
-Boss O provides 40-80 tickers. Script to seed:
+Watchlist comes from Lark (other traders maintain it). No manual seeding needed.
+Verify it returns data:
 ```bash
-for t in BBRI BMRI BBCA TLKM ANTM ADRO AKRA ...; do
-  curl -X POST http://127.0.0.1:8787/watchlist \
-    -H 'Content-Type: application/json' \
-    -d "{\"ticker\":\"$t\",\"status\":\"active\",\"source\":\"manual\"}"
-done
+curl http://127.0.0.1:8787/watchlist | python3 -c "import json,sys; d=json.load(sys.stdin); print(f'{len(d)} tickers from Lark')"
+```
+
+If Boss O wants to add local-only tickers (not in Lark), use POST:
+```bash
+curl -X POST http://127.0.0.1:8787/watchlist \
+  -H 'Content-Type: application/json' \
+  -d '{"ticker":"ANTM","status":"active","source":"manual"}'
 ```
 
 ### 5.3 Verify full pipeline
@@ -454,9 +462,11 @@ print(f'Tickers: {tickers[:20]}...')
 services/telegram-scraper/              (copied + adapted from ~/bitstock/scrapper_client/telegram)
 services/telegram-scraper/telegram-scraper.service
 tools/trader/fund_manager_client.py     (local backend Python client)
+tools/data-persistence/threads-accounts.csv  (Boss O's Threads account list — add rows, no code change)
 skills/trader/threads-universe.md       (username-path scraping skill)
 code/fund-manager/backend/migrations/0008_insights.sql
 code/fund-manager/backend/internal/api/handlers/insights.go
+code/fund-manager/backend/internal/lark/    (ported from ~/bitstock/backend/lark/ — Lark watchlist client)
 ```
 
 ### Modified
