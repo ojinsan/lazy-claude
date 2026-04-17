@@ -31,17 +31,21 @@ def load_stock_universe() -> set[str]:
 
 
 def latest_layer1_payload() -> dict:
-    today = datetime.now(WIB).strftime('%Y-%m-%d')
-    path = LAYER1_DIR / f'{today}.jsonl'
-    if not path.exists():
-        return {}
-    lines = [line.strip() for line in path.read_text().splitlines() if line.strip()]
-    if not lines:
-        return {}
-    try:
-        return json.loads(lines[-1])
-    except Exception:
-        return {}
+    """Read today's L1 output. Falls back to yesterday if today's file is missing."""
+    from datetime import timedelta
+    for delta in (0, 1):  # try today first, then yesterday
+        date = (datetime.now(WIB) - timedelta(days=delta)).strftime('%Y-%m-%d')
+        path = LAYER1_DIR / f'{date}.jsonl'
+        if not path.exists():
+            continue
+        lines = [line.strip() for line in path.read_text().splitlines() if line.strip()]
+        if not lines:
+            continue
+        try:
+            return json.loads(lines[-1])
+        except Exception:
+            continue
+    return {}
 
 
 def extract_layer1_candidates(valid: set[str]) -> list[str]:
@@ -118,34 +122,85 @@ def extract_hold_priority(valid: set[str], limit: int = 30) -> list[str]:
     return out
 
 
-def candidate_universe(max_total: int = 120) -> tuple[list[str], dict]:
+def get_threads_account_tickers() -> list[str]:
+    """Scrape Threads accounts from CSV, extract IDX ticker mentions."""
+    import subprocess
+    ACCOUNTS_CSV = Path('/home/lazywork/workspace/tools/data-persistence/threads-accounts.csv')
+    SCRAPER = Path('/home/lazywork/workspace/tools/general/playwright/threads-scraper.js')
+    if not ACCOUNTS_CSV.exists() or not SCRAPER.exists():
+        return []
+    tickers: list[str] = []
+    seen: set[str] = set()
+    try:
+        with open(ACCOUNTS_CSV) as f:
+            reader = csv.DictReader(f)
+            handles = [row['handle'].strip() for row in reader if row.get('handle', '').strip() and not row['handle'].startswith('#')]
+    except Exception:
+        return []
+    for handle in handles:
+        if not handle:
+            continue
+        try:
+            result = subprocess.run(
+                ['node', str(SCRAPER), '--username', handle, '--limit', '8'],
+                capture_output=True, text=True, timeout=120,
+            )
+            if result.returncode != 0:
+                continue
+            # Parse JSON from stdout (scraper prints to stdout)
+            payload = json.loads(result.stdout)
+            for post in payload.get('results', []):
+                text = str(post.get('text') or '').upper()
+                for m in TICKER_RE.findall(text):
+                    if m not in seen:
+                        seen.add(m)
+                        tickers.append(m)
+        except Exception:
+            continue
+    return tickers
+
+
+def candidate_universe() -> tuple[list[str], dict]:
+    """Build L2 candidate pool from 4 signal-driven sources. No alphabetical fill."""
+    import fund_manager_client as fmc
+
+    # Source 1: holds (always first)
+    holds = fmc.get_holds()
+
+    # Source 2: today's L1 output (yesterday fallback if L1 hasn't run yet)
     valid = load_stock_universe()
-    hold = extract_hold_priority(valid)
     layer1 = extract_layer1_candidates(valid)
-    watchlist = extract_backend_watchlist(valid)
 
+    # Source 3: telegram positive candidates from local fund-manager backend
+    telegram = fmc.get_positive_candidates(min_confidence=60, days=3)
+
+    # Source 4: watchlist from fund-manager (Lark + local SQLite)
+    watchlist_raw = fmc.get_watchlist()
+    watchlist = [
+        w['ticker'].upper() for w in watchlist_raw
+        if isinstance(w, dict) and w.get('ticker')
+        and (w.get('status') or '').lower() != 'hold'
+    ]
+
+    # Merge in priority order, dedup
     ordered: list[str] = []
-    for bucket in (hold, layer1, watchlist):
+    seen: set[str] = set()
+    for bucket in (holds, layer1, telegram, watchlist):
         for ticker in bucket:
-            if ticker not in ordered:
-                ordered.append(ticker)
+            t = str(ticker or '').upper().strip()
+            if t and t not in seen:
+                seen.add(t)
+                ordered.append(t)
 
-    if len(ordered) < max_total:
-        for ticker in sorted(valid):
-            if ticker not in ordered:
-                ordered.append(ticker)
-            if len(ordered) >= max_total:
-                break
-
-    selected = ordered[:max_total]
     meta = {
-        'hold_count': len(hold),
-        'layer1_count': len(layer1),
-        'watchlist_count': len(watchlist),
-        'selected_count': len(selected),
-        'selection_mode': 'hold_then_layer1_then_watchlist_then_fill',
+        'holds': len(holds),
+        'layer1_today': len(layer1),
+        'telegram_positives': len(telegram),
+        'watchlist': len(watchlist),
+        'total': len(ordered),
+        'selection_mode': 'holds→l1_today→telegram→watchlist (no_fill)',
     }
-    return selected, meta
+    return ordered, meta
 
 
 def score_ticker(code: str) -> dict | None:

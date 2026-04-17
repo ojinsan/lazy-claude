@@ -4,10 +4,11 @@ const fs = require('fs');
 const path = require('path');
 
 function parseArgs(argv) {
-  const out = { query: '', limit: 10, output: '', headless: true, comments: false };
+  const out = { query: '', username: '', limit: 10, output: '', headless: true, comments: false };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--query') out.query = argv[++i] || '';
+    else if (a === '--username') out.username = (argv[++i] || '').replace(/^@/, '');
     else if (a === '--limit') out.limit = Number(argv[++i] || '10');
     else if (a === '--output') out.output = argv[++i] || '';
     else if (a === '--headed') out.headless = false;
@@ -90,10 +91,37 @@ async function scrapeComments(page) {
   return commentsData;
 }
 
+async function getProfilePostLinks(page, username, limit) {
+  const profileUrl = `https://www.threads.net/@${username}`;
+  console.error(`[username] Navigating to profile: ${profileUrl}`);
+  await page.goto(profileUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.waitForTimeout(4000);
+
+  // Scroll to load more posts
+  for (let i = 0; i < 3; i++) {
+    await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
+    await page.waitForTimeout(1500);
+  }
+
+  const links = await page.evaluate(() => {
+    const seen = new Set();
+    const out = [];
+    document.querySelectorAll('a[href*="/post/"], a[href*="/t/"]').forEach(a => {
+      const href = a.href;
+      if (href && !seen.has(href)) { seen.add(href); out.push(href); }
+    });
+    return out;
+  });
+
+  console.error(`[username] Found ${links.length} post links on @${username}`);
+  return links.slice(0, limit);
+}
+
 async function main() {
   const args = parseArgs(process.argv);
-  if (!args.query) {
+  if (!args.query && !args.username) {
     console.error('Usage: threads-scraper.js --query "..." [--limit 10] [--output file.json] [--headed] [--comments]');
+    console.error('       threads-scraper.js --username handle [--limit 10] [--output file.json] [--headed]');
     process.exit(1);
   }
 
@@ -109,33 +137,39 @@ async function main() {
   });
 
   const page = browser.pages()[0] || await browser.newPage();
-  const searchUrl = `https://www.threads.net/search?q=${encodeURIComponent(args.query)}`;
-  console.log(`Searching for: ${args.query}`);
-  await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.waitForTimeout(5000);
 
-  // First, collect post links from search results
-  const postLinks = await page.evaluate(() => {
-    const links = [];
-    const articles = Array.from(document.querySelectorAll('article, a[href*="/post/"], a[href*="/t/"]'));
+  let postLinks = [];
+  let sourceLabel = '';
 
-    for (const article of articles) {
-      // Try to find a link within the article
-      const linkEl = article.querySelector('a[href*="/post/"], a[href*="/t/"]') ||
-                     (article.tagName === 'A' ? article : null);
+  if (args.username) {
+    // Username mode: scrape profile page directly
+    postLinks = await getProfilePostLinks(page, args.username, args.limit);
+    sourceLabel = `@${args.username}`;
+  } else {
+    // Search mode (original behaviour)
+    const searchUrl = `https://www.threads.net/search?q=${encodeURIComponent(args.query)}`;
+    console.error(`Searching for: ${args.query}`);
+    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(5000);
 
-      if (linkEl) {
-        const href = linkEl.href;
-        if (href && (href.includes('/post/') || href.includes('/t/')) && !links.includes(href)) {
-          links.push(href);
+    postLinks = await page.evaluate(() => {
+      const links = [];
+      const articles = Array.from(document.querySelectorAll('article, a[href*="/post/"], a[href*="/t/"]'));
+      for (const article of articles) {
+        const linkEl = article.querySelector('a[href*="/post/"], a[href*="/t/"]') ||
+                       (article.tagName === 'A' ? article : null);
+        if (linkEl) {
+          const href = linkEl.href;
+          if (href && (href.includes('/post/') || href.includes('/t/')) && !links.includes(href))
+            links.push(href);
         }
       }
-    }
+      return links;
+    });
+    sourceLabel = args.query;
+  }
 
-    return links;
-  });
-
-  console.log(`Found ${postLinks.length} post links`);
+  console.error(`Found ${postLinks.length} post links`);
 
   const results = [];
   const limit = Math.min(args.limit, postLinks.length);
@@ -161,7 +195,8 @@ async function main() {
   }
 
   const payload = {
-    query: args.query,
+    query: args.username ? `@${args.username}` : args.query,
+    username: args.username || null,
     fetchedAt: new Date().toISOString(),
     source: 'threads',
     results,
