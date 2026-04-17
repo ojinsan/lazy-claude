@@ -5,6 +5,7 @@ Build the top-down market map before touching any stock.
 ## What To Gather
 
 ### Global Markets
+- **First**: read `vault/data/overnight-<today>.json` (prefetched at 03:00 WIB by `overnight_macro.py`). If missing, fetch live.
 - US indices (S&P 500, Nasdaq, Dow) — risk-on or risk-off?
 - Japan (Nikkei), China (HSI/Shanghai), commodities (oil, gold, coal)
 - USD/IDR, DXY, US 10Y yield

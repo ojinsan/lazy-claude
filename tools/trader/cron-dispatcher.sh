@@ -39,8 +39,15 @@ run_monitoring_job() {
 
 log "tick — WIB ${WIB_HOUR}:$(printf '%02d' "$WIB_MIN")"
 
+# ── Pre-market data fetch: 04:00 WIB ────────────────────────────────────────
+if [[ $WIB_HOUR -eq 4 && $WIB_MIN -eq 0 ]]; then
+    log "→ PRE-MARKET DATA start"
+    python "$WORKSPACE/tools/trader/universe_scan.py" >> "$LOG" 2>&1 || log "⚠ universe_scan failed"
+    python "$WORKSPACE/tools/trader/catalyst_calendar.py" >> "$LOG" 2>&1 || log "⚠ catalyst_calendar failed"
+    log "← PRE-MARKET DATA done"
+
 # ── Portfolio window: 04:30 WIB ─────────────────────────────────────────────
-if [[ $WIB_HOUR -eq 4 && $WIB_MIN -eq 30 ]]; then
+elif [[ $WIB_HOUR -eq 4 && $WIB_MIN -eq 30 ]]; then
     log "→ PORTFOLIO (L0) start"
     run_claude_job "$COMMAND_DIR/portfolio.md"
     log "← PORTFOLIO done"
@@ -72,6 +79,42 @@ elif [[ $WIB_HOUR -ge 9 ]] && [[ $WIB_HOUR -lt 15 || ($WIB_HOUR -eq 15 && $WIB_M
     log "→ EXECUTE (intraday signals) start"
     run_monitoring_job "$COMMAND_DIR/execute.md"
     log "← EXECUTE done"
+
+# ── EOD publish: 15:20 WIB ──────────────────────────────────────────────────
+elif [[ $WIB_HOUR -eq 15 && $WIB_MIN -eq 20 ]]; then
+    log "→ EOD PUBLISH start"
+    run_claude_job "$COMMAND_DIR/eod.md"
+    log "← EOD PUBLISH done"
+
+# ── Weekly review: Sunday 20:00 WIB ─────────────────────────────────────────
+elif [[ $(TZ='Asia/Jakarta' date +%u) -eq 7 && $WIB_HOUR -eq 20 && $WIB_MIN -eq 0 ]]; then
+    log "→ WEEKLY REVIEW start"
+    python "$WORKSPACE/tools/trader/journal.py" weekly >> "$LOG" 2>&1 || log "⚠ weekly review failed"
+    log "← WEEKLY REVIEW done"
+
+# ── Monthly review: last calendar day of month 20:00 WIB ────────────────────
+elif [[ $WIB_HOUR -eq 20 && $WIB_MIN -eq 0 ]] && [[ $(TZ='Asia/Jakarta' date -d '+1 day' +%d) == "01" ]]; then
+    log "→ MONTHLY REVIEW start"
+    python "$WORKSPACE/tools/trader/journal.py" monthly >> "$LOG" 2>&1 || log "⚠ monthly review failed"
+    log "← MONTHLY REVIEW done"
+
+# ── Overnight macro: 03:00 WIB ───────────────────────────────────────────────
+elif [[ $WIB_HOUR -eq 3 && $WIB_MIN -eq 0 ]]; then
+    log "→ OVERNIGHT MACRO start"
+    python "$WORKSPACE/tools/trader/overnight_macro.py" >> "$LOG" 2>&1 || log "⚠ overnight_macro failed"
+    log "← OVERNIGHT MACRO done"
+
+# ── Mid-day regime check: 11:30 WIB ──────────────────────────────────────────
+elif [[ $WIB_HOUR -eq 11 && $WIB_MIN -eq 30 ]]; then
+    log "→ MIDDAY REGIME (11:30) start"
+    run_monitoring_job "$COMMAND_DIR/monitoring.md"
+    log "← MIDDAY REGIME done"
+
+# ── Mid-day regime check: 14:00 WIB ──────────────────────────────────────────
+elif [[ $WIB_HOUR -eq 14 && $WIB_MIN -eq 0 ]]; then
+    log "→ MIDDAY REGIME (14:00) start"
+    run_monitoring_job "$COMMAND_DIR/monitoring.md"
+    log "← MIDDAY REGIME done"
 
 # ── Off-hours ───────────────────────────────────────────────────────────────
 else

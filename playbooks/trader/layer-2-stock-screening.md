@@ -10,6 +10,14 @@ Filter the full universe down to a high-conviction shortlist.
   - Any ticker with action `exit-candidate` must NOT be promoted or added today. Substitution in the same sector is allowed.
 - Kill-switch check (already run in L0 Step 0): if active, skip all screening. Document only.
 
+## Universe Prep (Run Before Screening)
+
+Load today's expanded candidate pool:
+
+1. **Universe**: `vault/data/universe-<today>.json` — run `python tools/trader/universe_scan.py` first if missing. Filters: price 50–50K, avg vol ≥ 500K lots.
+2. **Catalyst calendar**: `vault/data/catalyst-<today>.json` — run `python tools/trader/catalyst_calendar.py` if missing. Note any events within 3 trading days for shortlisted names.
+3. **Relative strength**: `python tools/trader/relative_strength.py --sector <L1 top sector> --days 20`. Prefer names in top 5 RS; deprioritize bottom 5 unless clear accumulation overrides.
+
 ## Portfolio Health (Run First)
 
 Before screening new candidates, check existing holds:
@@ -27,6 +35,7 @@ If hold still passes → confirm thesis intact, carry forward.
 1. **Narrative fit** — does the stock match an active Layer 1 theme?
 2. **Technical structure** — base formation, trend, near support, not extended
 3. **Volume / liquidity** — adequate volume, no illiquid traps
+3.5. **Relative strength** — in top 5 of sector RS (`relative_strength.py`)? If bottom 5 without strong accumulation → skip.
 4. **Broker / whale signal** — accumulation pattern in broker flow or SID
 5. **Orderbook quality** — is there real bid support, or just noise?
 

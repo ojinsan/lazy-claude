@@ -8,6 +8,7 @@ Connect all layers into a precise, actionable trade plan. Easy to follow, no amb
 - **L0 thesis actions**: `vault/data/thesis-actions.json` — if ticker is `exit-candidate`, skip; only exit plan is valid.
 - **L0 kill-switch**: `journal.kill_switch_state()` — if active, no new entries.
 - **L1**: market regime, sector view, aggression posture
+- **Catalyst calendar**: `vault/data/catalyst-<today>.json` — check within 3 trading days. Either use as trigger or note "avoid entry pre-catalyst" explicitly in the plan.
 - **L1 intraday**: `journal.get_intraday_posture()` — if set and posture < morning posture, apply the lower value.
 - **L2**: shortlisted tickers with gate-cleared reasons
 - **L3**: tape signal, manipulation detection, Wyckoff phase (if arrived from L3)
