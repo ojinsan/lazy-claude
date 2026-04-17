@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"fund-manager/internal/api/handlers"
 	"fund-manager/internal/cache"
 	"fund-manager/internal/store"
 
@@ -13,9 +14,11 @@ import (
 func Mount(r chi.Router, s *store.Store, c *cache.Cache) {
 	r.Get("/healthz", Health)
 	r.Route("/api/v1", func(r chi.Router) {
-		// Handlers mounted in later phases
-		_ = s
-		_ = c
+		handlers.PortfolioRoutes(r, s, c)
+		handlers.PlanningRoutes(r, s)
+		handlers.SignalsRoutes(r, s, c)
+		handlers.LearningRoutes(r, s)
+		handlers.ChartsRoutes(r, s)
 	})
 }
 
