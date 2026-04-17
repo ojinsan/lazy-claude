@@ -38,6 +38,8 @@ Tape already defines entry price. Do not rebuild the full plan — that wastes a
 
 Mode B output is a one-block summary, not the full format below.
 
+If arrived via `spring` signal <!-- M3.3 --> → use spring entry rule from `skills/trader/spring-setup.md` (`## Entry`): entry zone = support ±1 tick on first reclaim; stop = spring bar low - 1 tick.
+
 ---
 
 ## Trade Plan Format (Per Ticker)
@@ -59,6 +61,7 @@ Exit rule: [time-based / price-based / thesis-break]
 Position size: Rp XX,XXX,XXX ([X]% of capital)
 Max risk: Rp XX,XXX,XXX ([X]% of capital)
 
+Confluence: [score/bucket from confluence_score.score(ticker)] <!-- M3.6 -->
 Monitoring: [what to watch — wall behavior / volume / tape]
 Invalidation signal: [one clear thing that says exit now]
 ```

@@ -24,6 +24,8 @@ For each flagged hold from Step 1: apply exit rules from `skills/trader/executio
 
 ## Step 3 — Entry Decisions
 
+Confluence gate <!-- M3.6 -->: require `confluence_score.score(ticker).score >= 60` before entry. Inline execution only if `score >= 80`.
+
 For each ticker in today's L4 plan with level `superlist` or `alert`: apply entry rules from `skills/trader/execution.md` (`## Entry Rules` + sizing + protocol).
 
 ## Step 4 — Output

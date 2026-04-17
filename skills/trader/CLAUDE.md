@@ -112,7 +112,7 @@ Load only what the current layer or task needs. Unload after use.
 | `whale-retail-analysis.md` | Broker flow + SID + player intent | Always in L2 |
 | `technical-analysis.md` | Structure, trend, support/resistance | Always in L2 |
 | `wyckoff-lens.md` | Accumulation/distribution phase | L2 when structure unclear |
-| `volume-price-rules.md` | 4-quadrant VP state, thresholds, sizing caps | L2 criterion 2.5, L3 every cycle | <!-- M3.2 -->
+| `volume-price-rules.md` | 4-quadrant VP state, sizing caps | L2 criterion 2.5 — see Scoring section for full detail |
 | `market-structure.md` | BOS/CHoCH, key levels, invalidation | L2 for each candidate |
 | `narrative-building.md` | Why this stock now | L2 for shortlist candidates |
 
@@ -148,6 +148,20 @@ Load only what the current layer or task needs. Unload after use.
 | `journal-review.md` | Lesson protocol, kill-switch, hit_rate_by, thesis actions, intraday posture, calibration | L0 Step 0+6, L4 pre-plan, L5 sizing, EOD sync |
 | `stockbit-access.md` | Token/auth handling | When auth issues arise |
 | `watchlist-4group.md` | Universe management | L2 universe construction |
+
+### Tape & Microstructure (M3.3+ — load when relevant)
+| Skill | Purpose | Load when |
+|-------|---------|-----------|
+| `spring-setup.md` | Wyckoff Phase C spring conditions, entry/stop rules, failure mode | L2 spring override, L3 wick_shakeout, L4 Mode B spring path |
+| `imposter-detection.md` | Smart money hiding in retail codes — lot size + timing anomalies | L3 every cycle when broker flow ambiguous |
+| `tape-reading.md` | 9-case tape reading reference — walls, markup, spam, crossing, spring | L3 every cycle for all monitored names |
+
+### Scoring (M3.2/M3.6 — load when evaluating setups)
+| Skill | Purpose | Load when |
+|-------|---------|-----------|
+| `volume-price-rules.md` | 4-quadrant VP state, thresholds, sizing caps | L2 criterion 2.5, L3 every cycle |
+| `confluence-scoring.md` | 0–100 composite score, buckets, anti-game rules | L2 final gate, L3 cycle output, L4 plan, L5 entry gate |
+| `auto-trigger.md` | Auto-invoke Claude on high-conviction signals — gates, dedup, budget | Loaded by monitoring runtime only |
 
 ### Ownership & Flow (M3.1 — load when checking konglo)
 | Skill | Purpose | Load when |

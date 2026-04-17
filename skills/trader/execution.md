@@ -110,6 +110,7 @@ When a layer other than L5 reaches high confidence, it may execute inline instea
 | L3 | Yes, if `accumulation_setup` + price in zone + thesis intact | accumulation_setup confirmed |
 | L4 | Yes, if plan is `urgent` + price in entry zone | urgent flag set |
 | L5 | Always — this is the default execution window | N/A |
+| Auto-Trigger | Only from `tools/trader/auto_trigger.py` gate success | confluence ≥ 80 + tape high + budget OK | <!-- M3.7 -->
 
 **Hard override — inline DISABLED regardless of layer/criteria:**
 - Portfolio DD > 5% from high-water mark → no new entries inline

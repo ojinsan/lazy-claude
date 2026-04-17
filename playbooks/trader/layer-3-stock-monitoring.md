@@ -48,7 +48,12 @@ Other cycles: skip this block entirely.
 - `accumulation_setup`: thick offer wall + whale bids underneath → smart money accumulating while retail fears the wall
 - `distribution_setup`: thick bid wall + whale offers behind it → whale distributing into retail attraction
 - `shakeout_trap`: engineered price dip (wall appears, price drops) but whale bids hold → deliberate retail flush
-- `wick_shakeout`: price dips >1.5% but whale bids remain → smart money held through the dip
+- `wick_shakeout`: price dips >1.5% but whale bids remain → smart money held through the dip. If confirmed, call `spring_detector.detect(ticker)` to distinguish a pure wick from an actual spring. <!-- M3.3 -->
+- `spring`: all 4 spring conditions met — price < support 2%, bid quality holds, smart money bidding, vol ≥1.5× <!-- M3.3 -->
+- `imposter_score >= +6` <!-- M3.4 -->: annotate the cycle's output. Re-read broker flow assuming retail codes may be operator-controlled.
+
+### Tape State (every cycle) <!-- M3.5 -->
+Call `tape_runner.snapshot(ticker)` for each actively monitored name. Append `composite` + `confidence` + `wall_fate` to the monitoring log. Promote to Airtable Insights on any state change to `fake_support`, `distribution_trap`, `ideal_markup`, `healthy_markup`, or `spring_ready`.
 
 ### Wyckoff Phase
 - Is the stock in accumulation, markup, distribution, or markdown?
@@ -66,6 +71,7 @@ Other cycles: skip this block entirely.
 | Wyckoff | `tools/trader/wyckoff.py` |
 | Psychology at levels | `tools/trader/psychology.py` — use when price hits wall or key level, judge bandar intent |
 | Realtime listener | `tools/trader/realtime_listener.py --tickers X Y --interval 30` — continuous crossing/flow events → `runtime/monitoring/realtime/` |
+| Tape reading | `tools/trader/tape_runner.py` (snapshot per cycle) <!-- M3.5 --> |
 
 ## Execution Trigger
 
@@ -84,6 +90,7 @@ Apply three output levels to every ticker assessed:
 Default to `local only`. Promote only when genuinely warranted. Do not stay silent on a name worth preserving just because it is not yet L4-ready.
 
 Per ticker:
+0. **Confluence score** <!-- M3.6 -->: recompute `confluence_score.score(ticker)`. If bucket transitions up → telegram + signal row. Attach `score` + `bucket` to this cycle's output.
 1. **Signal update**: accumulating / distributing / noisy / wait
 2. **Manipulation flag**: note any `accumulation_setup` or `shakeout_trap` explicitly
 3. **Promotion**: move to Layer 4 if golden setup appears

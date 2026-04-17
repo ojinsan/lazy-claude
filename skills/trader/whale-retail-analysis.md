@@ -145,3 +145,6 @@ Use `broker_profile.py` to estimate smart-money average cost:
 - "Smart money buying" requires consistent high `buy_days` from a known smart-money code. One day proves nothing.
 - SID direction overrides individual lot reads when they conflict.
 - No verdict without lot-size evidence — level shape alone is not enough.
+
+## Retail Code Anomalies
+If retail codes show lot sizes or timing patterns inconsistent with retail behavior, see `imposter-detection.md` (M3.4) before drawing conclusions from broker flow.

@@ -120,3 +120,13 @@ python3 tools/trader/telegram_client.py execution-summary \
   --holds "{summary}" --cash "{cash}"
 ```
 Trigger: end of L5 session and EOD publish.
+
+### `auto_trigger_detected` — M3.7 auto-trigger alert <!-- M3.7 -->
+Posted by `auto_trigger.trigger()` before Claude invocation. Content: ticker, confluence, tape composite, reason for firing.
+```python
+send_telegram(
+    f"[AUTO-TRIGGER] {ticker}\nSignal: {signal_kind}\nConfluence: {confluence}\nContext: {context_str}",
+    subcommand="auto_trigger_detected"
+)
+```
+Trigger: auto_trigger gate success OR any gate failure that reached telegram-only path.

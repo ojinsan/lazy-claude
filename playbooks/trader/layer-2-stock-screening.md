@@ -41,6 +41,8 @@ If hold still passes → confirm thesis intact, carry forward.
 5. **Orderbook quality** — is there real bid support, or just noise?
 6. **Konglo fit** <!-- M3.1 --> — `konglo_loader.group_for(ticker)`. If ticker belongs to a group in today's L1 `rotation_in` list → +1 conviction bucket. If portfolio already holds a peer in the same group → either substitute (if weaker peer exists) or skip.
 
+**Spring override** <!-- M3.3 -->: If `spring_detector.detect(ticker).is_spring` and `confidence in {"med","high"}` → criterion 2 (technical structure) is satisfied even if price closed below support. Promote to L4 instead of rejecting.
+
 ## Tools
 
 | Tool | How |
@@ -92,9 +94,12 @@ Document the adjustment — do not silently skip. If DD > 10% or posture = 1: st
 
 ---
 
+**Confluence gate** <!-- M3.6 -->: Compute `confluence_score.score(ticker)` for each shortlisted name. Only names with bucket `plan` or `execute` advance. Names with `watch` stay on the monitoring list only. `reject` → document reason.
+
 **Advance with adjusted size.** Two paths:
-- Confidence HIGH (5/5 criteria + clear entry zone) → **L4 Full Plan**
-- Confidence MED (4/5 criteria, entry zone developing) → **L3 Monitoring** first
+- Confidence HIGH (score ≥ 80, `execute` bucket) → **L4 Full Plan**
+- Confidence MED (score 60–79, `plan` bucket) → **L4 Full Plan** with reduced size
+- Score 40–59 (`watch`) → **L3 Monitoring** first
 
 ## Execution Trigger
 

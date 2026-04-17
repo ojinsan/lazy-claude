@@ -214,6 +214,24 @@ def main():
     compact = [f"{r['ticker']}: {r['stance']} ({r['summary']})" for r in records]
     print('\n'.join(compact))
 
+    # M3.7: auto-trigger check per ticker
+    try:
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).parent.parent))
+        from tools.trader.tape_runner import snapshot as tape_snapshot
+        from tools.trader.auto_trigger import should_trigger, trigger
+        for r in records:
+            t = r["ticker"]
+            try:
+                tape = tape_snapshot(t)
+                ok, reason = should_trigger(t, tape.composite)
+                if ok:
+                    trigger(t, tape.composite, {"stance": r["stance"], "summary": r["summary"]})
+            except Exception:
+                pass
+    except Exception:
+        pass
+
 
 if __name__ == '__main__':
     main()
