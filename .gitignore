@@ -46,3 +46,9 @@ tools/general/playwright/.pw-firefox-*/
 vault/data/*.json
 vault/layer-output/**/*.md
 vault/reviews/**/*.md
+
+# Services — runtime artifacts
+services/**/.venv/
+services/**/__pycache__/
+services/**/*.pyc
+services/**/.env
