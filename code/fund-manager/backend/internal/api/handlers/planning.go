@@ -1,16 +1,31 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
+	"strings"
+	"time"
 
+	"fund-manager/internal/lark"
 	"fund-manager/internal/model"
 	"fund-manager/internal/store"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func PlanningRoutes(r chi.Router, s *store.Store) {
-	r.Get("/watchlist", listWatchlist(s))
+// LarkClient is a minimal interface so handlers can call FetchWatchlist without
+// importing the full lark package in every handler.
+type LarkClient interface {
+	FetchWatchlist(ctx context.Context) ([]model.WatchlistEntry, error)
+	Configured() bool
+}
+
+func PlanningRoutes(r chi.Router, s *store.Store, lc ...*lark.Client) {
+	var larkClient LarkClient
+	if len(lc) > 0 && lc[0] != nil && lc[0].Configured() {
+		larkClient = lc[0]
+	}
+	r.Get("/watchlist", listWatchlist(s, larkClient))
 	r.Post("/watchlist", upsertWatchlist(s))
 	r.Delete("/watchlist/{ticker}", archiveWatchlist(s))
 
@@ -29,12 +44,51 @@ func PlanningRoutes(r chi.Router, s *store.Store) {
 	r.Put("/tradeplans/{id}", updateTradePlan(s))
 }
 
-func listWatchlist(s *store.Store) http.HandlerFunc {
+func listWatchlist(s *store.Store, lc LarkClient) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		items, err := s.ListWatchlist(queryStr(r, "status"))
-		if err != nil { writeError(w, 500, err.Error()); return }
-		if items == nil { items = []*model.Watchlist{} }
-		writeList(w, items, len(items))
+		// Collect from Lark first (if configured)
+		seen := map[string]bool{}
+		var out []map[string]string
+
+		if lc != nil {
+			ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+			defer cancel()
+			entries, err := lc.FetchWatchlist(ctx)
+			if err == nil {
+				for _, e := range entries {
+					ticker := strings.ToUpper(strings.TrimSpace(e.Stock))
+					if ticker == "" { continue }
+					if !seen[ticker] {
+						seen[ticker] = true
+						out = append(out, map[string]string{
+							"ticker": ticker,
+							"status": e.Status,
+							"source": "lark",
+						})
+					}
+				}
+			}
+		}
+
+		// Merge local SQLite (adds entries not in Lark)
+		local, err := s.ListWatchlist("")
+		if err == nil {
+			for _, wl := range local {
+				ticker := strings.ToUpper(strings.TrimSpace(wl.Ticker))
+				if ticker == "" { continue }
+				if !seen[ticker] {
+					seen[ticker] = true
+					out = append(out, map[string]string{
+						"ticker": ticker,
+						"status": wl.Status,
+						"source": "local",
+					})
+				}
+			}
+		}
+
+		if out == nil { out = []map[string]string{} }
+		writeList(w, out, len(out))
 	}
 }
 

@@ -6,18 +6,19 @@ import (
 
 	"fund-manager/internal/api/handlers"
 	"fund-manager/internal/cache"
+	"fund-manager/internal/lark"
 	"fund-manager/internal/store"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func Mount(r chi.Router, s *store.Store, c *cache.Cache) {
+func Mount(r chi.Router, s *store.Store, c *cache.Cache, lc *lark.Client) {
 	r.Get("/healthz", Health)
 	// Feed endpoints at root — match telegram scraper POST target directly
 	handlers.InsightsFeedRoutes(r, s)
 	r.Route("/api/v1", func(r chi.Router) {
 		handlers.PortfolioRoutes(r, s, c)
-		handlers.PlanningRoutes(r, s)
+		handlers.PlanningRoutes(r, s, lc)
 		handlers.SignalsRoutes(r, s, c)
 		handlers.LearningRoutes(r, s)
 		handlers.ChartsRoutes(r, s)

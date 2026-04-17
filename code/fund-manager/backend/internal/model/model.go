@@ -249,3 +249,10 @@ type PositiveCandidate struct {
 	LatestAt string `json:"latest_at"`
 	Source   string `json:"source"`
 }
+
+// WatchlistEntry is returned by the Lark client and GET /watchlist.
+type WatchlistEntry struct {
+	Stock  string `json:"stock"`
+	Status string `json:"status"`
+	Source string `json:"source,omitempty"`
+}

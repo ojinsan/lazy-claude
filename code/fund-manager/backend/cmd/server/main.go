@@ -7,6 +7,7 @@ import (
 	"fund-manager/internal/api"
 	"fund-manager/internal/cache"
 	"fund-manager/internal/config"
+	"fund-manager/internal/lark"
 	"fund-manager/internal/store"
 
 	"github.com/go-chi/chi/v5"
@@ -37,10 +38,23 @@ func main() {
 	defer c.Close()
 	log.Println("redis: connected →", cfg.RedisAddr)
 
+	// Build Lark client (optional — falls back gracefully if env vars not set)
+	lc := lark.New(lark.Config{
+		AppID:      cfg.LarkAppID,
+		AppSecret:  cfg.LarkAppSecret,
+		SheetToken: cfg.LarkSheetToken,
+		WikiToken:  cfg.LarkWikiToken,
+	})
+	if lc.Configured() {
+		log.Println("lark: watchlist client configured")
+	} else {
+		log.Println("lark: not configured — watchlist will use local SQLite only")
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	api.Mount(r, s, c)
+	api.Mount(r, s, c, lc)
 
 	addr := "127.0.0.1:" + cfg.Port
 	log.Printf("fund-manager listening on %s", addr)
