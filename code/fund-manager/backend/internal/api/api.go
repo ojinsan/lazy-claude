@@ -19,6 +19,7 @@ func Mount(r chi.Router, s *store.Store, c *cache.Cache) {
 		handlers.SignalsRoutes(r, s, c)
 		handlers.LearningRoutes(r, s)
 		handlers.ChartsRoutes(r, s)
+		handlers.StrategyRoutes(r, s)
 	})
 }
 

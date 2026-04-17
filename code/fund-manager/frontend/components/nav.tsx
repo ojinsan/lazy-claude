@@ -13,6 +13,9 @@ const links = [
   { href: "/themes", label: "Themes" },
   { href: "/performance", label: "Performance" },
   { href: "/evaluation", label: "Evaluation" },
+  { href: "/tape", label: "Tape" },
+  { href: "/konglo", label: "Konglo" },
+  { href: "/confluence", label: "Confluence" },
 ];
 
 export function Nav() {

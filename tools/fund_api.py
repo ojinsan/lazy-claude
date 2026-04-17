@@ -209,6 +209,34 @@ class FundAPI:
         r = self._get("/charts", ticker=ticker, kind=kind, since=since, limit=limit)
         return (r or {}).get("items", [])
 
+    # ─── M3 Strategy signals ─────────────────────────────────────────────────
+
+    def post_tape_state(self, data: dict) -> dict | None:
+        """Keys: ts, ticker, composite, confidence, wall_fate, payload_json."""
+        return self._post("/tape-states", data)
+
+    def get_tape_history(self, ticker=None, composite=None, since=None, limit=100) -> list:
+        r = self._get("/tape-states", ticker=ticker, composite=composite, since=since, limit=limit)
+        return (r or {}).get("items", [])
+
+    def post_confluence(self, data: dict) -> dict | None:
+        """Keys: ts, ticker, score, bucket, components_json."""
+        return self._post("/confluence", data)
+
+    def get_confluence_latest(self) -> list:
+        r = self._get("/confluence/latest")
+        return (r or {}).get("items", [])
+
+    def post_auto_trigger_log(self, data: dict) -> dict | None:
+        return self._post("/auto-triggers", data)
+
+    def get_konglo_group(self, ticker: str) -> list:
+        r = self._get(f"/konglo/tickers/{ticker}")
+        return (r or {}).get("items", [])
+
+    def post_konglo_group(self, data: dict) -> dict | None:
+        return self._post("/konglo/groups", data)
+
     # ─── Cache ────────────────────────────────────────────────────────────────
 
     def get_price(self, ticker: str) -> dict | None:
