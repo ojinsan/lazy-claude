@@ -161,10 +161,10 @@ def get_threads_account_tickers() -> list[str]:
 
 
 def candidate_universe() -> tuple[list[str], dict]:
-    """Build L2 candidate pool from 4 signal-driven sources. No alphabetical fill."""
+    """Build L2 candidate pool from 5 signal-driven sources. No alphabetical fill."""
     import fund_manager_client as fmc
 
-    # Source 1: holds (always first)
+    # Source 1: holds (always first — positions already owned)
     holds = fmc.get_holds()
 
     # Source 2: today's L1 output (yesterday fallback if L1 hasn't run yet)
@@ -174,7 +174,10 @@ def candidate_universe() -> tuple[list[str], dict]:
     # Source 3: telegram positive candidates from local fund-manager backend
     telegram = fmc.get_positive_candidates(min_confidence=60, days=3)
 
-    # Source 4: watchlist from fund-manager (Lark + local SQLite)
+    # Source 4: Threads account tickers — runs scraper for each tracked handle
+    threads = get_threads_account_tickers()
+
+    # Source 5: watchlist from fund-manager (Lark other traders + local SQLite)
     watchlist_raw = fmc.get_watchlist()
     watchlist = [
         w['ticker'].upper() for w in watchlist_raw
@@ -185,7 +188,7 @@ def candidate_universe() -> tuple[list[str], dict]:
     # Merge in priority order, dedup
     ordered: list[str] = []
     seen: set[str] = set()
-    for bucket in (holds, layer1, telegram, watchlist):
+    for bucket in (holds, layer1, telegram, threads, watchlist):
         for ticker in bucket:
             t = str(ticker or '').upper().strip()
             if t and t not in seen:
@@ -196,9 +199,10 @@ def candidate_universe() -> tuple[list[str], dict]:
         'holds': len(holds),
         'layer1_today': len(layer1),
         'telegram_positives': len(telegram),
+        'threads_accounts': len(threads),
         'watchlist': len(watchlist),
         'total': len(ordered),
-        'selection_mode': 'holds→l1_today→telegram→watchlist (no_fill)',
+        'selection_mode': 'holds→l1→telegram→threads→watchlist (no_fill)',
     }
     return ordered, meta
 
@@ -210,15 +214,34 @@ def score_ticker(code: str) -> dict | None:
     price = float(ob.get('lastprice') or 0)
     change_pct = float(ob.get('change_percent') or 0)
     value = float(ob.get('value') or 0)
-    bid = ob.get('bid', []) or []
     offer = ob.get('offer', []) or []
-    bidv = sum(float(x.get('volume', 0) or 0) for x in bid[:5])
-    offerv = sum(float(x.get('volume', 0) or 0) for x in offer[:5])
-    bor = bidv / offerv if offerv else (999 if bidv else 0)
+
+    # Thick offer wall (top 3 levels) = potential absorption zone
+    max_offer_lot = max((float(x.get('volume', 0) or 0) for x in offer[:3]), default=0) / 100
+
+    # HAKA/HAKI running trade ratio: buyers hitting offer vs sellers hitting bid
+    rt = api.analyze_running_trades(code, limit=80)
+    buy_vol = float(rt.get('buy_volume', 0) or 0)
+    sell_vol = float(rt.get('sell_volume', 0) or 0)
+    haka_ratio = buy_vol / sell_vol if sell_vol > 0 else (2.0 if buy_vol > 0 else 1.0)
+
+    # Base: momentum + liquidity
     score = max(min(change_pct, 8), -8) * 2
     score += min(math.log10(value + 1), 8) * 3 if value > 0 else 0
-    score += 6 if bor > 1.5 else 3 if bor > 1.1 else -3 if bor < 0.7 else 0
-    return {'ticker': code, 'price': price, 'change_pct': round(change_pct, 2), 'value': value, 'bor': round(bor, 2), 'score': round(score, 2)}
+
+    # HAKA dominance = real buyers eating the offer (not fake bid wall)
+    score += 6 if haka_ratio > 1.5 else 3 if haka_ratio > 1.1 else -3 if haka_ratio < 0.7 else 0
+
+    # Wyckoff Case 3 absorption bonus: thick offer + steady price + HAKA dominant
+    steady = abs(change_pct) < 1.5
+    if steady and max_offer_lot >= 200 and haka_ratio > 1.0:
+        score += 5
+
+    return {
+        'ticker': code, 'price': price, 'change_pct': round(change_pct, 2),
+        'value': value, 'haka_ratio': round(haka_ratio, 2),
+        'max_offer_lot': round(max_offer_lot, 0), 'score': round(score, 2),
+    }
 
 
 def score_holdings_vs_candidates(hold_tickers: list[str], top_candidates: list[dict]) -> dict:
@@ -226,8 +249,8 @@ def score_holdings_vs_candidates(hold_tickers: list[str], top_candidates: list[d
     hold_scored = [x for x in (score_ticker(t) for t in hold_tickers) if x]
     hold_scored = sorted(hold_scored, key=lambda x: x['score'])
 
-    # Use 75th percentile of valid candidates (bor < 100) as benchmark — ignore broken tickers
-    valid_cands = [c for c in top_candidates if c.get('bor', 0) < 100 and c.get('value', 0) > 1_000_000_000]
+    # Valid candidates: liquid (>1B IDR value) and real data (haka_ratio not inflated default)
+    valid_cands = [c for c in top_candidates if c.get('haka_ratio', 0) < 10 and c.get('value', 0) > 1_000_000_000]
     top_score = valid_cands[0]['score'] if valid_cands else (top_candidates[0]['score'] if top_candidates else 0)
 
     rotations = []
@@ -240,7 +263,7 @@ def score_holdings_vs_candidates(hold_tickers: list[str], top_candidates: list[d
             rotations.append({
                 'from': h['ticker'],
                 'from_score': h['score'],
-                'reason': f"score={h['score']:.1f} vs market={top_score:.1f}, momentum={h['change_pct']}%, bor={h['bor']}",
+                'reason': f"score={h['score']:.1f} vs market={top_score:.1f}, momentum={h['change_pct']}%, haka={h.get('haka_ratio', '?')}",
                 'to_candidates': [{'ticker': b['ticker'], 'score': b['score']} for b in better],
             })
 
@@ -299,7 +322,7 @@ def main():
     # Post layer output summary (includes rotation)
     _fund_api.post_layer_output({
         'run_date': today, 'layer': 'L2', 'ts': ts_now,
-        'summary': f"L2 screen: {meta['selected_count']} candidates, top {len(top)} scored{rot_summary}",
+        'summary': f"L2 screen: {meta['total']} candidates, top {len(top)} scored{rot_summary}",
         'body_md': json.dumps({'top': top[:10], 'meta': meta, 'rotation': rotation}, indent=2),
         'severity': 'high' if rotation.get('rotation_candidates') else 'info',
         'tickers': ','.join(r['ticker'] for r in top[:10]),

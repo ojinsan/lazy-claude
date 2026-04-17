@@ -44,6 +44,7 @@ func main() {
 		AppSecret:  cfg.LarkAppSecret,
 		SheetToken: cfg.LarkSheetToken,
 		WikiToken:  cfg.LarkWikiToken,
+		Range:      cfg.LarkRange,
 	})
 	if lc.Configured() {
 		log.Println("lark: watchlist client configured")

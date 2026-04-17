@@ -11,10 +11,11 @@ type Config struct {
 	RedisDB   int
 	Port      string
 	// Lark watchlist — all optional; watchlist falls back to empty if not configured
-	LarkAppID      string
-	LarkAppSecret  string
-	LarkSheetToken string
-	LarkWikiToken  string
+	LarkAppID       string
+	LarkAppSecret   string
+	LarkSheetToken  string
+	LarkWikiToken   string
+	LarkRange       string // e.g. "83d528!A:B"
 }
 
 func Load() (*Config, error) {
@@ -35,6 +36,7 @@ func Load() (*Config, error) {
 		LarkAppSecret:  os.Getenv("LARK_APP_SECRET"),
 		LarkSheetToken: os.Getenv("LARK_SHEET_TOKEN"),
 		LarkWikiToken:  os.Getenv("LARK_WIKI_TOKEN"),
+		LarkRange:      os.Getenv("LARK_WATCHLIST_RANGE"),
 	}, nil
 }
 
