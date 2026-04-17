@@ -211,3 +211,41 @@ type Price struct {
 	Ask    float64 `json:"ask,omitempty"`
 	Ts     string  `json:"ts"`
 }
+
+// ─── Insights ─────────────────────────────────────────────────────────────────
+
+type Insight struct {
+	ID              int    `json:"id,omitempty"`
+	OccurredAt      string `json:"occurred_at"`
+	Ticker          string `json:"ticker"`
+	Content         string `json:"content"`
+	ParticipantType string `json:"participant_type"`
+	AIRecap         string `json:"ai_recap,omitempty"`
+	Confidence      int    `json:"confidence"`
+	AddressText     string `json:"address_text,omitempty"`
+	Source          string `json:"source"`
+	Topic           string `json:"topic,omitempty"`
+	CreatedAt       string `json:"created_at,omitempty"`
+}
+
+type InsightIngestion struct {
+	Insights []InsightInput `json:"insights"`
+}
+
+type InsightInput struct {
+	Time            string `json:"time"`
+	Content         string `json:"content"`
+	ParticipantType string `json:"participant_type"`
+	AddressText     string `json:"address_text"`
+	Source          string `json:"source"`
+	Topic           string `json:"topic,omitempty"`
+	Confidence      int    `json:"confidence,omitempty"`
+}
+
+type PositiveCandidate struct {
+	Ticker   string `json:"ticker"`
+	MaxConf  int    `json:"max_confidence"`
+	Count    int    `json:"count"`
+	LatestAt string `json:"latest_at"`
+	Source   string `json:"source"`
+}

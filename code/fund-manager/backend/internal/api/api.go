@@ -13,6 +13,8 @@ import (
 
 func Mount(r chi.Router, s *store.Store, c *cache.Cache) {
 	r.Get("/healthz", Health)
+	// Feed endpoints at root — match telegram scraper POST target directly
+	handlers.InsightsFeedRoutes(r, s)
 	r.Route("/api/v1", func(r chi.Router) {
 		handlers.PortfolioRoutes(r, s, c)
 		handlers.PlanningRoutes(r, s)
@@ -20,6 +22,7 @@ func Mount(r chi.Router, s *store.Store, c *cache.Cache) {
 		handlers.LearningRoutes(r, s)
 		handlers.ChartsRoutes(r, s)
 		handlers.StrategyRoutes(r, s)
+		handlers.InsightsQueryRoutes(r, s)
 	})
 }
 
