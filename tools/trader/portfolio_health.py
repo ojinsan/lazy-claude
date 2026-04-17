@@ -79,23 +79,34 @@ def save_state(state: dict[str, Any]) -> None:
             }),
         }
         _api.post_portfolio_snapshot(snap)
-        # Holdings are in exposure.by_ticker (keyed by symbol)
-        by_ticker = exposure.get("by_ticker") or []
-        if by_ticker:
+        # Holdings from actual portfolio API (has shares, avg_price)
+        try:
+            from api import get_portfolio
+            port = get_portfolio()
+            positions = port.get("positions", [])
+            if isinstance(positions, dict):
+                positions = list(positions.values())
+        except Exception:
+            positions = []
+
+        # Enrich with sector from exposure.by_ticker
+        sector_map = {h.get("symbol", ""): h.get("sector_bucket", "") for h in (exposure.get("by_ticker") or [])}
+
+        if positions:
             date = snap["date"]
             batch = [{
                 "date": date,
-                "ticker": h.get("symbol") or h.get("ticker", ""),
-                "shares": int(h.get("shares") or h.get("volume") or 0),
-                "avg_cost": float(h.get("avg_cost") or h.get("avg_price") or 0),
-                "last_price": float(h.get("last_price") or h.get("price") or 0),
+                "ticker": str(h.get("symbol") or h.get("ticker", "")),
+                "shares": int(h.get("shares") or h.get("lots", 0) * 100 or 0),
+                "avg_cost": float(h.get("avg_price") or h.get("avg_cost") or 0),
+                "last_price": float(h.get("latest_price") or h.get("last_price") or 0),
                 "market_value": float(h.get("market_value") or 0),
-                "unrealized_pnl": float(h.get("unrealized_pnl") or h.get("pnl") or 0),
+                "unrealized_pnl": float(h.get("pl") or h.get("unrealized_pnl") or 0),
                 "unrealized_pct": float(h.get("gain_pct") or h.get("unrealized_pct") or 0),
-                "sector": str(h.get("sector_bucket") or h.get("sector") or ""),
-                "action": str(h.get("action") or "hold"),
-                "thesis_status": str(h.get("thesis_status") or ""),
-            } for h in by_ticker if h.get("symbol") or h.get("ticker")]
+                "sector": sector_map.get(h.get("symbol", ""), ""),
+                "action": "hold",
+                "thesis_status": "",
+            } for h in positions if h.get("symbol") or h.get("ticker")]
             if batch:
                 _api.post_holdings(batch)
     except Exception as _e:

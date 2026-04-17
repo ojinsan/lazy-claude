@@ -166,11 +166,58 @@ def score_ticker(code: str) -> dict | None:
     return {'ticker': code, 'price': price, 'change_pct': round(change_pct, 2), 'value': value, 'bor': round(bor, 2), 'score': round(score, 2)}
 
 
+def score_holdings_vs_candidates(hold_tickers: list[str], top_candidates: list[dict]) -> dict:
+    """Compare current holdings score to top new candidates. Return rotation recommendations."""
+    hold_scored = [x for x in (score_ticker(t) for t in hold_tickers) if x]
+    hold_scored = sorted(hold_scored, key=lambda x: x['score'])
+
+    # Use 75th percentile of valid candidates (bor < 100) as benchmark — ignore broken tickers
+    valid_cands = [c for c in top_candidates if c.get('bor', 0) < 100 and c.get('value', 0) > 1_000_000_000]
+    top_score = valid_cands[0]['score'] if valid_cands else (top_candidates[0]['score'] if top_candidates else 0)
+
+    rotations = []
+    for h in hold_scored:
+        # Flag if: score < 55% of valid market top AND negative/flat momentum AND better liquid alternative exists
+        weak = h['score'] < top_score * 0.55
+        negative_momentum = h.get('change_pct', 0) < 0
+        better = [c for c in valid_cands if c['score'] > h['score'] * 1.3][:2]
+        if weak and negative_momentum and better:
+            rotations.append({
+                'from': h['ticker'],
+                'from_score': h['score'],
+                'reason': f"score={h['score']:.1f} vs market={top_score:.1f}, momentum={h['change_pct']}%, bor={h['bor']}",
+                'to_candidates': [{'ticker': b['ticker'], 'score': b['score']} for b in better],
+            })
+
+    keepers = [h for h in hold_scored if h['score'] >= top_score * 0.6]
+    return {
+        'hold_scored': hold_scored,
+        'rotation_candidates': rotations,
+        'keepers': [k['ticker'] for k in keepers],
+        'top_new_score': top_score,
+    }
+
+
 def main():
+    # Load current holdings for rotation analysis
+    # Deduplicate: get latest date's holdings only
+    all_holdings = _fund_api.get_holdings()
+    seen_tickers: set[str] = set()
+    hold_tickers: list[str] = []
+    for h in all_holdings:
+        t = h.get('ticker', '')
+        if t and t not in seen_tickers:
+            seen_tickers.add(t)
+            hold_tickers.append(t)
+
     tickers, meta = candidate_universe(max_total=120)
     names = [x for x in (score_ticker(c) for c in tickers) if x]
     names = sorted(names, key=lambda x: x['score'], reverse=True)
     top = names[:15]
+
+    # Rotation analysis
+    rotation = score_holdings_vs_candidates(hold_tickers, top) if hold_tickers else {}
+
     payload = {
         'timestamp': datetime.now(WIB).isoformat(),
         'type': 'layer-2-stock-screening',
@@ -180,34 +227,59 @@ def main():
         'candidate_tickers': tickers,
         'scored_count': len(names),
         'top': top,
+        'rotation': rotation,
     }
     path = OUTDIR / f"{datetime.now(WIB).strftime('%Y-%m-%d')}.jsonl"
     with path.open('a') as f:
         f.write(json.dumps(payload, ensure_ascii=False) + '\n')
     today = datetime.now(WIB).strftime('%Y-%m-%d')
     ts_now = datetime.now(WIB).isoformat()
-    # Post layer output summary
+
+    # Build rotation summary for output
+    rot_summary = ""
+    if rotation.get('rotation_candidates'):
+        rot_lines = [f"{r['from']} → {r['to_candidates'][0]['ticker'] if r['to_candidates'] else 'watch'}" for r in rotation['rotation_candidates']]
+        rot_summary = f" | Rotation flags: {', '.join(rot_lines)}"
+
+    # Post layer output summary (includes rotation)
     _fund_api.post_layer_output({
         'run_date': today, 'layer': 'L2', 'ts': ts_now,
-        'summary': f"L2 screen: {meta['selected_count']} candidates, top {len(top)} scored",
-        'body_md': json.dumps({'top': top[:10], 'meta': meta}, indent=2),
-        'severity': 'info', 'tickers': ','.join(r['ticker'] for r in top[:10]),
+        'summary': f"L2 screen: {meta['selected_count']} candidates, top {len(top)} scored{rot_summary}",
+        'body_md': json.dumps({'top': top[:10], 'meta': meta, 'rotation': rotation}, indent=2),
+        'severity': 'high' if rotation.get('rotation_candidates') else 'info',
+        'tickers': ','.join(r['ticker'] for r in top[:10]),
     })
-    # Post each top ticker as a signal
-    for row in top[:5]:
+
+    # Post rotation signals
+    for rot in rotation.get('rotation_candidates', []):
         _fund_api.post_signal({
-            'ts': ts_now, 'ticker': row['ticker'], 'layer': 'L2',
-            'kind': 'screening_hit',
-            'severity': 'high' if row['score'] >= 15 else 'low',
-            'price': row['price'],
-            'payload_json': json.dumps({'score': row['score'], 'change_pct': row['change_pct'], 'bor': row['bor'], 'value': row['value']}),
+            'ts': ts_now, 'ticker': rot['from'], 'layer': 'L2',
+            'kind': 'rotation_candidate',
+            'severity': 'high',
+            'payload_json': json.dumps(rot),
         })
-        _fund_api.post_watchlist({
-            'ticker': row['ticker'], 'first_added': today,
-            'status': 'active', 'conviction': 'high' if row['score'] >= 15 else 'low',
-            'updated_at': ts_now,
-        })
-    print(json.dumps({'path': str(path), 'candidate_meta': meta, 'top5': top[:5]}, indent=2))
+
+    # Post new top candidates as signals + watchlist
+    for row in top[:5]:
+        if row['ticker'] not in hold_tickers:
+            _fund_api.post_signal({
+                'ts': ts_now, 'ticker': row['ticker'], 'layer': 'L2',
+                'kind': 'screening_hit',
+                'severity': 'high' if row['score'] >= 15 else 'low',
+                'price': row['price'],
+                'payload_json': json.dumps({'score': row['score'], 'change_pct': row['change_pct'], 'bor': row['bor'], 'value': row['value']}),
+            })
+            _fund_api.post_watchlist({
+                'ticker': row['ticker'], 'first_added': today,
+                'status': 'active', 'conviction': 'high' if row['score'] >= 15 else 'low',
+                'updated_at': ts_now,
+            })
+
+    print(json.dumps({
+        'path': str(path), 'candidate_meta': meta,
+        'top5': top[:5],
+        'rotation': rotation,
+    }, indent=2))
 
 if __name__ == '__main__':
     main()

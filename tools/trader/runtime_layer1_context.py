@@ -2,6 +2,7 @@
 from __future__ import annotations
 import json
 import subprocess
+import concurrent.futures
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -16,12 +17,48 @@ LAYER1_DIR = RUNTIME / 'notes' / 'layer_1_global_context'
 LAYER1_DIR.mkdir(parents=True, exist_ok=True)
 
 THREADS_SCRIPT = Path('/home/lazywork/workspace/tools/general/playwright/threads-scraper.js')
-THREADS_QUERIES = [
-    'saham IHSG IDX BEI',
+THREADS_QUERIES_BASE = [
+    'saham IHSG IDX BEI hari ini',
     'MSCI konglo free float dividen saham Indonesia',
-    'BBCA BMRI TLKM ANTM ADRO AKRA AALI saham',
 ]
-MARKET_SYMBOLS = ['IHSG', 'BBCA', 'BMRI', 'TLKM', 'ANTM', 'ADRO', 'AKRA', 'AALI']
+MARKET_SYMBOLS_BASE = ['IHSG', 'BBCA', 'BMRI', 'TLKM', 'ANTM', 'ADRO']
+
+PORTFOLIO_STATE_PATH = Path('/home/lazywork/workspace/vault/data/portfolio-state.json')
+
+
+def load_l0_state() -> dict:
+    try:
+        return json.loads(PORTFOLIO_STATE_PATH.read_text())
+    except Exception:
+        return {}
+
+
+def get_hold_tickers() -> list[str]:
+    """Return tickers from current portfolio holdings."""
+    state = load_l0_state()
+    by_ticker = state.get('exposure', {}).get('by_ticker', [])
+    return [h.get('symbol') or h.get('ticker', '') for h in by_ticker if h.get('symbol') or h.get('ticker')]
+
+
+def build_dynamic_queries(hold_tickers: list[str]) -> list[str]:
+    queries = list(THREADS_QUERIES_BASE)
+    if hold_tickers:
+        # Grouped holding query
+        queries.append(' '.join(hold_tickers[:6]) + ' saham hari ini')
+        # Per-ticker for top 3 holds
+        for t in hold_tickers[:3]:
+            queries.append(f'{t} saham hari ini katalis')
+    return queries
+
+
+def build_market_symbols(hold_tickers: list[str]) -> list[str]:
+    seen = set(MARKET_SYMBOLS_BASE)
+    symbols = list(MARKET_SYMBOLS_BASE)
+    for t in hold_tickers:
+        if t and t not in seen:
+            symbols.append(t)
+            seen.add(t)
+    return symbols
 RAG_QUERIES = [
     # market regime
     'IHSG hari ini kenapa turun',
@@ -51,29 +88,62 @@ RAG_QUERIES = [
 ]
 
 
-def run_threads(queries: list[str] = THREADS_QUERIES, limit: int = 6) -> dict:
-    all_items = []
-    seen = set()
-    for query in queries:
-        cmd = ['node', str(THREADS_SCRIPT), '--query', query, '--limit', str(limit)]
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+def _run_one_query(query: str, limit: int) -> list[dict]:
+    cmd = ['node', str(THREADS_SCRIPT), '--query', query, '--limit', str(limit)]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
         if proc.returncode != 0:
-            continue
+            return []
+        # stdout contains progress messages before the JSON blob; find the JSON start
+        stdout = proc.stdout
+        json_start = stdout.find('{')
+        if json_start == -1:
+            return []
+        data = json.loads(stdout[json_start:])
+        return [{'query': query, 'text': r.get('text', '').strip()}
+                for r in data.get('results', data.get('captured', []))
+                if r.get('text', '').strip()]
+    except Exception:
+        return []
+
+
+def run_threads(queries: list[str] | None = None, limit: int = 5) -> dict:
+    if queries is None:
+        queries = THREADS_QUERIES_BASE
+
+    # Launch all node processes in parallel (Playwright needs real processes, not threads)
+    procs = []
+    for q in queries:
+        cmd = ['node', str(THREADS_SCRIPT), '--query', q, '--limit', str(limit)]
+        procs.append((q, subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)))
+
+    all_items = []
+    seen: set[str] = set()
+    import time
+    deadline = time.time() + 60
+    for query, proc in procs:
+        remaining = max(1, deadline - time.time())
         try:
-            data = json.loads(proc.stdout)
+            stdout, _ = proc.communicate(timeout=remaining)
+            json_start = stdout.find('{')
+            if json_start == -1:
+                continue
+            data = json.loads(stdout[json_start:])
+            for r in data.get('results', data.get('captured', [])):
+                txt = r.get('text', '').strip()
+                if txt and txt not in seen:
+                    seen.add(txt)
+                    all_items.append({'query': query, 'text': txt})
         except Exception:
+            proc.kill()
             continue
-        for row in data.get('captured', []):
-            txt = row.get('text', '').strip()
-            if txt and txt not in seen:
-                seen.add(txt)
-                all_items.append({'query': query, 'text': txt})
+
     return {'captured': all_items}
 
 
-def get_market_snapshot() -> list[dict]:
+def get_market_snapshot(symbols: list[str] | None = None) -> list[dict]:
     rows = []
-    for sym in MARKET_SYMBOLS:
+    for sym in (symbols or MARKET_SYMBOLS_BASE):
         try:
             if sym == 'IHSG':
                 ob = api.get_stockbit_index('IHSG')
@@ -143,7 +213,7 @@ def get_rag_items() -> list[dict]:
     return clean_rag_items(out)
 
 
-def synthesize(snapshot: list[dict], rag_items: list[dict], threads: dict) -> dict:
+def synthesize(snapshot: list[dict], rag_items: list[dict], threads: dict, hold_tickers: list[str] | None = None) -> dict:
     market = next((x for x in snapshot if x['ticker'] == 'IHSG'), {})
     regime = 'mixed'
     try:
@@ -176,10 +246,23 @@ def synthesize(snapshot: list[dict], rag_items: list[dict], threads: dict) -> di
     if not narrative_flags:
         narrative_flags.append('No useful Threads chatter captured')
 
+    # Holding-specific price analysis
+    hold_lines = []
+    if hold_tickers:
+        for t in hold_tickers:
+            row = next((x for x in snapshot if x['ticker'] == t), None)
+            if row:
+                hold_lines.append(f"{t} {row['change']}% @ {row['price']}")
+
+    holding_block = ""
+    if hold_lines:
+        holding_block = f" Current holds today: {' | '.join(hold_lines)}."
+
     content = (
         f"Layer 1 global context using Stockbit + RAG + Threads. IHSG regime looks {regime}; "
         f"IHSG {market.get('change')}% @ {market.get('price')}. "
-        f"Sector proxy snapshot: {' | '.join(sector_lines) if sector_lines else 'limited sector snapshot'}. "
+        f"Sector proxy snapshot: {' | '.join(sector_lines) if sector_lines else 'limited sector snapshot'}."
+        f"{holding_block} "
         f"Threads narrative: {' | '.join(narrative_flags)}. "
         f"RAG narrative/ticker hits: {', '.join(rag_hits) if rag_hits else 'no strong clean RAG summary yet'}. "
         f"Trading posture: stay selective and prioritize names with aligned narrative + liquidity + tape confirmation."
@@ -240,10 +323,20 @@ def publish_airtable(payload: dict) -> list[str]:
 
 
 def main():
-    snapshot = get_market_snapshot()
-    rag_items = get_rag_items()
-    threads = run_threads()
-    payload = synthesize(snapshot, rag_items, threads)
+    hold_tickers = get_hold_tickers()
+    symbols = build_market_symbols(hold_tickers)
+    queries = build_dynamic_queries(hold_tickers)
+
+    # Run in parallel: snapshot + rag + threads
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+        f_snap = pool.submit(get_market_snapshot, symbols)
+        f_rag = pool.submit(get_rag_items)
+        f_threads = pool.submit(run_threads, queries)
+        snapshot = f_snap.result(timeout=60)
+        rag_items = f_rag.result(timeout=90)
+        threads = f_threads.result(timeout=70)
+
+    payload = synthesize(snapshot, rag_items, threads, hold_tickers)
     local_path = save_local(payload)
     created = publish_airtable(payload)
     print(json.dumps(_safe_jsonable({
