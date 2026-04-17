@@ -104,15 +104,16 @@ def log_trade(
     return entry
 
 
-def close_trade(trade_id: int, exit_price: float, lesson: str = ""):
-    """Close a trade, calculate PnL."""
+def close_trade(trade_id: int, exit_price: float, lesson: str = "") -> dict:
+    """Close a trade, calculate PnL, and return a suggested lesson."""
     if not TRANSACTIONS_FILE.exists():
-        return None
-    
+        return {}
+
     transactions = json.loads(TRANSACTIONS_FILE.read_text())
-    
-    for t in transactions:
-        if t["id"] == trade_id:
+    t = {}
+    for row in transactions:
+        if row["id"] == trade_id:
+            t = row
             entry_price = t["price"]
             if t["action"] == "buy":
                 t["pnl"] = (exit_price - entry_price) * t["shares"]
@@ -121,8 +122,10 @@ def close_trade(trade_id: int, exit_price: float, lesson: str = ""):
             t["exit_timestamp"] = datetime.now(WIB).isoformat()
             t["lesson"] = lesson
             break
-    
+
     TRANSACTIONS_FILE.write_text(json.dumps(transactions, indent=2, ensure_ascii=False))
+    pnl_pct = float(t.get("pnl_pct") or 0)
+    t["suggested_lesson"] = _draft_lesson_from_close(t, pnl_pct)
     return t
 
 

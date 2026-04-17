@@ -12,15 +12,21 @@ All functions live in `tools/trader/journal.py`. The vault layout convention liv
 
 | Before this work | Call this | Reason |
 |------------------|-----------|--------|
-| L4 plan on ticker with prior history | `get_thesis(ticker)` | Re-read the live thesis frontmatter + sections before writing a new plan |
-| L4 plan on any ticker | `detect_recurring_mistakes(days=30)` | If a repeating pattern is active, size down or skip |
-| L5 sizing for new entry | `confidence_calibration(days=90)` | If the current conviction bucket drift is > +0.2 (over-optimistic) → cap risk at 1% |
-| Close any trade | `close_trade(id, price, lesson)` + `log_lesson_v2(...)` | Every close produces at least one lesson entry |
-| L0 Step 6 | `detect_recurring_mistakes` + `confidence_calibration` | Feeds the self-review; any ≥ 3× pattern → Telegram urgent |
+| L0 Step 0 | `python journal.py stale` | Enforce drift check on any thesis with no 7-day review |
+| L0 Step 0 | `kill_switch_state()` | 3 consecutive losses / DD>10% / recurring pattern blocks all new entries |
+| L0 Step 5 | `hit_rate_by('sector', 90)` | Surfaces which sector bets actually pay; informs exposure decisions |
+| L4 plan on ticker with prior history | `get_thesis(ticker)` | Re-read the live thesis before writing a new plan |
+| L4 plan on any ticker | `detect_recurring_mistakes(days=30)` | Repeating pattern active → size down or skip |
+| L4 plan on any ticker | `hit_rate_by('pattern_tag', 90)` | If active pattern has <40% win-rate in 90d → force risk_pct = 1% |
+| L5 sizing for new entry | `confidence_calibration(days=90)` | Conviction bucket drift > +0.2 → cap risk at 1% |
+| Close any trade | `close_trade(id, price, lesson)` | Returns `suggested_lesson` dict; confirm + call `log_lesson_v2` with it |
+| L0 Step 6 | `detect_recurring_mistakes` + `confidence_calibration` | Self-review; any ≥ 3× pattern → Telegram urgent |
 | L3 new signal on tracked hold | `append_thesis_review(ticker, 'L3', note)` | Always append-only — never rewrite a thesis file |
+| L3 mid-day 11:30 / 14:00 | `set_intraday_posture(posture, reason)` | Updates vault/data/regime-intraday.json for L4/L5 reads |
+| L0 Step 4 per hold | `set_thesis_action(ticker, action)` | Writes vault/data/thesis-actions.json for L2/L4 gate |
 | EOD publish | `sync_to_airtable('all')` via `vault_sync.py` | Dashboard refresh |
-| Sunday 20:00 WIB | `generate_weekly_review()` | Writes `vault/reviews/weekly/YYYY-Www.md` |
-| Last day of month 20:00 WIB | `generate_monthly_review()` | Writes `vault/reviews/monthly/YYYY-MM.md` |
+| Sunday 20:00 WIB | `generate_weekly_review()` or `python journal.py weekly` | Writes `vault/reviews/weekly/YYYY-Www.md` |
+| Last day of month 20:00 WIB | `generate_monthly_review()` or `python journal.py monthly` | Writes `vault/reviews/monthly/YYYY-MM.md` |
 
 ## Lesson Protocol (log_lesson_v2)
 

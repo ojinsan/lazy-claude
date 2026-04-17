@@ -144,9 +144,23 @@ Load only what the current layer or task needs. Unload after use.
 | `broker-flow.md` | Deep broker flow reading | L2/L3 ambiguous flow |
 | `sid-tracker.md` | SID accumulation/distribution detail | L2 when SID signal is key |
 | `insight-crawling.md` | Web/RAG/Threads intel | L1 context fetch |
-| `journal-review.md` | Lesson protocol, pattern detection, thesis append, calibration usage | L0 Step 6, L4 pre-plan, L5 sizing, EOD sync |
+| `journal-review.md` | Lesson protocol, kill-switch, hit_rate_by, thesis actions, intraday posture, calibration | L0 Step 0+6, L4 pre-plan, L5 sizing, EOD sync |
 | `stockbit-access.md` | Token/auth handling | When auth issues arise |
 | `watchlist-4group.md` | Universe management | L2 universe construction |
+
+### New Capabilities (M1 additions — load when relevant)
+| Function | Where | When |
+|----------|-------|------|
+| `journal.kill_switch_state()` | L0 Step 0, L5 pre-entry | Before any new entry — abort if active |
+| `journal.set_thesis_action(ticker, action)` | L0 Step 4 | After each hold drift-check |
+| `journal.get_thesis_actions()` | L2 input, L4 input | Filter exit-candidates from promotion |
+| `journal.set_intraday_posture(posture, reason)` | L3 11:30 / 14:00 | Mid-day regime flip |
+| `journal.hit_rate_by(dim, days)` | L4 pre-plan | Cap risk if pattern win-rate < 40% |
+| `journal.load_previous_orders()` | L0 Step 1.5 | Review yesterday's execution |
+| `universe_scan.py` | L2 Universe Prep | Daily at 04:00 WIB via cron |
+| `catalyst_calendar.py` | L1 Indonesia, L4 inputs | Daily at 04:00 WIB via cron |
+| `relative_strength.py` | L2 criterion 3.5 | Per-sector RS ranking |
+| `overnight_macro.py` | L1 Global Markets | Daily at 03:00 WIB via cron |
 
 ---
 

@@ -8,6 +8,22 @@ Business logic scripts and service connectors. Called by playbooks/, skills/, or
 2. **If unsure which file to use**, consult `tools/INDEX.md` — full per-script descriptions with layer tags.
 3. **Before calling any service**, read `tools/manual/<service>.md` — each manual lists what cases it covers and a minimal how-to.
 
+## Skill doc convention
+
+- If tool needs auth, env vars, browser profile, external side effects, or multi-step workflow: skill should point to the manual first, then the exact script/tool path.
+- If tool is a short local helper with obvious inputs/outputs: skill can point directly to the script/tool path.
+- Skill docs should always keep the exact script/tool path visible even when a manual is primary.
+- Keep long operational setup in `tools/manual/*.md`; keep task-specific usage in the skill MD.
+
+## Trader Utility Scripts (M1.3 / M1.5 additions)
+
+| Script | Purpose | Output |
+|--------|---------|--------|
+| `trader/universe_scan.py` | Daily universe scan — liquid IDX tickers | `vault/data/universe-YYYY-MM-DD.json` |
+| `trader/catalyst_calendar.py` | Upcoming corporate events for active holds | `vault/data/catalyst-YYYY-MM-DD.json` |
+| `trader/relative_strength.py` | RS vs IHSG rank within a sector | stdout table |
+| `trader/overnight_macro.py` | Prefetch global market closes (03:00 WIB) | `vault/data/overnight-YYYY-MM-DD.json` |
+
 ## Connectors (service clients)
 
 | Connector   | Type              | MCP | Manual |
@@ -18,6 +34,7 @@ Business logic scripts and service connectors. Called by playbooks/, skills/, or
 | google      | OAuth REST        | Yes | `manual/google.md` |
 | threads     | Playwright        | Yes | `manual/threads.md` |
 | instagram   | Playwright        | No  | `manual/instagram.md` |
+| facebook    | Playwright        | No  | `manual/facebook.md` |
 | browser     | Playwright base   | No  | `manual/browser.md` |
 | telegram    | Bot API           | No  | `manual/telegram.md` |
 
