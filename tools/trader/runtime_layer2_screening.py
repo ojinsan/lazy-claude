@@ -160,12 +160,40 @@ def get_threads_account_tickers() -> list[str]:
     return tickers
 
 
+def _get_live_holds() -> list[str]:
+    """Return tickers of live positions from portfolio-state.json (L0 output).
+    Falls back to api.get_portfolio() if state file missing or older than 6 hours.
+    """
+    from datetime import timedelta
+    import api as _api
+    STATE = Path('/home/lazywork/workspace/vault/data/portfolio-state.json')
+    try:
+        if STATE.exists():
+            import os
+            age_hours = (datetime.now(WIB).timestamp() - STATE.stat().st_mtime) / 3600
+            if age_hours < 6:
+                import json as _json
+                data = _json.loads(STATE.read_text())
+                positions = data.get('exposure', {}).get('by_ticker', [])
+                return [p['symbol'].upper() for p in positions if p.get('symbol')]
+    except Exception:
+        pass
+    # Fallback: live API call
+    try:
+        portfolio = _api.get_portfolio()
+        positions = portfolio.get('positions', []) if isinstance(portfolio, dict) else []
+        return [p['symbol'].upper() for p in positions if p.get('symbol') and int(p.get('shares', 0) or 0) > 0]
+    except Exception:
+        return []
+
+
 def candidate_universe() -> tuple[list[str], dict]:
     """Build L2 candidate pool from 5 signal-driven sources. No alphabetical fill."""
     import fund_manager_client as fmc
 
-    # Source 1: holds (always first — positions already owned)
-    holds = fmc.get_holds()
+    # Source 1: live portfolio holds from vault/data/portfolio-state.json (written by L0 at 04:30)
+    # Fallback: call api.get_portfolio() directly if state file is missing/stale
+    holds = _get_live_holds()
 
     # Source 2: today's L1 output (yesterday fallback if L1 hasn't run yet)
     valid = load_stock_universe()
@@ -288,7 +316,7 @@ def main():
             seen_tickers.add(t)
             hold_tickers.append(t)
 
-    tickers, meta = candidate_universe(max_total=120)
+    tickers, meta = candidate_universe()
     names = [x for x in (score_ticker(c) for c in tickers) if x]
     names = sorted(names, key=lambda x: x['score'], reverse=True)
     top = names[:15]
