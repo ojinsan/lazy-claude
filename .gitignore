@@ -54,3 +54,4 @@ services/**/*.pyc
 services/**/.env
 services/**/.DS_Store
 services/**/telegram_session.session
+services/**/*.session-journal
