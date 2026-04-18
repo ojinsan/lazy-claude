@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { Signal } from "@/lib/api";
@@ -17,19 +18,27 @@ export function SignalsFeed({ initial }: { initial: Signal[] }) {
     return () => es.close();
   }, []);
 
-  const sev = (s: string) => s === "high" ? "destructive" : s === "medium" ? "secondary" : "outline";
+  const sev = (s: string) => {
+    if (s === "high") return "destructive";
+    if (s === "medium") return "warning";
+    return "secondary";
+  };
 
   return (
-    <div className="space-y-1 max-h-80 overflow-y-auto">
-      {signals.length === 0 && <div className="text-zinc-500 text-sm">No signals yet</div>}
-      {signals.map((s) => (
-        <div key={s.id} className="flex items-center gap-2 text-xs py-1 border-b border-zinc-800">
-          <Badge variant={sev(s.severity) as "destructive" | "secondary" | "outline"} className="shrink-0">{s.severity}</Badge>
-          <span className="font-mono text-zinc-300 w-16 shrink-0">{s.ticker}</span>
-          <span className="text-zinc-400">{s.kind}</span>
-          <span className="text-zinc-600 ml-auto">{s.layer}</span>
-        </div>
-      ))}
+    <div className="space-y-2">
+      {signals.length === 0 ? <div className="rounded-xl border border-dashed border-border/80 px-4 py-6 text-sm text-muted-foreground">No signals yet</div> : null}
+      <div className="space-y-2">
+        {signals.map((s) => (
+          <div key={s.id} className="flex items-center gap-3 rounded-xl border border-border/70 bg-secondary/35 px-3 py-2.5 text-sm">
+            <Badge variant={sev(s.severity) as "destructive" | "warning" | "secondary"} className="shrink-0 capitalize">
+              {s.severity}
+            </Badge>
+            <span className="mono w-16 shrink-0 text-[13px] text-foreground">{s.ticker}</span>
+            <span className="truncate text-muted-foreground">{s.kind}</span>
+            <span className="ml-auto text-xs text-muted-foreground">{s.layer}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

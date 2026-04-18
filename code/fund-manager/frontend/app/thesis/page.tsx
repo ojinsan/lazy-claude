@@ -1,6 +1,7 @@
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function ThesisPage({ searchParams }: { searchParams: Promise<{ ticker?: string; status?: string }> }) {
   const { ticker, status } = await searchParams;
@@ -14,53 +15,81 @@ export default async function ThesisPage({ searchParams }: { searchParams: Promi
   const selected = selectedResp.status === "fulfilled" ? selectedResp.value : null;
   const reviews = reviewsResp.status === "fulfilled" ? (reviewsResp.value as { items: any[] }).items : [];
 
-  const statusColor = (s: string) => s === "active" ? "text-green-400" : s === "closed" ? "text-red-400" : "text-zinc-400";
+  const statusVariant = (value: string) => {
+    if (value === "active") return "success";
+    if (value === "closed") return "destructive";
+    return "outline";
+  };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-bold">Thesis</h1>
-      <div className="flex gap-2 text-sm mb-2">
-        {["active","closed","archived"].map((s) => (
-          <a key={s} href={`?status=${s}`} className={`px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-xs ${status===s?"ring-1 ring-zinc-500":""}`}>{s}</a>
+    <div className="page-shell">
+      <section className="page-header">
+        <div className="space-y-2">
+          <div className="section-label">Research book</div>
+          <h1 className="page-title">Thesis</h1>
+          <p className="page-description">Thesis list, selected write-up, and review history.</p>
+        </div>
+      </section>
+
+      <div className="flex flex-wrap gap-2">
+        {["active", "closed", "archived"].map((value) => (
+          <a key={value} href={`?status=${value}`} className={`filter-chip ${status === value ? "filter-chip-active" : ""}`}>{value}</a>
         ))}
       </div>
-      <div className="grid md:grid-cols-3 gap-4">
-        {/* Left: list */}
-        <div className="border border-zinc-800 rounded bg-zinc-900 overflow-y-auto max-h-[70vh]">
-          {list.map((t) => (
-            <Link key={t.ticker} href={`?ticker=${t.ticker}${status?`&status=${status}`:""}`}
-              className={`flex items-center justify-between px-3 py-2 border-b border-zinc-800 hover:bg-zinc-800 text-sm ${ticker===t.ticker?"bg-zinc-800":""}`}>
-              <span className="font-mono text-cyan-400">{t.ticker}</span>
-              <span className={`text-xs ${statusColor(t.status)}`}>{t.status}</span>
-            </Link>
-          ))}
-          {list.length === 0 && <div className="p-3 text-zinc-500 text-sm">No thesis</div>}
-        </div>
 
-        {/* Right: selected */}
-        <div className="md:col-span-2 border border-zinc-800 rounded bg-zinc-900 p-3 space-y-3 max-h-[70vh] overflow-y-auto">
-          {selected ? (
-            <>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-cyan-400">{selected.ticker}</span>
-                <Badge variant="outline">{selected.status}</Badge>
-                <span className="text-zinc-500 text-xs ml-auto">last review: {selected.last_review || "—"}</span>
-              </div>
-              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-sans">{selected.body_md}</pre>
-              <div className="border-t border-zinc-700 pt-2">
-                <div className="text-xs text-zinc-400 mb-1">Review Log</div>
-                {reviews.map((r: any) => (
-                  <div key={r.id} className="text-xs py-1 border-b border-zinc-900">
-                    <span className="text-zinc-500">{r.review_date}</span>
-                    <span className="text-zinc-600 mx-1">({r.layer})</span>
-                    <span className="text-zinc-300">{r.note}</span>
-                  </div>
-                ))}
-                {reviews.length === 0 && <div className="text-zinc-600 text-xs">No reviews</div>}
-              </div>
-            </>
-          ) : <div className="text-zinc-500 text-sm">Select a ticker</div>}
-        </div>
+      <div className="grid gap-4 md:grid-cols-[320px_1fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Tickers</CardTitle>
+            <CardDescription>Available thesis entries for selected status.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {list.map((item) => (
+              <Link
+                key={item.ticker}
+                href={`?ticker=${item.ticker}${status ? `&status=${status}` : ""}`}
+                className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition-colors ${ticker === item.ticker ? "border-primary/30 bg-primary/12" : "border-border/70 bg-secondary/35 hover:bg-secondary/60"}`}
+              >
+                <span className="mono text-foreground">{item.ticker}</span>
+                <Badge variant={statusVariant(item.status) as "success" | "destructive" | "outline"}>{item.status}</Badge>
+              </Link>
+            ))}
+            {list.length === 0 ? <div className="text-sm text-muted-foreground">No thesis.</div> : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle>{selected ? selected.ticker : "Select a ticker"}</CardTitle>
+              {selected ? <Badge variant={statusVariant(selected.status) as "success" | "destructive" | "outline"}>{selected.status}</Badge> : null}
+            </div>
+            <CardDescription>{selected ? `Last review: ${selected.last_review || "—"}` : "Choose a thesis from left column."}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {selected ? (
+              <>
+                <div className="content-block">{selected.body_md}</div>
+                <div className="space-y-2">
+                  <div className="section-label">Review log</div>
+                  {reviews.map((review: any) => (
+                    <div key={review.id} className="rounded-xl border border-border/70 bg-secondary/35 px-4 py-3 text-sm">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span>{review.review_date}</span>
+                        <span>•</span>
+                        <span>{review.layer}</span>
+                      </div>
+                      <div className="mt-1 text-secondary-foreground">{review.note}</div>
+                    </div>
+                  ))}
+                  {reviews.length === 0 ? <div className="text-sm text-muted-foreground">No reviews.</div> : null}
+                </div>
+              </>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border/80 px-4 py-6 text-sm text-muted-foreground">Select a ticker.</div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

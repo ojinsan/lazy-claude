@@ -1,37 +1,44 @@
 import { api } from "@/lib/api";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default async function EvaluationPage() {
-  const [weeklyResp, monthlyResp] = await Promise.allSettled([
-    api.getEvaluations("weekly"),
-    api.getEvaluations("monthly"),
-  ]);
+  const [weeklyResp, monthlyResp] = await Promise.allSettled([api.getEvaluations("weekly"), api.getEvaluations("monthly")]);
 
   const weekly = weeklyResp.status === "fulfilled" ? weeklyResp.value.items : [];
   const monthly = monthlyResp.status === "fulfilled" ? monthlyResp.value.items : [];
 
   const EvalList = ({ evals }: { evals: typeof weekly }) => (
     <div className="space-y-3">
-      {evals.map((e) => (
-        <details key={e.id} className="border border-zinc-800 rounded bg-zinc-900">
-          <summary className="px-3 py-2 cursor-pointer flex items-center justify-between text-sm">
-            <span className="font-semibold">{e.period_key}</span>
-            <span className="text-zinc-500 text-xs">{e.generated_at?.slice(0, 10)}</span>
-          </summary>
-          <div className="px-3 pb-3 pt-1 border-t border-zinc-800">
-            <pre className="text-xs text-zinc-300 whitespace-pre-wrap font-sans">{e.body_md}</pre>
-          </div>
-        </details>
+      {evals.length === 0 ? <div className="rounded-xl border border-dashed border-border/80 px-4 py-6 text-sm text-muted-foreground">No evaluations.</div> : null}
+      {evals.map((evaluation) => (
+        <Card key={evaluation.id}>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>{evaluation.period_key}</CardTitle>
+              <span className="mono text-xs text-muted-foreground">{evaluation.generated_at?.slice(0, 10)}</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="content-block">{evaluation.body_md}</div>
+          </CardContent>
+        </Card>
       ))}
-      {evals.length === 0 && <div className="text-zinc-500 text-sm py-4">No evaluations</div>}
     </div>
   );
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-bold">Evaluation</h1>
+    <div className="page-shell">
+      <section className="page-header">
+        <div className="space-y-2">
+          <div className="section-label">Review cadence</div>
+          <h1 className="page-title">Evaluation</h1>
+          <p className="page-description">Weekly and monthly generated evaluations with cleaner reading layout.</p>
+        </div>
+      </section>
+
       <Tabs defaultValue="weekly">
-        <TabsList className="bg-zinc-900">
+        <TabsList>
           <TabsTrigger value="weekly">Weekly ({weekly.length})</TabsTrigger>
           <TabsTrigger value="monthly">Monthly ({monthly.length})</TabsTrigger>
         </TabsList>

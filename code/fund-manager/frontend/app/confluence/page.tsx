@@ -1,5 +1,6 @@
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 async function getConfluence() {
   const base = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8787/api/v1";
@@ -8,47 +9,58 @@ async function getConfluence() {
   return res.json();
 }
 
-const bucketColor = (b: string) => {
-  if (b === "execute") return "text-green-400";
-  if (b === "plan") return "text-cyan-400";
-  if (b === "watch") return "text-yellow-400";
-  return "text-zinc-500";
+const bucketColor = (bucket: string) => {
+  if (bucket === "execute") return "success";
+  if (bucket === "plan") return "secondary";
+  if (bucket === "watch") return "warning";
+  return "outline";
 };
 
 export default async function ConfluencePage() {
   const data = await getConfluence();
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-bold">Confluence Scores</h1>
-      <div className="text-sm text-zinc-400">Latest score per ticker. Recomputed each L3 cycle.</div>
+    <div className="page-shell">
+      <section className="page-header">
+        <div className="space-y-2">
+          <div className="section-label">Scoring model</div>
+          <h1 className="page-title">Confluence scores</h1>
+          <p className="page-description">Latest aggregate confluence score per ticker, recalculated each L3 cycle.</p>
+        </div>
+        <Badge variant="secondary">{data.count} rows</Badge>
+      </section>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {data.items.map((c: any) => {
-          let comps: Record<string, number> = {};
-          try { comps = JSON.parse(c.components_json); } catch {}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {data.items.map((item: any) => {
+          let components: Record<string, number> = {};
+          try {
+            components = JSON.parse(item.components_json);
+          } catch {}
+
           return (
-            <div key={c.id} className="border border-zinc-800 rounded bg-zinc-900 p-3">
-              <div className="flex items-center justify-between mb-2">
-                <Link href={`/ticker/${c.ticker}`} className="text-cyan-400 hover:underline font-bold">{c.ticker}</Link>
-                <div className="flex items-center gap-2">
-                  <span className={`text-2xl font-bold ${bucketColor(c.bucket)}`}>{c.score}</span>
-                  <Badge variant="outline" className={`text-xs ${bucketColor(c.bucket)}`}>{c.bucket}</Badge>
+            <Card key={item.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-3">
+                  <Link href={`/ticker/${item.ticker}`} className="ticker-link text-base">{item.ticker}</Link>
+                  <div className="flex items-center gap-2">
+                    <span className="text-3xl font-semibold tracking-[-0.03em] text-foreground">{item.score}</span>
+                    <Badge variant={bucketColor(item.bucket) as "success" | "secondary" | "warning" | "outline"}>{item.bucket}</Badge>
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-2 text-xs text-zinc-400">
-                {Object.entries(comps).map(([k, v]) => (
-                  <div key={k} className="flex justify-between py-0.5 border-b border-zinc-800">
-                    <span>{k}</span>
-                    <span className={Number(v) >= 0 ? "text-green-400" : "text-red-400"}>{Number(v) > 0 ? "+" : ""}{v}</span>
+                <CardDescription>{item.ts?.slice(0, 16)}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {Object.entries(components).map(([key, value]) => (
+                  <div key={key} className="flex items-center justify-between rounded-xl border border-border/70 bg-secondary/35 px-3 py-2 text-sm">
+                    <span className="text-muted-foreground">{key}</span>
+                    <span className={Number(value) >= 0 ? "data-positive" : "data-negative"}>{Number(value) > 0 ? "+" : ""}{value}</span>
                   </div>
                 ))}
-              </div>
-              <div className="text-xs text-zinc-600 mt-1">{c.ts?.slice(0, 16)}</div>
-            </div>
+              </CardContent>
+            </Card>
           );
         })}
-        {data.items.length === 0 && <div className="text-zinc-500 text-sm col-span-3 py-4">No scores yet</div>}
+        {data.items.length === 0 ? <div className="rounded-xl border border-dashed border-border/80 px-4 py-6 text-sm text-muted-foreground">No scores yet.</div> : null}
       </div>
     </div>
   );

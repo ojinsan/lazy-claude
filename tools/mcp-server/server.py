@@ -1,10 +1,10 @@
 """
 Lazywork MCP Server
 ====================
-Exposes workspace tools over SSE so any Claude on the Tailscale network
+Exposes workspace tools over streamable HTTP so any Claude on the Tailscale network
 can call them as native MCP tools.
 
-Transport: streamable-http  →  http://lazywork-mbp.tailc83490.ts.net:8765/sse
+Transport: streamable-http  →  http://lazywork-mbp.tailc83490.ts.net:8765/mcp
 Auth: Tailscale handles network auth — no token needed.
 """
 
@@ -50,11 +50,11 @@ mcp = FastMCP(
 def threads_search(query: str, limit: int = 10) -> str:
     """
     Search Threads posts by keyword using the logged-in Firefox profile.
-    Returns post text, likes, and reply counts.
+    Returns post text plus top reply snippets.
     """
     result = subprocess.run(
-        ['node', str(THREADS_SCRIPT), '--query', query, '--limit', str(limit)],
-        capture_output=True, text=True, timeout=60
+        ['node', str(THREADS_SCRIPT), '--query', query, '--limit', str(limit), '--comments'],
+        capture_output=True, text=True, timeout=240
     )
     if result.returncode != 0:
         raise RuntimeError(result.stderr[:500])
@@ -64,8 +64,28 @@ def threads_search(query: str, limit: int = 10) -> str:
         lines = [f"Query: {query} ({len(posts)} results)\n"]
         for p in posts:
             text = p.get('text', '').strip()
+            comments = [c for c in p.get('comments', []) if c.get('text')]
+            if not text and not comments:
+                continue
+
+            lines.append('---')
             if text:
-                lines.append(f"---\n{text[:400]}\nLikes: {p.get('likes',0)} | Replies: {p.get('replies',0)}")
+                lines.append(text[:400])
+            if p.get('views'):
+                lines.append(f"Views: {p.get('views')}")
+            if p.get('url'):
+                lines.append(f"URL: {p.get('url')}")
+            if comments:
+                lines.append('Replies:')
+                for c in comments[:4]:
+                    author = c.get('author') or 'unknown'
+                    tags = []
+                    if c.get('byAuthor'):
+                        tags.append('author')
+                    elif c.get('isThreadStarter'):
+                        tags.append('starter')
+                    tag_text = f" ({', '.join(tags)})" if tags else ''
+                    lines.append(f"- @{author}{tag_text}: {c.get('text', '')[:220]}")
         return '\n'.join(lines)
     except Exception as e:
         raise RuntimeError(f"Parse error: {e}\nRaw: {result.stdout[:300]}")

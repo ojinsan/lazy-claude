@@ -18,30 +18,27 @@ function parseArgs(argv) {
 }
 
 async function scrapePost(page) {
-  // Wait for the post to load
   await page.waitForTimeout(3000);
 
-  // Get post URL
   const postUrl = page.url();
 
-  // Scrape post text and engagement
   const postData = await page.evaluate(() => {
-    // Threads renders post text in span[dir="auto"]
-    // Pattern: views → username → post text → replies...
-    // Pick the first span with substantial content (>30 chars or multiline)
     const spans = Array.from(document.querySelectorAll('span[dir="auto"]'));
-    const text = spans
-      .map(e => e.innerText?.trim() || '')
+    const spanTexts = spans.map(e => e.innerText?.trim() || '').filter(Boolean);
+    const text = spanTexts
       .filter(t => t.length > 30 || t.includes('\n'))
       .find(t => !t.match(/^\d+(\.\d+)?[KMB]?\s*(views|likes|replies)/i)) || '';
-
-    // Engagement: look for view/like/reply counts near spans containing those words
     const viewsSpan = spans.find(e => /views/i.test(e.innerText));
     const views = viewsSpan ? viewsSpan.innerText.replace(/views/i, '').trim() : '0';
+    const author = spanTexts.find((value, index) => {
+      const next = spanTexts[index + 1] || '';
+      return /^[^\s].{0,80}$/.test(value) && /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(next);
+    }) || '';
 
     return {
       text: text.slice(0, 3000),
       views,
+      author,
     };
   });
 
@@ -52,43 +49,103 @@ async function scrapePost(page) {
 }
 
 async function scrapeComments(page) {
-  // Try to scroll and load comments
-  const comments = [];
-
-  // Scroll down to load more comments
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) {
     await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1200);
   }
 
-  const commentsData = await page.evaluate(() => {
-    const commentEls = document.querySelectorAll('article');
-    const comments = [];
+  return await page.evaluate(() => {
+    const spans = Array.from(document.querySelectorAll('span[dir="auto"]'))
+      .map(el => (el.innerText || '').trim())
+      .filter(Boolean);
 
-    // Skip the main post (first article), get the rest as comments
-    for (let i = 1; i < commentEls.length; i++) {
-      const el = commentEls[i];
-      const text = el.querySelector('[data-pressable-module="PostBody"]')?.innerText ||
-                   el.querySelector('div[dir="auto"]')?.innerText ||
-                   el.querySelector('span')?.innerText || '';
+    const isDate = text => /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(text);
+    const isHeaderAt = index => (
+      index + 1 < spans.length &&
+      isDate(spans[index + 1]) &&
+      /^[^\s].{0,80}$/.test(spans[index])
+    );
+    const cleanPart = text => text
+      .replace(/^·\s*/gm, '')
+      .replace(/^Author\s*$/gim, '')
+      .replace(/^Translate\s*$/gim, '')
+      .replace(/^Some additional replies aren't available\. Learn more\s*$/gim, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    const noisePatterns = [
+      /^(like|reply|repost|share|follow|following|translate|see translation)$/i,
+      /^\d+(\.\d+)?[KMB]?$/,
+      /^\d+(\.\d+)?[KMB]?\s+(like|likes|reply|replies|repost|reposts|view|views)$/i,
+      /^threads$/i,
+      /^view all replies$/i,
+      /^some additional replies aren't available\. learn more$/i,
+    ];
+    const isNoise = text => noisePatterns.some(re => re.test(text)) || /^https?:\/\//i.test(text);
+    const uniq = values => [...new Set(values.filter(Boolean))];
 
-      if (text.length > 20 && text.length < 2000) {
-        const likes = el.querySelector('[data-pressable-module="like_fill"] span')?.innerText ||
-                      el.querySelector('[aria-label*="like"] span')?.innerText || '0';
+    const blocks = [];
+    for (let i = 0; i < spans.length - 1; i++) {
+      if (!isHeaderAt(i)) continue;
 
-        comments.push({
+      const author = spans[i];
+      const date = spans[i + 1];
+      let j = i + 2;
+      let byAuthor = false;
+
+      if (spans[j] === 'Author' || /^·?\s*Author$/i.test(spans[j])) {
+        byAuthor = true;
+        j += 1;
+      }
+
+      const parts = [];
+      for (; j < spans.length; j++) {
+        const text = spans[j];
+        if (isHeaderAt(j)) break;
+        if (!text || text === author || isDate(text) || isNoise(text)) continue;
+        if (/^·?\s*Author$/i.test(text)) {
+          byAuthor = true;
+          continue;
+        }
+        if (parts.length && /^liked by /i.test(text)) break;
+        const cleaned = cleanPart(text.replace(/\s+\n/g, '\n'));
+        if (!cleaned || isNoise(cleaned)) continue;
+        parts.push(cleaned);
+        if (parts.length >= 8) break;
+      }
+
+      const text = uniq(parts).join('\n').trim();
+      if (text.length >= 20 && text.length <= 2000) {
+        blocks.push({
+          author,
+          date,
+          byAuthor,
           text: text.slice(0, 1000),
-          likes,
         });
       }
 
-      if (comments.length >= 30) break;
+      i = Math.max(i, j - 1);
     }
 
-    return comments;
+    const starter = blocks[0]?.author || '';
+    const seen = new Set();
+    return blocks
+      .slice(1)
+      .filter(item => {
+        const key = `${item.author}|${item.text}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .map((item, index) => ({
+        ...item,
+        isThreadStarter: !!starter && item.author === starter,
+        priority: item.byAuthor ? 0 : item.author === starter ? 1 : 2,
+        order: index,
+      }))
+      .sort((a, b) => a.priority - b.priority || a.order - b.order)
+      .slice(0, 30)
+      .map(({ priority, order, ...item }) => item);
   });
-
-  return commentsData;
 }
 
 async function getProfilePostLinks(page, username, limit) {
@@ -176,7 +233,7 @@ async function main() {
 
   for (let i = 0; i < limit; i++) {
     const link = postLinks[i];
-    console.log(`Scraping post ${i + 1}/${limit}: ${link}`);
+    console.error(`Scraping post ${i + 1}/${limit}: ${link}`);
 
     try {
       await page.goto(link, { waitUntil: 'domcontentloaded', timeout: 60000 });

@@ -2,11 +2,15 @@ import { api } from "@/lib/api";
 
 export async function KillSwitchBanner() {
   let ks: { active: boolean; reason?: string } = { active: false, reason: "" };
-  try { ks = await api.getKillSwitch(); } catch { }
+  try {
+    ks = await api.getKillSwitch();
+  } catch {}
   if (!ks.active) return null;
+
   return (
-    <div className="bg-red-900 border border-red-500 text-red-100 px-4 py-2 text-sm font-semibold">
-      ⛔ KILL SWITCH ACTIVE — {ks.reason || "no new entries"}
+    <div className="rounded-2xl border border-danger/35 bg-danger/14 px-4 py-3 text-sm text-danger shadow-[0_10px_30px_rgba(255,99,105,0.08)]">
+      <div className="font-semibold tracking-[-0.02em]">Kill switch active</div>
+      <div className="mt-1 text-danger/85">{ks.reason || "No new entries."}</div>
     </div>
   );
 }

@@ -52,3 +52,5 @@ services/**/.venv/
 services/**/__pycache__/
 services/**/*.pyc
 services/**/.env
+services/**/.DS_Store
+services/**/telegram_session.session

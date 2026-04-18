@@ -4,11 +4,11 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/lazywork/workspace/services/telegram-scraper
-ExecStart=/home/lazywork/workspace/services/telegram-scraper/.venv/bin/python main.py
+WorkingDirectory=/home/lazywork/workspace/services
+ExecStart=/home/lazywork/workspace/services/telegram-scraper/.venv/bin/python -m telegram_scraper
 Restart=on-failure
 RestartSec=30
-Environment=TG_INSIGHT_API_URL=http://127.0.0.1:8787/feed/telegram/insight
+EnvironmentFile=/home/lazywork/workspace/services/telegram-scraper/.env
 
 [Install]
 WantedBy=default.target

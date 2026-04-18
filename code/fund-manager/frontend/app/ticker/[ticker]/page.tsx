@@ -1,7 +1,9 @@
-import { api } from "@/lib/api";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { api } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default async function TickerPage({ params }: { params: Promise<{ ticker: string }> }) {
   const { ticker } = await params;
@@ -25,23 +27,30 @@ export default async function TickerPage({ params }: { params: Promise<{ ticker:
   const latestHolding = holdings[0] ?? null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Link href="/portfolio" className="text-zinc-500 hover:text-white text-sm">← Portfolio</Link>
-        <h1 className="text-xl font-bold text-cyan-400">{t}</h1>
-        {latestHolding && (
-          <div className="flex gap-3 text-sm text-zinc-400">
-            <span>{latestHolding.shares.toLocaleString()} shares</span>
-            <span>avg {latestHolding.avg_cost.toLocaleString()}</span>
-            <span className={latestHolding.unrealized_pnl >= 0 ? "text-green-400" : "text-red-400"}>
-              {latestHolding.unrealized_pct?.toFixed(1)}%
-            </span>
+    <div className="page-shell">
+      <section className="page-header">
+        <div className="space-y-3">
+          <Link href="/portfolio" className="text-sm text-muted-foreground hover:text-foreground">← Back to portfolio</Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="page-title">{t}</h1>
+            {thesis ? <Badge variant="outline">{thesis.status}</Badge> : null}
           </div>
-        )}
-      </div>
+          <p className="page-description">Single-name workspace for thesis, plans, signals, and transaction history.</p>
+        </div>
+        {latestHolding ? (
+          <div className="rounded-2xl border border-border/80 bg-card px-4 py-3 text-sm shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_40px_rgba(0,0,0,0.22)]">
+            <div className="section-label">Current holding</div>
+            <div className="mt-2 flex flex-wrap gap-3 text-secondary-foreground">
+              <span>{latestHolding.shares.toLocaleString()} shares</span>
+              <span>avg {latestHolding.avg_cost.toLocaleString()}</span>
+              <span className={latestHolding.unrealized_pnl >= 0 ? "data-positive" : "data-negative"}>{latestHolding.unrealized_pct?.toFixed(1)}%</span>
+            </div>
+          </div>
+        ) : null}
+      </section>
 
       <Tabs defaultValue="thesis">
-        <TabsList className="bg-zinc-900">
+        <TabsList>
           <TabsTrigger value="thesis">Thesis</TabsTrigger>
           <TabsTrigger value="plans">Plans ({plans.length})</TabsTrigger>
           <TabsTrigger value="signals">Signals ({signals.length})</TabsTrigger>
@@ -49,78 +58,130 @@ export default async function TickerPage({ params }: { params: Promise<{ ticker:
         </TabsList>
 
         <TabsContent value="thesis">
-          {thesis ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{thesis.status}</Badge>
-                <span className="text-zinc-500 text-xs">last review: {thesis.last_review || "—"}</span>
-              </div>
-              <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-sans bg-zinc-900 rounded p-3 border border-zinc-800">{thesis.body_md}</pre>
-              <div>
-                <div className="text-xs text-zinc-400 mb-1">Review Log</div>
-                {reviews.map((r) => (
-                  <div key={r.id} className="text-xs py-1 border-b border-zinc-900">
-                    <span className="text-zinc-500">{r.review_date}</span>
-                    <span className="text-zinc-600 mx-1">({r.layer})</span>
-                    <span className="text-zinc-300">{r.note}</span>
+          <Card>
+            <CardHeader>
+              <CardTitle>Thesis</CardTitle>
+              <CardDescription>{thesis ? `Last review: ${thesis.last_review || "—"}` : `No thesis for ${t}.`}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {thesis ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">{thesis.status}</Badge>
+                    <span className="text-xs text-muted-foreground">{t}</span>
                   </div>
-                ))}
-              </div>
-            </div>
-          ) : <div className="text-zinc-500 text-sm py-4">No thesis for {t}</div>}
+                  <div className="content-block">{thesis.body_md}</div>
+                  <div className="space-y-2">
+                    <div className="section-label">Review log</div>
+                    {reviews.map((review) => (
+                      <div key={review.id} className="rounded-xl border border-border/70 bg-secondary/35 px-4 py-3 text-sm">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span>{review.review_date}</span>
+                          <span>•</span>
+                          <span>{review.layer}</span>
+                        </div>
+                        <div className="mt-1 text-secondary-foreground">{review.note}</div>
+                      </div>
+                    ))}
+                    {reviews.length === 0 ? <div className="text-sm text-muted-foreground">No reviews yet.</div> : null}
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border/80 px-4 py-6 text-sm text-muted-foreground">No thesis for {t}.</div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="plans">
-          {plans.map((p) => (
-            <div key={p.id} className="border border-zinc-800 rounded p-3 mb-2 bg-zinc-900 text-sm space-y-1">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline">{p.plan_date}</Badge>
-                <Badge variant="secondary">{p.mode}</Badge>
-                <span className="text-zinc-400">{p.setup_type}</span>
-                <Badge variant={p.status === "executed" ? "secondary" : "outline"} className="ml-auto">{p.status}</Badge>
-              </div>
-              <div className="text-zinc-400 text-xs">Entry: {p.entry_low.toLocaleString()}–{p.entry_high.toLocaleString()} | SL: {p.stop.toLocaleString()} | T1: {p.target_1.toLocaleString()}</div>
-              <pre className="text-xs text-zinc-500 whitespace-pre-wrap">{p.raw_md?.slice(0, 200)}</pre>
-            </div>
-          ))}
-          {plans.length === 0 && <div className="text-zinc-500 text-sm py-4">No plans</div>}
+          <Card>
+            <CardHeader>
+              <CardTitle>Trade plans</CardTitle>
+              <CardDescription>Queued and historical setups tied to this ticker.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {plans.map((plan) => (
+                <div key={plan.id} className="rounded-2xl border border-border/80 bg-secondary/35 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">{plan.plan_date}</Badge>
+                    <Badge variant="secondary">{plan.mode}</Badge>
+                    <span className="text-sm text-muted-foreground">{plan.setup_type || "No setup tag"}</span>
+                    <Badge variant={plan.status === "executed" ? "success" : "outline"} className="ml-auto">{plan.status}</Badge>
+                  </div>
+                  <div className="mt-3 grid gap-3 text-sm md:grid-cols-3">
+                    <div><span className="section-label">Entry</span><div className="mono mt-1">{plan.entry_low.toLocaleString()}–{plan.entry_high.toLocaleString()}</div></div>
+                    <div><span className="section-label">Stop</span><div className="mono mt-1 data-negative">{plan.stop.toLocaleString()}</div></div>
+                    <div><span className="section-label">Target 1</span><div className="mono mt-1 data-positive">{plan.target_1.toLocaleString()}</div></div>
+                  </div>
+                  <div className="content-block mt-3">{plan.raw_md?.slice(0, 400)}</div>
+                </div>
+              ))}
+              {plans.length === 0 ? <div className="rounded-xl border border-dashed border-border/80 px-4 py-6 text-sm text-muted-foreground">No plans.</div> : null}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="signals">
-          <table className="w-full text-xs border-collapse">
-            <thead><tr className="text-zinc-500 border-b border-zinc-800 text-left">{["Time","Layer","Kind","Severity","Price"].map(h=><th key={h} className="py-1.5 pr-3">{h}</th>)}</tr></thead>
-            <tbody>
-              {signals.map((s) => (
-                <tr key={s.id} className="border-b border-zinc-900">
-                  <td className="py-1 pr-3 text-zinc-500">{s.ts?.slice(0, 16)}</td>
-                  <td className="pr-3 text-zinc-400">{s.layer}</td>
-                  <td className="pr-3"><Badge variant="outline" className="text-xs">{s.kind}</Badge></td>
-                  <td className="pr-3">{s.severity}</td>
-                  <td className="pr-3">{s.price?.toLocaleString() || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {signals.length === 0 && <div className="text-zinc-500 text-sm py-4">No signals</div>}
+          <Card>
+            <CardHeader>
+              <CardTitle>Signals</CardTitle>
+              <CardDescription>Latest signal events linked to {t}.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {["Time", "Layer", "Kind", "Severity", "Price"].map((header) => <TableHead key={header}>{header}</TableHead>)}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {signals.map((signal) => (
+                    <TableRow key={signal.id}>
+                      <TableCell className="mono text-xs text-muted-foreground">{signal.ts?.slice(0, 16)}</TableCell>
+                      <TableCell className="text-muted-foreground">{signal.layer}</TableCell>
+                      <TableCell><Badge variant="outline">{signal.kind}</Badge></TableCell>
+                      <TableCell className="capitalize text-secondary-foreground">{signal.severity}</TableCell>
+                      <TableCell>{signal.price?.toLocaleString() || "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {signals.length === 0 ? <div className="rounded-xl border border-dashed border-border/80 px-4 py-6 text-sm text-muted-foreground">No signals.</div> : null}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="transactions">
-          <table className="w-full text-xs border-collapse">
-            <thead><tr className="text-zinc-500 border-b border-zinc-800 text-left">{["Time","Side","Shares","Price","P&L","Layer"].map(h=><th key={h} className="py-1.5 pr-3">{h}</th>)}</tr></thead>
-            <tbody>
-              {txs.map((t) => (
-                <tr key={t.id} className="border-b border-zinc-900">
-                  <td className="py-1 pr-3 text-zinc-500">{t.ts?.slice(0, 16)}</td>
-                  <td className={`pr-3 font-semibold ${t.side === "BUY" ? "text-green-400" : "text-red-400"}`}>{t.side}</td>
-                  <td className="pr-3">{t.shares.toLocaleString()}</td>
-                  <td className="pr-3">{t.price.toLocaleString()}</td>
-                  <td className={`pr-3 ${t.pnl >= 0 ? "text-green-400" : t.pnl < 0 ? "text-red-400" : "text-zinc-500"}`}>{t.pnl ? `${t.pnl_pct?.toFixed(1)}%` : "open"}</td>
-                  <td className="pr-3 text-zinc-500">{t.layer_origin}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {txs.length === 0 && <div className="text-zinc-500 text-sm py-4">No transactions</div>}
+          <Card>
+            <CardHeader>
+              <CardTitle>Transactions</CardTitle>
+              <CardDescription>Execution history over last 365 days.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {["Time", "Side", "Shares", "Price", "P&L", "Layer"].map((header) => <TableHead key={header}>{header}</TableHead>)}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {txs.map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell className="mono text-xs text-muted-foreground">{tx.ts?.slice(0, 16)}</TableCell>
+                      <TableCell className={tx.side === "BUY" ? "data-positive" : "data-negative"}>{tx.side}</TableCell>
+                      <TableCell>{tx.shares.toLocaleString()}</TableCell>
+                      <TableCell>{tx.price.toLocaleString()}</TableCell>
+                      <TableCell className={tx.pnl > 0 ? "data-positive" : tx.pnl < 0 ? "data-negative" : "text-muted-foreground"}>
+                        {tx.pnl ? `${tx.pnl_pct?.toFixed(1)}%` : "open"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{tx.layer_origin}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {txs.length === 0 ? <div className="rounded-xl border border-dashed border-border/80 px-4 py-6 text-sm text-muted-foreground">No transactions.</div> : null}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

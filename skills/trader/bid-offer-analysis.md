@@ -70,7 +70,9 @@ Compute from a single snapshot (`api.get_stockbit_orderbook(ticker)`):
 
 | Metric | Formula | Read |
 |--------|---------|------|
-| Bid/Ask ratio (top 5 lv) | `sum(bid_qty[0:5]) / sum(ask_qty[0:5])` | > 1.5 = buy pressure; < 0.67 = sell pressure |
+| Bid/Ask ratio (top 5 lv) | `sum(bid_qty[0:5]) / sum(ask_qty[0:5])` | **Unreliable alone** — big players post fake thick bids to lure retail. Use as secondary only. |
+| HAKA/HAKI ratio | `buy_vol / sell_vol` from running trades | > 1.5 = real buying pressure (buyers actively hitting offer); < 0.7 = selling pressure |
+| Absorption signal | Thick OFFER wall + steady price + HAKA > HAKI | Price holds despite wall = smart money silently absorbing retail sells → Case 3 |
 | Depth asymmetry | `bid_depth_5lv / ask_depth_5lv` | same threshold; tracks shape over time |
 | Wall persistence | seconds wall survives before being pulled | < 30 s = fake; > 120 s = real |
 
