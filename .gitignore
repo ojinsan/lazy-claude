@@ -46,6 +46,8 @@ tools/general/playwright/.pw-firefox-*/
 vault/data/*.json
 vault/layer-output/**/*.md
 vault/reviews/**/*.md
+vault/.obsidian/
+vault/*.canvas
 
 # Services — runtime artifacts
 services/**/.venv/
