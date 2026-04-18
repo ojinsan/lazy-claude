@@ -24,25 +24,62 @@ class ChatConfig:
         return any(kw.lower() in name_lower for kw in self.admin_keywords)
 
 
-# Default chat configurations
+# Chat configurations — Boss O's account
 CHAT_CONFIGS: dict[str, ChatConfig] = {
+    # RLA group/channels (all accessible)
     "RLA Markibel": ChatConfig(
         name="RLA Markibel",
-        chat_type="group",
-        admin_keywords=["illusix", "rivan t", "robby", "budi9696"],
+        chat_type="channel",
+        force_all_admin=True,
     ),
     "RLA INVESTOR GROUP": ChatConfig(
         name="RLA INVESTOR GROUP",
-        chat_type="group",
-        admin_keywords=["illusix", "rivan t", "robby", "budi9696"],
+        chat_type="channel",
+        force_all_admin=True,
     ),
-    "RLA STOCKPICK CHANNEL": ChatConfig(
-        name="RLA STOCKPICK CHANNEL",
+    "RLA STOCKPICK Channel": ChatConfig(
+        name="RLA STOCKPICK Channel",
         chat_type="channel",
         force_all_admin=True,
     ),
     "RLA INVESTOR CHANNEL": ChatConfig(
         name="RLA INVESTOR CHANNEL",
+        chat_type="channel",
+        force_all_admin=True,
+    ),
+    "RLA GUIDANCE CHANNEL": ChatConfig(
+        name="RLA GUIDANCE CHANNEL",
+        chat_type="channel",
+        force_all_admin=True,
+    ),
+    # Independent stock channels
+    "Ngecap saham": ChatConfig(
+        name="Ngecap saham",
+        chat_type="channel",
+        force_all_admin=True,
+    ),
+    "Morfus' Trading Idea": ChatConfig(
+        name="Morfus' Trading Idea",
+        chat_type="channel",
+        force_all_admin=True,
+    ),
+    "UntungStock Discussion": ChatConfig(
+        name="UntungStock Discussion",
+        chat_type="channel",
+        force_all_admin=True,
+    ),
+    "indx stocks reborn": ChatConfig(
+        name="indx stocks reborn",
+        chat_type="channel",
+        force_all_admin=True,
+    ),
+    "MY - SWING PLAN": ChatConfig(
+        name="MY - SWING PLAN",
+        chat_type="channel",
+        force_all_admin=True,
+    ),
+    "MY - Daily TRADE": ChatConfig(
+        name="MY - Daily TRADE",
         chat_type="channel",
         force_all_admin=True,
     ),
