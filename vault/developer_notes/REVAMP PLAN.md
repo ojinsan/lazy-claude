@@ -47,9 +47,6 @@ Just learn from the current screening skills and tools. I will review later.
 #### [P2] Bid Offer Analysis
 
 [placeholder, explore dulu bareng claude, brainstorm]
-* docs plt stock
-
-* thread esprade
 
 
 * tiap 10 menit sekali:
@@ -61,3 +58,708 @@ Just learn from the current screening skills and tools. I will review later.
 	* Breakout powerful
 		* cek apakah resist di breakout, diiringi dengan offer yang selalu "dibeli" oleh buyer.
 	* Cek narative RAG v3 dari telegram/threads, kalau ada sinyal menarik.
+
+Bid Offer thick wall setup:
+
+```
+def analyze_near_book(bids: list, offers: list, n: int = 7) -> dict:
+    # bids sorted desc by price (nearest first)
+    # offers sorted asc by price (nearest first)
+    bids_near   = sorted(bids,   key=lambda x: x["price"], reverse=True)[:n]
+    offers_near = sorted(offers, key=lambda x: x["price"])[:n]
+
+    ratios = []
+    for i, (b, o) in enumerate(zip(bids_near, offers_near)):
+        ratios.append({
+            "level": i + 1,
+            "ratio": round(o["lot"] / b["lot"], 2) if b["lot"] else 999,
+            "bid_lot": b["lot"],
+            "offer_lot": o["lot"],
+        })
+
+    r = [x["ratio"] for x in ratios]
+
+    # spike: level 1 dominates and is 2x+ any other level
+    is_spike = r[0] >= 3.0 and r[0] >= 2.0 * max(r[1:])
+
+    # gradient: ratios trend upward level by level
+    rising = sum(1 for i in range(len(r)-1) if r[i+1] > r[i])
+    is_gradient = rising >= len(r) * 0.6
+
+    # bid thinness: are top 3 bid lots much smaller than levels 4-7?
+    near_bid_avg = sum(x["bid_lot"] for x in ratios[:3]) / 3
+    far_bid_avg  = sum(x["bid_lot"] for x in ratios[3:]) / max(len(ratios[3:]), 1)
+    retail_scared = near_bid_avg < far_bid_avg * 0.7
+
+    pattern = "spike" if is_spike else "gradient" if is_gradient else "normal"
+
+    return {
+        "pattern": pattern,
+        "retail_scared": retail_scared,
+        "ratios": r,
+        "level_1_ratio": r[0],
+    }
+```
+
+Retail avoider (For screening layer):
+```
+fetch("https://exodus.stockbit.com/order-trade/broker/activity?broker_code=XL&broker_code=YP&broker_code=XC&broker_code=PD&limit=50&page=1&from=2026-04-17&to=2026-04-17&transaction_type=TRANSACTION_TYPE_NET&market_board=MARKET_TYPE_REGULER&investor_type=INVESTOR_TYPE_ALL", {
+  "headers": {
+    "accept": "application/json",
+    "accept-language": "en-US,en;q=0.9",
+    "authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImExNWQ5OGE2LTdkYzgtNDM3NS05NDk0LTEyOWJlM2RlODVkNCIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZSI6Im9qaW4iLCJlbWEiOiJvamluY2FzaEBnbWFpbC5jb20iLCJmdWwiOiJGYXV6YW4gUmFtYWRoYW4iLCJzZXMiOiJUMWJQNUdCTk1KRHgzV3JqIiwiZHZjIjoiNzlhYWNmOGFkZmY5MDM4YzQzMWExMDRkYTY0ZjdiNDciLCJ1aWQiOjYzODU2MSwiY291IjoiSUQifSwiZXhwIjoxNzc2NjE1MTk0LCJpYXQiOjE3NzY1Mjg3OTQsImlzcyI6IlNUT0NLQklUIiwianRpIjoiMTkzZGE2ZGQtZWQwMy00OTA2LWI4NGItODc1YzAwZTkyMjZjIiwibmJmIjoxNzc2NTI4Nzk0LCJ2ZXIiOiJ2MSJ9.PKhXDzsEJCwhR3KUGzoFGnA7i64Ce9_qi7lqboBU_DrF1dcSgfGBx1pCw0sK0UBL9jvoM03FsbV2RAQwdiWETuGZUTm6JXoIAScX9LFD4zyUiwAZDmAPGGrN3Op7w48uvYYJ4BNteARXEZ9eTsJl9PwLbC8EYuuLBeVia_TjYFB31p58ieYAzewbC_FNiJxt0VCSW_h5-3PWul7OqmR5VnfKsiKuC3LudKIjrwNJFA1Tas3g39ErIaSzz3LESbyzN7jJuKxl0NbhJLuFY_bzlrf7-DdXoeXQzrjSvZeyufLpOo_Jk7Lh6wbtg_duxe1-9UMAGCIauVcOVrGFooeA7Q",
+    "sec-ch-ua": "\"Chromium\";v=\"116\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"116\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "\"macOS\"",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-site"
+  },
+  "referrer": "https://stockbit.com/",
+  "referrerPolicy": "strict-origin-when-cross-origin",
+  "body": null,
+  "method": "GET",
+  "mode": "cors",
+  "credentials": "include"
+});
+
+{
+    "message": "Successfully loaded Broker Activity data",
+    "data": {
+        "broker_activity_transaction": {
+            "brokers_buy": [
+                {
+                    "stock_code": "BBCA",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": 230751955000,
+                    "lot": 357391,
+                    "avg_price": 6461.327949264119,
+                    "freq": 29386,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/BBCA.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "",
+                            "text": ""
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "BMRI",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": 85281074000,
+                    "lot": 184978,
+                    "avg_price": 4619.789943459222,
+                    "freq": 9784,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/BMRI.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "HMSP",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": 1563889000,
+                    "lot": 20812,
+                    "avg_price": 751.1595394736842,
+                    "freq": 593,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/HMSP.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                }
+            ],
+            "brokers_sell": [
+                {
+                    "stock_code": "ADRO",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -42255450000,
+                    "lot": -165829,
+                    "avg_price": 2547.487418102082,
+                    "freq": 8899,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/ADRO.png?version=1753857016610110434",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "",
+                            "text": ""
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "AADI",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -41851597500,
+                    "lot": -37117,
+                    "avg_price": 11270.125325782683,
+                    "freq": 4093,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/AADI.png?version=1731380937972873322",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "EMAS",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -34893832500,
+                    "lot": -40630,
+                    "avg_price": 8556.229513046565,
+                    "freq": 5453,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/EMAS.png?version=1757313721556982559",
+                        "corpaction": {
+                            "active": true,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "BRMS",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -31461134000,
+                    "lot": -362747,
+                    "avg_price": 866.5165423331205,
+                    "freq": 8795,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/BRMS.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "BREN",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -28912117500,
+                    "lot": -44253,
+                    "avg_price": 6509.00546849494,
+                    "freq": 2268,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/BREN.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "CUAN",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -26231563000,
+                    "lot": -168170,
+                    "avg_price": 1578.2418594706219,
+                    "freq": 14946,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/CUAN.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "BIPI",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -5603208400,
+                    "lot": -204891,
+                    "avg_price": 282.5167160763156,
+                    "freq": 16635,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/BIPI.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": [
+                            {
+                                "notation_code": "L",
+                                "notation_desc": "Perusahaan Tercatat belum menyampaikan laporan keuangan",
+                                "icon_url": {
+                                    "light_mode": "https://assets.stockbit.com/logos/notations/light/L.png",
+                                    "dark_mode": "https://assets.stockbit.com/logos/notations/dark/L.png"
+                                }
+                            }
+                        ]
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "ACES",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -5555713400,
+                    "lot": -146934,
+                    "avg_price": 377.51375504573093,
+                    "freq": 5855,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/ACES-NEW.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "WIFI",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -5310889000,
+                    "lot": -21238,
+                    "avg_price": 2490.76794684556,
+                    "freq": 3624,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/WIFI.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "LSIP",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -5204446000,
+                    "lot": -32149,
+                    "avg_price": 1620.1989238148572,
+                    "freq": 1045,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/LSIP.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "PADI",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -5143695400,
+                    "lot": -431804,
+                    "avg_price": 124.14110070920589,
+                    "freq": 10403,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/PADI.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "ADMR",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -4877099000,
+                    "lot": -25175,
+                    "avg_price": 1933.6957764534682,
+                    "freq": 1355,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/ADMR.png?version=1753857326844772768",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "KRAS",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -4803164600,
+                    "lot": -160539,
+                    "avg_price": 299.5452995717434,
+                    "freq": 2206,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/KRAS.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "ZATA",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -4510134700,
+                    "lot": -452817,
+                    "avg_price": 100.59687531854676,
+                    "freq": 18048,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/ZATA.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": [
+                            {
+                                "notation_code": "L",
+                                "notation_desc": "Perusahaan Tercatat belum menyampaikan laporan keuangan",
+                                "icon_url": {
+                                    "light_mode": "https://assets.stockbit.com/logos/notations/light/L.png",
+                                    "dark_mode": "https://assets.stockbit.com/logos/notations/dark/L.png"
+                                }
+                            }
+                        ]
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "INDF",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -4198052500,
+                    "lot": -6016,
+                    "avg_price": 6973.679361179361,
+                    "freq": 1457,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/INDF.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "MDIA",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -4150641600,
+                    "lot": -535756,
+                    "avg_price": 84.17880775756468,
+                    "freq": 10797,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/MDIA.png",
+                        "corpaction": {
+                            "active": false,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": [
+                            {
+                                "notation_code": "L",
+                                "notation_desc": "Perusahaan Tercatat belum menyampaikan laporan keuangan",
+                                "icon_url": {
+                                    "light_mode": "https://assets.stockbit.com/logos/notations/light/L.png",
+                                    "dark_mode": "https://assets.stockbit.com/logos/notations/dark/L.png"
+                                }
+                            }
+                        ]
+                    },
+                    "nval_trend": []
+                },
+                {
+                    "stock_code": "LPPF",
+                    "broker_code": "PD",
+                    "type": "BROKER_TYPE_LOCAL",
+                    "date": "2026-04-17",
+                    "value": -3881177500,
+                    "lot": -20010,
+                    "avg_price": 1942.3451962608237,
+                    "freq": 2937,
+                    "company_detail": {
+                        "icon_url": "https://assets.stockbit.com/logos/companies/LPPF.png",
+                        "corpaction": {
+                            "active": true,
+                            "icon": "https://assets.stockbit.com/images/corp_action_event_icon.svg",
+                            "text": "Perusahaan Memiliki Corporate Action"
+                        },
+                        "notation": []
+                    },
+                    "nval_trend": []
+                }
+            ]
+        },
+        "from": "2026-04-17",
+        "to": "2026-04-17",
+        "broker_code": "PD, XC, XL, YP",
+        "broker_name": ""
+    }
+}
+
+```
+
+Withdrawn Detection:
+```
+fetch("https://exodus.stockbit.com/order-trade/order-queue?stock_code=WMUU&action_type=ACTION_TYPE_BUY&board_type=BOARD_TYPE_REGULAR&order_status=ORDER_STATUS_WITHDRAWN&limit=100&price=79", {
+  "headers": {
+    "accept": "application/json",
+    "accept-language": "en-US,en;q=0.9",
+    "authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImExNWQ5OGE2LTdkYzgtNDM3NS05NDk0LTEyOWJlM2RlODVkNCIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZSI6Im9qaW4iLCJlbWEiOiJvamluY2FzaEBnbWFpbC5jb20iLCJmdWwiOiJGYXV6YW4gUmFtYWRoYW4iLCJzZXMiOiJUMWJQNUdCTk1KRHgzV3JqIiwiZHZjIjoiNzlhYWNmOGFkZmY5MDM4YzQzMWExMDRkYTY0ZjdiNDciLCJ1aWQiOjYzODU2MSwiY291IjoiSUQifSwiZXhwIjoxNzc2NjE1MTk0LCJpYXQiOjE3NzY1Mjg3OTQsImlzcyI6IlNUT0NLQklUIiwianRpIjoiMTkzZGE2ZGQtZWQwMy00OTA2LWI4NGItODc1YzAwZTkyMjZjIiwibmJmIjoxNzc2NTI4Nzk0LCJ2ZXIiOiJ2MSJ9.PKhXDzsEJCwhR3KUGzoFGnA7i64Ce9_qi7lqboBU_DrF1dcSgfGBx1pCw0sK0UBL9jvoM03FsbV2RAQwdiWETuGZUTm6JXoIAScX9LFD4zyUiwAZDmAPGGrN3Op7w48uvYYJ4BNteARXEZ9eTsJl9PwLbC8EYuuLBeVia_TjYFB31p58ieYAzewbC_FNiJxt0VCSW_h5-3PWul7OqmR5VnfKsiKuC3LudKIjrwNJFA1Tas3g39ErIaSzz3LESbyzN7jJuKxl0NbhJLuFY_bzlrf7-DdXoeXQzrjSvZeyufLpOo_Jk7Lh6wbtg_duxe1-9UMAGCIauVcOVrGFooeA7Q",
+    "sec-ch-ua": "\"Chromium\";v=\"116\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"116\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "\"macOS\"",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-site"
+  },
+  "referrer": "https://stockbit.com/",
+  "referrerPolicy": "strict-origin-when-cross-origin",
+  "body": null,
+  "method": "GET",
+  "mode": "cors",
+  "credentials": "include"
+});
+
+-- overall retail detector (1 freq small lot):
+fetch("https://exodus.stockbit.com/order-trade/order-queue?stock_code=WMUU&action_type=ACTION_TYPE_BUY&board_type=BOARD_TYPE_REGULAR&order_status=ORDER_STATUS_ALL&limit=100&price=79", {
+  "headers": {
+    "accept": "application/json",
+    "accept-language": "en-US,en;q=0.9",
+    "authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImExNWQ5OGE2LTdkYzgtNDM3NS05NDk0LTEyOWJlM2RlODVkNCIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZSI6Im9qaW4iLCJlbWEiOiJvamluY2FzaEBnbWFpbC5jb20iLCJmdWwiOiJGYXV6YW4gUmFtYWRoYW4iLCJzZXMiOiJUMWJQNUdCTk1KRHgzV3JqIiwiZHZjIjoiNzlhYWNmOGFkZmY5MDM4YzQzMWExMDRkYTY0ZjdiNDciLCJ1aWQiOjYzODU2MSwiY291IjoiSUQifSwiZXhwIjoxNzc2NjE1MTk0LCJpYXQiOjE3NzY1Mjg3OTQsImlzcyI6IlNUT0NLQklUIiwianRpIjoiMTkzZGE2ZGQtZWQwMy00OTA2LWI4NGItODc1YzAwZTkyMjZjIiwibmJmIjoxNzc2NTI4Nzk0LCJ2ZXIiOiJ2MSJ9.PKhXDzsEJCwhR3KUGzoFGnA7i64Ce9_qi7lqboBU_DrF1dcSgfGBx1pCw0sK0UBL9jvoM03FsbV2RAQwdiWETuGZUTm6JXoIAScX9LFD4zyUiwAZDmAPGGrN3Op7w48uvYYJ4BNteARXEZ9eTsJl9PwLbC8EYuuLBeVia_TjYFB31p58ieYAzewbC_FNiJxt0VCSW_h5-3PWul7OqmR5VnfKsiKuC3LudKIjrwNJFA1Tas3g39ErIaSzz3LESbyzN7jJuKxl0NbhJLuFY_bzlrf7-DdXoeXQzrjSvZeyufLpOo_Jk7Lh6wbtg_duxe1-9UMAGCIauVcOVrGFooeA7Q",
+    "sec-ch-ua": "\"Chromium\";v=\"116\", \"Not)A;Brand\";v=\"24\", \"Google Chrome\";v=\"116\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "\"macOS\"",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-site"
+  },
+  "referrer": "https://stockbit.com/",
+  "referrerPolicy": "strict-origin-when-cross-origin",
+  "body": null,
+  "method": "GET",
+  "mode": "cors",
+  "credentials": "include"
+});
+
+-- both response format:
+{
+    "message": "Successfully get list order queue",
+    "data": {
+        "orders": [
+            {
+                "id": "2812762000",
+                "queue_number": "0",
+                "stock_code": "WMUU",
+                "time": "2026-04-17T08:58:00.000075Z",
+                "action_type": "ACTION_TYPE_BUY",
+                "price": 79,
+                "status": "ORDER_STATUS_FULL_MATCH",
+                "open": 0,
+                "lot": 8000,
+                "board_type": "BOARD_TYPE_REGULAR",
+                "broker_code": "IU",
+                "exchange_order_number": {
+                    "full": "202604170000014107",
+                    "formatted": "14107"
+                },
+                "queue_lot": 0,
+                "broker_group": "BROKER_GROUP_LOCAL",
+                "order_number": "202604170000014107"
+            },
+            {
+                "id": "2812759365",
+                "queue_number": "0",
+                "stock_code": "WMUU",
+                "time": "2026-04-17T08:58:00.000075Z",
+                "action_type": "ACTION_TYPE_BUY",
+                "price": 79,
+                "status": "ORDER_STATUS_WITHDRAWN",
+                "open": 0,
+                "lot": 2000,
+                "board_type": "BOARD_TYPE_REGULAR",
+                "broker_code": "",
+                "exchange_order_number": {
+                    "full": "202604170000073832",
+                    "formatted": "73832"
+                },
+                "queue_lot": 0,
+                "broker_group": "BROKER_GROUP_UNSPECIFIED",
+                "order_number": "202604170000073832"
+            },
+            {
+                "id": "2812761255",
+                "queue_number": "0",
+                "stock_code": "WMUU",
+                "time": "2026-04-17T08:58:00.000075Z",
+                "action_type": "ACTION_TYPE_BUY",
+                "price": 79,
+                "status": "ORDER_STATUS_WITHDRAWN",
+                "open": 0,
+                "lot": 11,
+                "board_type": "BOARD_TYPE_REGULAR",
+                "broker_code": "",
+                "exchange_order_number": {
+                    "full": "202604170000152236",
+                    "formatted": "152236"
+                },
+                "queue_lot": 0,
+                "broker_group": "BROKER_GROUP_UNSPECIFIED",
+                "order_number": "202604170000152236"
+            },
+            {
+                "id": "2812761716",
+                "queue_number": "0",
+                "stock_code": "WMUU",
+                "time": "2026-04-17T08:58:00.000075Z",
+                "action_type": "ACTION_TYPE_BUY",
+                "price": 79,
+                "status": "ORDER_STATUS_WITHDRAWN",
+                "open": 0,
+                "lot": 1000,
+                "board_type": "BOARD_TYPE_REGULAR",
+                "broker_code": "",
+                "exchange_order_number": {
+                    "full": "202604170000190695",
+                    "formatted": "190695"
+                },
+                "queue_lot": 0,
+                "broker_group": "BROKER_GROUP_UNSPECIFIED",
+                "order_number": "202604170000190695"
+            },
+            {
+                "id": "2812761486",
+                "queue_number": "0",
+                "stock_code": "WMUU",
+                "time": "2026-04-17T08:58:00.000075Z",
+                "action_type": "ACTION_TYPE_BUY",
+                "price": 79,
+                "status": "ORDER_STATUS_WITHDRAWN",
+                "open": 0,
+                "lot": 50,
+                "board_type": "BOARD_TYPE_REGULAR",
+                "broker_code": "",
+                "exchange_order_number": {
+                    "full": "202604170000250466",
+                    "formatted": "250466"
+                },
+                "queue_lot": 0,
+                "broker_group": "BROKER_GROUP_UNSPECIFIED",
+                "order_number": "202604170000250466"
+            },
+            {
+                "id": "2812761692",
+                "queue_number": "0",
+                "stock_code": "WMUU",
+                "time": "2026-04-17T08:58:00.000075Z",
+                "action_type": "ACTION_TYPE_BUY",
+                "price": 79,
+                "status": "ORDER_STATUS_WITHDRAWN",
+                "open": 0,
+                "lot": 50,
+                "board_type": "BOARD_TYPE_REGULAR",
+                "broker_code": "",
+                "exchange_order_number": {
+                    "full": "202604170000271292",
+                    "formatted": "271292"
+                },
+                "queue_lot": 0,
+                "broker_group": "BROKER_GROUP_UNSPECIFIED",
+                "order_number": "202604170000271292"
+            },
+            {
+                "id": "2818575034",
+                "queue_number": "0",
+                "stock_code": "WMUU",
+                "time": "2026-04-17T14:17:42.875834Z",
+                "action_type": "ACTION_TYPE_BUY",
+                "price": 79,
+                "status": "ORDER_STATUS_FULL_MATCH",
+                "open": 0,
+                "lot": 1001,
+                "board_type": "BOARD_TYPE_REGULAR",
+                "broker_code": "EP",
+                "exchange_order_number": {
+                    "full": "202604170004164612",
+                    "formatted": "4164612"
+                },
+                "queue_lot": 0,
+                "broker_group": "BROKER_GROUP_LOCAL",
+                "order_number": "202604170004164612"
+            }
+        ],
+        "is_open_market": false,
+        "pagination": {
+            "has_next_page": true
+        }
+    }
+}
