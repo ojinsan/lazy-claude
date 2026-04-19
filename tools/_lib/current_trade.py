@@ -169,8 +169,12 @@ def _serialize(ct: CurrentTrade) -> dict[str, Any]:
 
 def _write_live(ct: CurrentTrade) -> None:
     os.makedirs(os.path.dirname(LIVE_PATH), exist_ok=True)
-    with open(LIVE_PATH, "w") as f:
+    tmp = LIVE_PATH + ".tmp"
+    with open(tmp, "w") as f:
         json.dump(_serialize(ct), f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, LIVE_PATH)
 
 
 def save(ct: CurrentTrade, layer: str, status: Status, note: Optional[str] = None) -> None:

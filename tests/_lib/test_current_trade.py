@@ -99,5 +99,27 @@ class SaveTest(unittest.TestCase):
                 self.assertEqual(reloaded.layer_runs["l0"].status, "ok")
 
 
+class AtomicWriteTest(unittest.TestCase):
+    def test_crash_between_tmp_and_rename_preserves_live(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            live = os.path.join(tmp, "current_trade.json")
+            hist = os.path.join(tmp, "history")
+            with patch.object(ct_mod, "LIVE_PATH", live), \
+                 patch.object(ct_mod, "HISTORY_DIR", hist):
+                ct = ct_mod.load()
+                ct.version = 5
+                ct_mod._write_live(ct)
+                def boom(src, dst):
+                    raise OSError("crash")
+                with patch.object(ct_mod.os, "replace", boom):
+                    try:
+                        ct.version = 99
+                        ct_mod._write_live(ct)
+                    except OSError:
+                        pass
+                reloaded = ct_mod.load()
+                self.assertEqual(reloaded.version, 5)
+
+
 if __name__ == "__main__":
     unittest.main()
