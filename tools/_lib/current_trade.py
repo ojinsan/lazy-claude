@@ -104,7 +104,54 @@ class CurrentTrade:
     layer_runs: dict[str, LayerRun] = field(default_factory=_empty_layer_runs)
 
 
+def _parse_list_item(d: dict[str, Any]) -> ListItem:
+    plan = None
+    raw_plan = d.get("current_plan")
+    if raw_plan is not None:
+        plan = CurrentPlan(mode=raw_plan["mode"], price=raw_plan.get("price"))
+    return ListItem(
+        ticker=d["ticker"],
+        confidence=int(d["confidence"]),
+        current_plan=plan,
+        details=d.get("details", ""),
+    )
+
+
+def _parse_trader_status(d: dict[str, Any]) -> TraderStatus:
+    return TraderStatus(
+        regime=d.get("regime", ""),
+        aggressiveness=d.get("aggressiveness", ""),
+        sectors=list(d.get("sectors", [])),
+        narratives=[Narrative(**n) for n in d.get("narratives", [])],
+        balance=Balance(**d.get("balance", {})),
+        pnl=PnL(**d.get("pnl", {})),
+        holdings=[Holding(**h) for h in d.get("holdings", [])],
+    )
+
+
 def load() -> CurrentTrade:
     if not os.path.exists(LIVE_PATH):
         return CurrentTrade()
-    raise NotImplementedError("load() from existing file not implemented yet")
+    with open(LIVE_PATH) as f:
+        data = json.load(f)
+    sv = data.get("schema_version")
+    if sv != SCHEMA_VERSION:
+        raise ValueError(f"schema_version mismatch: file={sv!r} expected={SCHEMA_VERSION!r}")
+    lists = Lists(
+        filtered=[_parse_list_item(x) for x in data["lists"].get("filtered", [])],
+        watchlist=[_parse_list_item(x) for x in data["lists"].get("watchlist", [])],
+        superlist=[_parse_list_item(x) for x in data["lists"].get("superlist", [])],
+        exitlist=[_parse_list_item(x) for x in data["lists"].get("exitlist", [])],
+    )
+    layer_runs = {
+        name: LayerRun(**data["layer_runs"].get(name, {}))
+        for name in ("l0", "l1", "l2", "l3", "l4", "l5")
+    }
+    return CurrentTrade(
+        schema_version=sv,
+        version=int(data.get("version", 0)),
+        updated_at=data.get("updated_at"),
+        lists=lists,
+        trader_status=_parse_trader_status(data.get("trader_status", {})),
+        layer_runs=layer_runs,
+    )
