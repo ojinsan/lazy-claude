@@ -63,7 +63,53 @@ Legend for `status`:
 
 ## Archived references
 
-To be populated in Task 13 — grep of archived skills/playbooks for `tools/trader/<X>` references.
+From grep of `archive/` for `tools/trader/<X>` mentions. Use this to know which scripts the old system actually invoked, when resurrecting logic for new specs. Items marked `(gone)` no longer exist in `tools/trader/` — pure historical references.
+
+| Tool | Mentioned in archived files |
+|------|-----------------------------|
+| `tools/trader/airtable_client.py` | 9 |
+| `tools/trader/api.py` | 38 |
+| `tools/trader/auto_layer4_trigger.py` (gone) | 1 |
+| `tools/trader/auto_trigger.py` | 3 |
+| `tools/trader/broker_profile.py` | 8 |
+| `tools/trader/catalyst_calendar.py` | 1 |
+| `tools/trader/confluence_score.py` | 1 |
+| `tools/trader/data.py` (gone) | 2 |
+| `tools/trader/imposter_detector.py` | 1 |
+| `tools/trader/indicators.py` | 5 |
+| `tools/trader/journal.py` | 15 |
+| `tools/trader/konglo_flow.py` | 2 |
+| `tools/trader/macro.py` | 2 |
+| `tools/trader/market_structure.py` | 4 |
+| `tools/trader/narrative.py` | 3 |
+| `tools/trader/notification_system.py` (gone) | 1 |
+| `tools/trader/orderbook_poller.py` | 12 |
+| `tools/trader/orderbook_ws.py` | 8 |
+| `tools/trader/portfolio_health.py` | 7 |
+| `tools/trader/psychology.py` | 2 |
+| `tools/trader/realtime_listener.py` | 6 |
+| `tools/trader/relative_strength.py` | 1 |
+| `tools/trader/running_trade_poller.py` | 14 |
+| `tools/trader/runtime_eod_publish.py` | 2 |
+| `tools/trader/runtime_layer1_context.py` | 3 |
+| `tools/trader/runtime_layer2_screening.py` | 2 |
+| `tools/trader/runtime_monitoring.py` | 5 |
+| `tools/trader/runtime_summary_30m.py` | 4 |
+| `tools/trader/sb_screener_create.py` | 7 |
+| `tools/trader/sb_screener_hapcu_foreign_flow.py` | 4 |
+| `tools/trader/screener.py` | 1 |
+| `tools/trader/sid_tracker.py` | 8 |
+| `tools/trader/spring_detector.py` | 1 |
+| `tools/trader/stockbit_screener.py` | 1 |
+| `tools/trader/tape.py` (gone) | 1 |
+| `tools/trader/tape_runner.py` | 2 |
+| `tools/trader/telegram_client.py` | 13 |
+| `tools/trader/tick_walls.py` | 4 |
+| `tools/trader/tradeplan.py` | 3 |
+| `tools/trader/universe_scan.py` | 1 |
+| `tools/trader/vp_analyzer.py` | 1 |
+| `tools/trader/watchlist_4group_scan.py` | 1 |
+| `tools/trader/wyckoff.py` | 3 |
 
 ## Spec status
 
