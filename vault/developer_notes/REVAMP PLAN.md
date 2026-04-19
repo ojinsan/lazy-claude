@@ -101,7 +101,10 @@ def analyze_near_book(bids: list, offers: list, n: int = 7) -> dict:
     }
 ```
 
-Retail avoider (For screening layer):
+Broker screener #1: tools/trader/sb_screener_hapcu_foreign_flow.py (For L1 layer)
+
+
+Retail avoider (For L1 layer) --> see stocklist avoided by retail:
 ```
 fetch("https://exodus.stockbit.com/order-trade/broker/activity?broker_code=XL&broker_code=YP&broker_code=XC&broker_code=PD&limit=50&page=1&from=2026-04-17&to=2026-04-17&transaction_type=TRANSACTION_TYPE_NET&market_board=MARKET_TYPE_REGULER&investor_type=INVESTOR_TYPE_ALL", {
   "headers": {
