@@ -147,6 +147,7 @@ Load only what the current layer or task needs. Unload after use.
 | `insight-crawling.md` | Web/RAG/Threads intel | L1 context fetch |
 | `journal-review.md` | Lesson protocol, kill-switch, hit_rate_by, thesis actions, intraday posture, calibration | L0 Step 0+6, L4 pre-plan, L5 sizing, EOD sync |
 | `stockbit-access.md` | Token/auth handling | When auth issues arise |
+| `stockbit-screener.md` | Build, run, save Stockbit screener templates | When creating or testing screener rules |
 | `watchlist-4group.md` | Universe management | L2 universe construction |
 
 ### Tape & Microstructure (M3.3+ — load when relevant)
