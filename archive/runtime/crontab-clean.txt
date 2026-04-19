@@ -1,0 +1,24 @@
+# Scarlett Trading Crontab - Clean Architecture
+# Code collects and compresses data. Scarlett (AI) thinks on heartbeat.
+# All times WIB. Trading days only (Mon-Fri).
+
+# === DATA COLLECTION (code only, no AI judgment) ===
+
+# Layer 3: Fetch orderbook + running trade every 10 minutes during market hours
+*/10 9-15 * * 1-5 $HOME/.openclaw/workspace/scarlett/runtime/cron/trader_intraday_10m.sh
+
+# Layer 3: Compress 10-minute notes into 30-minute summary
+*/30 9-15 * * 1-5 $HOME/.openclaw/workspace/scarlett/runtime/cron/trader_summary_30m.sh
+
+# EOD: Publish end-of-day notes
+20 15 * * 1-5 $HOME/.openclaw/workspace/scarlett/runtime/cron/trader_eod_publish.sh
+
+# === AI THINKING (OpenClaw heartbeat handles this) ===
+# Scarlett wakes up on heartbeat schedule defined in HEARTBEAT.md:
+#   05:00-05:29  Layer 1 - Global Context (Scarlett reads data, thinks about regime)
+#   05:30-05:59  Layer 2 - Stock Screening (Scarlett reads screens, thinks about candidates)
+#   06:00-06:29  Layer 4 - Trade Plan (Scarlett connects all layers, builds plans)
+#   06:30-06:59  Tradeplan Generation (Scarlett refines actionable plans)
+#   09:00-15:00  Layer 3 - Heartbeat Review (Scarlett reads 30m summaries, interprets)
+#
+# NO Python scripts pretend to think. Scarlett (LLM) does the actual thinking.
