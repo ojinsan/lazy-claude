@@ -177,6 +177,21 @@ def _write_live(ct: CurrentTrade) -> None:
     os.replace(tmp, LIVE_PATH)
 
 
+def _write_snapshot(ct: CurrentTrade, layer: str) -> None:
+    tz = _dt.timezone(_dt.timedelta(hours=7))
+    now = _dt.datetime.now(tz)
+    day_dir = os.path.join(HISTORY_DIR, now.strftime("%Y-%m-%d"))
+    os.makedirs(day_dir, exist_ok=True)
+    name = f"{layer}-{now.strftime('%H%M')}.json"
+    path = os.path.join(day_dir, name)
+    with open(path, "w") as f:
+        json.dump(_serialize(ct), f, indent=2)
+
+
+def snapshot(ct: CurrentTrade, label: str) -> None:
+    _write_snapshot(ct, label)
+
+
 def save(ct: CurrentTrade, layer: str, status: Status, note: Optional[str] = None) -> None:
     if layer not in ct.layer_runs:
         raise ValueError(f"unknown layer: {layer!r}")
@@ -185,3 +200,4 @@ def save(ct: CurrentTrade, layer: str, status: Status, note: Optional[str] = Non
     ct.updated_at = now
     ct.layer_runs[layer] = LayerRun(last_run=now, status=status, note=note)
     _write_live(ct)
+    _write_snapshot(ct, layer)

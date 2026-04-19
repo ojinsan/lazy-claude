@@ -121,5 +121,23 @@ class AtomicWriteTest(unittest.TestCase):
                 self.assertEqual(reloaded.version, 5)
 
 
+class SnapshotTest(unittest.TestCase):
+    def test_save_writes_snapshot_with_layer_and_time_in_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            live = os.path.join(tmp, "current_trade.json")
+            hist = os.path.join(tmp, "history")
+            with patch.object(ct_mod, "LIVE_PATH", live), \
+                 patch.object(ct_mod, "HISTORY_DIR", hist):
+                ct = ct_mod.load()
+                ct_mod.save(ct, layer="l2", status="ok", note="screening done")
+            days = os.listdir(hist)
+            self.assertEqual(len(days), 1)
+            day = days[0]
+            self.assertRegex(day, r"^\d{4}-\d{2}-\d{2}$")
+            files = os.listdir(os.path.join(hist, day))
+            self.assertEqual(len(files), 1)
+            self.assertRegex(files[0], r"^l2-\d{4}\.json$")
+
+
 if __name__ == "__main__":
     unittest.main()
