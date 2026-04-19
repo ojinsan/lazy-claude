@@ -111,6 +111,10 @@ From grep of `archive/` for `tools/trader/<X>` mentions. Use this to know which 
 | `tools/trader/watchlist_4group_scan.py` | 1 |
 | `tools/trader/wyckoff.py` | 3 |
 
+## Live dependencies on slash-command dir
+
+- `tools/trader/cron-dispatcher.sh` still references `.claude/commands/trade/`. Resolves to new stubs today. Revisit per spec #8 (orchestration).
+
 ## Spec status
 
 | Spec | Scope | Status |
