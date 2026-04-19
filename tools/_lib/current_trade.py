@@ -4,6 +4,7 @@ See docs/superpowers/specs/2026-04-19-trading-agents-revamp-spec-1-core-design.m
 """
 from __future__ import annotations
 
+import datetime as _dt
 import json
 import os
 from dataclasses import dataclass, field, asdict
@@ -155,3 +156,28 @@ def load() -> CurrentTrade:
         trader_status=_parse_trader_status(data.get("trader_status", {})),
         layer_runs=layer_runs,
     )
+
+
+def _now_wib_iso() -> str:
+    tz = _dt.timezone(_dt.timedelta(hours=7))
+    return _dt.datetime.now(tz).replace(microsecond=0).isoformat()
+
+
+def _serialize(ct: CurrentTrade) -> dict[str, Any]:
+    return asdict(ct)
+
+
+def _write_live(ct: CurrentTrade) -> None:
+    os.makedirs(os.path.dirname(LIVE_PATH), exist_ok=True)
+    with open(LIVE_PATH, "w") as f:
+        json.dump(_serialize(ct), f, indent=2)
+
+
+def save(ct: CurrentTrade, layer: str, status: Status, note: Optional[str] = None) -> None:
+    if layer not in ct.layer_runs:
+        raise ValueError(f"unknown layer: {layer!r}")
+    ct.version += 1
+    now = _now_wib_iso()
+    ct.updated_at = now
+    ct.layer_runs[layer] = LayerRun(last_run=now, status=status, note=note)
+    _write_live(ct)

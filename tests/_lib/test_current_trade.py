@@ -79,5 +79,25 @@ class LoadExistingTest(unittest.TestCase):
                     ct_mod.load()
 
 
+class SaveTest(unittest.TestCase):
+    def test_save_bumps_version_and_updates_layer_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            live = os.path.join(tmp, "current_trade.json")
+            hist = os.path.join(tmp, "history")
+            with patch.object(ct_mod, "LIVE_PATH", live), \
+                 patch.object(ct_mod, "HISTORY_DIR", hist):
+                ct = ct_mod.load()
+                self.assertEqual(ct.version, 0)
+                ct_mod.save(ct, layer="l0", status="ok", note="hello")
+                self.assertEqual(ct.version, 1)
+                self.assertEqual(ct.layer_runs["l0"].status, "ok")
+                self.assertEqual(ct.layer_runs["l0"].note, "hello")
+                self.assertIsNotNone(ct.layer_runs["l0"].last_run)
+                self.assertIsNotNone(ct.updated_at)
+                reloaded = ct_mod.load()
+                self.assertEqual(reloaded.version, 1)
+                self.assertEqual(reloaded.layer_runs["l0"].status, "ok")
+
+
 if __name__ == "__main__":
     unittest.main()
