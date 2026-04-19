@@ -24,7 +24,7 @@ memory/
 .env.local
 .env.*.local
 
-# Runtime data (logs, tokens, monitoring state)
+# Runtime data (logs, tokens, monitoring state, current_trade.json + history snapshots)
 runtime/
 
 # Python venvs
