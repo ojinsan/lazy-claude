@@ -39,3 +39,36 @@ class HoldingsFromPositionsTest(unittest.TestCase):
         impc = next(h for h in holdings if h.ticker == "IMPC")
         self.assertEqual(impc.lot, 20)
         self.assertAlmostEqual(impc.pnl_pct, 4.17)
+
+
+import datetime as dt
+from tools._lib.current_trade import PnL
+
+
+class PnLRollupFromOrdersTest(unittest.TestCase):
+    def test_sums_filled_sells_in_current_month_for_mtd(self):
+        resp = _load("carina_orders.json")
+        # today = 2026-04-20 → April window
+        today = dt.date(2026, 4, 20)
+        prior = PnL(realized=0.0, unrealized=0.0, mtd=0.0, ytd=0.0)
+        pnl = l0_synth.pnl_rollup_from_orders(resp, prior_pnl=prior, today=today)
+        # Only the 2026-04-15 BUMI sell counts for MtD (-125000).
+        self.assertEqual(pnl.mtd, -125000.0)
+        # YtD = MtD + 2026-03-20 AADI sell (1325000) = 1200000.
+        self.assertEqual(pnl.ytd, 1200000.0)
+
+    def test_empty_window_falls_back_to_prior_values(self):
+        resp = {"orders": []}
+        today = dt.date(2026, 4, 20)
+        prior = PnL(realized=0.0, unrealized=0.0, mtd=-250000.0, ytd=1200000.0)
+        pnl = l0_synth.pnl_rollup_from_orders(resp, prior_pnl=prior, today=today)
+        self.assertEqual(pnl.mtd, -250000.0)
+        self.assertEqual(pnl.ytd, 1200000.0)
+
+    def test_cancelled_orders_excluded(self):
+        resp = _load("carina_orders.json")
+        today = dt.date(2026, 4, 20)
+        prior = PnL(realized=0.0, unrealized=0.0, mtd=0.0, ytd=0.0)
+        pnl = l0_synth.pnl_rollup_from_orders(resp, prior_pnl=prior, today=today)
+        # Cancelled ADMR order on 2026-04-18 must not change MtD.
+        self.assertEqual(pnl.mtd, -125000.0)
