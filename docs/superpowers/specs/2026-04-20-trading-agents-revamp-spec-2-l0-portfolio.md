@@ -110,9 +110,15 @@ Updated via `tools/_lib.current_trade.save(ct, layer="l0", status="ok"|"error", 
 - `playbooks/trader/CLAUDE.md` — replace stub with layer index row for L0.
 - `skills/trader/CLAUDE.md` — note L0 playbook location.
 
-### 4.4 Not created (deliberate)
+### 4.4 Partial helpers (created) + deliberate exclusions
+
+**Created** (path C from plan brainstorm — mechanical only, no AI):
+- `tools/trader/l0_synth.py` — pure data reshaping. Functions: `balance_from_cash(carina_cash_json) -> Balance`, `holdings_from_positions(carina_positions_json) -> list[Holding]`, `pnl_rollup_from_orders(carina_orders_json, prior_pnl: PnL) -> PnL`, `assemble_trader_status_draft(...) -> TraderStatus`. No Opus, no side effects.
+- `tools/_lib/daily_note.py` — shared append helper (used by L0 now, L1/L3/L5 later). Functions: `append_section(date_str, section_heading, body)`.
+
+**Not created** (deliberate):
 - `skills/trader/portfolio-analysis.md` — collapsed into playbook.
-- `tools/trader/l0_*.py` — no new Python helper.
+- `tools/trader/l0_runner.py` / `l0_main.py` orchestrator — the Claude playbook IS the orchestrator. It calls `l0_synth` functions for mechanical work and calls Opus for judgment (aggressiveness tier, `holding.details` synthesis).
 - `tools/manual/carina.md` — deferred to Spec #7 (L5 Execute) when Carina usage grows.
 
 ## 5. Aggressiveness Logic
@@ -184,22 +190,44 @@ Stdlib `unittest`. No new deps. Mocks via `unittest.mock.patch`.
 - `thesis_ADMR.md`, `thesis_IMPC.md` — sample thesis files.
 - `daily_2026-04-17.md` — prior-day note.
 
-### 8.2 Unit tests (`tests/trader/test_l0_*.py`)
+### 8.2 Unit tests — mechanical helpers only
 
+`tests/_lib/test_current_trade.py` (extend):
 | Test | Assertion |
 |------|-----------|
-| `test_snapshot_merges_carina_into_holdings` | holdings list has ticker/lot/avg/current/pnl_pct for each position |
-| `test_pnl_rollup_from_carina_orders` | mtd/ytd summed correctly from filled sell orders window |
-| `test_missing_thesis_file_yields_no_thesis_note` | `holding.details` starts with `"no thesis:"` |
-| `test_aggressiveness_tier_written_verbatim` | Opus response parsed into 5-tier literal |
-| `test_redflag_holding_triggers_telegram` | `telegram.send` called iff ≥1 redflag; silent otherwise |
-| `test_daily_note_append_creates_file_if_missing` | file created with `### L0 — HH:MM` section |
-| `test_current_trade_save_called_with_layer_l0` | `save(ct, layer="l0", status="ok", note=...)` |
-| `test_model_error_sets_status_error_and_alerts` | status=error, Telegram alert, no partial state |
+| `test_holding_details_round_trips` | `Holding(..., details="redflag: x")` serializes + parses back correctly |
+
+`tests/_lib/test_daily_note.py` (new):
+| Test | Assertion |
+|------|-----------|
+| `test_append_creates_file_if_missing` | file created with `# YYYY-MM-DD\n\n## Auto-Appended\n\n### heading\nbody\n` |
+| `test_append_preserves_existing_content` | existing `## Auto-Appended` rows untouched, new section appended |
+
+`tests/trader/test_l0_synth.py` (new):
+| Test | Assertion |
+|------|-----------|
+| `test_balance_from_cash_response` | `Balance(cash, buying_power)` parsed from canned fixture |
+| `test_holdings_from_positions_response` | `list[Holding]` with ticker/lot/avg/current/pnl_pct populated from fixture |
+| `test_pnl_rollup_from_orders_sums_window` | MtD/YtD rollup over filled sell orders in date window |
+| `test_pnl_rollup_falls_back_to_prior_when_window_empty` | prior `PnL.mtd`/`.ytd` preserved when no orders in window |
+| `test_assemble_trader_status_draft_combines_all` | wrapper returns complete `TraderStatus` with balance + pnl + holdings populated, `details=""`, `aggressiveness=""` (Opus fills later) |
+
+**Judgment-level behaviors** (aggressiveness literal, `holding.details` prefix, redflag → Telegram, daily-note append at L0 run, `save()` with layer="l0") are NOT unit-tested — they live in the playbook orchestration. Validated via manual dry-run per §8.4.
 
 ### 8.3 Integration test (optional)
 
 `tests/trader/test_l0_e2e.py`: runs whole playbook with all I/O mocked, asserts final `current_trade.json` + daily-note output match golden fixture.
+
+### 8.4 Manual dry-run (playbook acceptance)
+
+Since the playbook is Claude-executed, judgment behaviors are validated by running `/trade:portfolio` in dry mode (no Carina writes — write gate from spec #1 mock/live). Checklist:
+
+- [ ] Regime is one of 5 aggressiveness literals.
+- [ ] Every `holding.details` has one of the 4 prefixes.
+- [ ] Telegram alert sent iff ≥1 redflag holding.
+- [ ] `vault/daily/YYYY-MM-DD.md` has `### L0 — HH:MM` section.
+- [ ] `runtime/current_trade.json` has version bumped, `layer_runs.l0.status="ok"`.
+- [ ] Snapshot file `runtime/history/YYYY-MM-DD/l0-HHMM.json` exists.
 
 ## 9. Out-of-Scope Reminders
 
