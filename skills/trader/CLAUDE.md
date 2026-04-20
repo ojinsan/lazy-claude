@@ -9,3 +9,4 @@ Master design: `docs/superpowers/specs/2026-04-19-trading-agents-revamp-spec-0-m
 | Layer | Playbook |
 |-------|----------|
 | L0 Portfolio | `playbooks/trader/layer-0-portfolio.md` |
+| L1 Insight | `playbooks/trader/layer-1-insight.md` |

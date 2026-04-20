@@ -5,7 +5,7 @@ Each layer has one combined skill+workflow playbook. Slash command under `.claud
 | Layer | Playbook | Slash | Status |
 |-------|----------|-------|--------|
 | L0 Portfolio | `layer-0-portfolio.md` | `/trade:portfolio` | live |
-| L1 Insight | stub — spec #3 | `/trade:insight` | stub |
+| L1 Insight | `layer-1-insight.md` | `/trade:insight` | live |
 | L2 Screening | stub — spec #4 | `/trade:screening` | stub |
 | L3 Monitoring | stub — spec #5 | `/trade:monitor` | stub |
 | L4 Tradeplan | stub — spec #6 | `/trade:tradeplan` | stub |
