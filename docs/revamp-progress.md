@@ -8,6 +8,15 @@ Legend for `status`:
 - `unused` — not referenced by new system, candidate for archive
 - `deprecate-candidate` — scheduled for removal in future cleanup
 
+## `tools/_lib/*.py` — Used By
+
+| Tool | Used-by-layer | Status | Notes |
+|------|---------------|--------|-------|
+| `current_trade.py` | L0, L1, L2, L3, L4, L5 | live | spec #1 — shared schema + save/load |
+| `ratelimit.py` | L2, L3, L5 | live | spec #1 — token buckets |
+| `claude_model.py` | L0, L1, L2, L4 | live | spec #1 — Opus↔openclaude fallback |
+| `daily_note.py` | L0 (L1/L3/L5 later) | live | spec #2 — shared daily-note append |
+
 ## `tools/trader/*.py` — Used By
 
 | Tool | Used-by-layer | Status | Notes |
@@ -51,7 +60,8 @@ Legend for `status`:
 | `stockbit_login.py` |   | live |   |
 | `stockbit_screener.py` |   | live |   |
 | `tape_runner.py` |   | live |   |
-| `telegram_client.py` |   | live |   |
+| `l0_synth.py` | L0 | live | mechanical data reshaping for L0 playbook (spec #2) |
+| `telegram_client.py` | L0 | live |   |
 | `think.py` |   | live |   |
 | `tick_walls.py` |   | live |   |
 | `tradeplan.py` |   | live |   |
@@ -111,6 +121,14 @@ From grep of `archive/` for `tools/trader/<X>` mentions. Use this to know which 
 | `tools/trader/watchlist_4group_scan.py` | 1 |
 | `tools/trader/wyckoff.py` | 3 |
 
+## External MCP tools (used-by-layer)
+
+| MCP tool | Used-by-layer | Notes |
+|----------|---------------|-------|
+| `mcp__lazytools__carina_cash_balance` | L0 | live balance input |
+| `mcp__lazytools__carina_position_detail` | L0 | live holdings input |
+| `mcp__lazytools__carina_orders` | L0 | MtD/YtD rollup input |
+
 ## Live dependencies on slash-command dir
 
 - `tools/trader/cron-dispatcher.sh` still references `.claude/commands/trade/`. Resolves to new stubs today. Revisit per spec #8 (orchestration).
@@ -121,7 +139,7 @@ From grep of `archive/` for `tools/trader/<X>` mentions. Use this to know which 
 |------|-------|--------|
 | #0 | Master | draft pushed |
 | #1 | Core + Archive/Scaffold | in progress |
-| #2 | L0 Portfolio | not started |
+| #2 | L0 Portfolio | design+plan locked, executing |
 | #3 | L1 + L1-A + L1-B | not started |
 | #4 | L2 Screening | not started |
 | #5 | L3 Monitoring | not started |
