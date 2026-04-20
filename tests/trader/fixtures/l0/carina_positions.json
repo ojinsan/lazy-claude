@@ -1,0 +1,20 @@
+{
+  "positions": [
+    {
+      "ticker": "ADMR",
+      "lot": 40,
+      "avg_price": 1950.0,
+      "current_price": 1940.0,
+      "unrealized_pnl": -40000.0,
+      "pnl_pct": -0.51
+    },
+    {
+      "ticker": "IMPC",
+      "lot": 20,
+      "avg_price": 1200.0,
+      "current_price": 1250.0,
+      "unrealized_pnl": 100000.0,
+      "pnl_pct": 4.17
+    }
+  ]
+}
