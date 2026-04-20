@@ -908,6 +908,31 @@ except Exception as e:
 
 
 @mcp.tool()
+def carina_portfolio() -> str:
+    """
+    Get full Carina portfolio: cash + invested + all positions in one call.
+
+    Returns JSON:
+      {
+        "summary": {cash, invested, allocated, equity, unrealised_pl, realised_pl, gain_pct},
+        "positions": [{symbol, lots, shares, avg_price, latest_price, market_value, pl, gain_pct}, ...]
+      }
+
+    Use this for bulk portfolio reads (L0 daily). Filters out zero-share positions.
+    """
+    return _sb_script("""
+import sys, json, os
+sys.path.insert(0, os.environ['TRADER_DIR'])
+from config import load_env; load_env()
+import api
+try:
+    print(json.dumps(api.get_portfolio(), ensure_ascii=False, indent=2, default=str))
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+""")
+
+
+@mcp.tool()
 def carina_position_detail(stock_code: str) -> str:
     """
     Get per-stock position detail from Carina (qty, avg price, P/L, market value).

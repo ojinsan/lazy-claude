@@ -1,0 +1,33 @@
+{
+  "summary": {
+    "cash": 19612924.64,
+    "invested": 32872291.43,
+    "allocated": 0,
+    "equity": 53307905.64,
+    "unrealised_pl": 60000.0,
+    "realised_pl": 0,
+    "gain_pct": 1.5674
+  },
+  "positions": [
+    {
+      "symbol": "ADMR",
+      "lots": 40,
+      "shares": 4000,
+      "avg_price": 1950.0,
+      "latest_price": 1940.0,
+      "market_value": 7760000,
+      "pl": -40000.0,
+      "gain_pct": -0.51
+    },
+    {
+      "symbol": "IMPC",
+      "lots": 20,
+      "shares": 2000,
+      "avg_price": 1200.0,
+      "latest_price": 1250.0,
+      "market_value": 2500000,
+      "pl": 100000.0,
+      "gain_pct": 4.17
+    }
+  ]
+}

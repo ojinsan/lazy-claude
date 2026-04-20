@@ -1,9 +1,9 @@
 """L0 mechanical data reshaping helpers.
 
-Pure functions — no AI, no I/O, no side effects. Carina MCP responses
-(plain dicts from tool calls) → spec #1 dataclasses. The playbook
-orchestrates calls and feeds assembled TraderStatus draft to Opus for
-aggressiveness tier + per-holding details synth.
+Pure functions — no AI, no I/O, no side effects. Inputs are plain dicts from
+MCP `carina_portfolio` + rows from `journal.load_previous_orders`. Output is
+spec #1 dataclasses. The playbook orchestrates calls and feeds the assembled
+TraderStatus draft to Opus for aggressiveness tier + per-holding details.
 
 See docs/superpowers/specs/2026-04-20-trading-agents-revamp-spec-2-l0-portfolio.md.
 """
@@ -14,32 +14,34 @@ import datetime as _dt
 from tools._lib.current_trade import Balance, Holding, PnL, TraderStatus
 
 
-def balance_from_cash(carina_cash: dict) -> Balance:
-    """Parse Carina cash_balance response into Balance dataclass.
+def balance_from_portfolio(carina_portfolio: dict) -> Balance:
+    """Parse Carina `portfolio` response into Balance.
 
-    Expected keys: `cash` (float, IDR), `buying_power` (float, IDR).
+    Uses `summary.cash` for both cash and buying_power (IDX cash accounts have
+    no margin — broker API does not expose a distinct buying_power field).
     """
-    return Balance(
-        cash=float(carina_cash["cash"]),
-        buying_power=float(carina_cash["buying_power"]),
-    )
+    summary = carina_portfolio.get("summary", {})
+    cash = float(summary.get("cash") or 0.0)
+    return Balance(cash=cash, buying_power=cash)
 
 
-def holdings_from_positions(carina_positions: dict) -> list[Holding]:
-    """Parse Carina position_detail response into list[Holding].
+def holdings_from_portfolio(carina_portfolio: dict) -> list[Holding]:
+    """Parse Carina `portfolio.positions` into list[Holding].
 
-    Expected shape: `{"positions": [{ticker, lot, avg_price, current_price, pnl_pct, ...}, ...]}`.
+    Position shape (from api.get_portfolio):
+      {symbol, lots, shares, avg_price, latest_price, market_value, pl, gain_pct}
+
     `details` always starts empty; playbook fills via Opus.
     """
     out: list[Holding] = []
-    for p in carina_positions.get("positions", []):
+    for p in carina_portfolio.get("positions", []):
         out.append(
             Holding(
-                ticker=str(p["ticker"]),
-                lot=int(p["lot"]),
+                ticker=str(p["symbol"]),
+                lot=int(p["lots"]),
                 avg_price=float(p["avg_price"]),
-                current_price=float(p["current_price"]),
-                pnl_pct=float(p["pnl_pct"]),
+                current_price=float(p["latest_price"]),
+                pnl_pct=float(p["gain_pct"]),
                 details="",
             )
         )
@@ -47,18 +49,28 @@ def holdings_from_positions(carina_positions: dict) -> list[Holding]:
 
 
 def pnl_rollup_from_orders(
-    carina_orders: dict,
+    journal_rows: list[dict],
     prior_pnl: PnL,
     today: _dt.date,
 ) -> PnL:
-    """Sum realized PnL across filled sell orders within month/year window.
+    """Compute realized MtD/YtD from local journal rows via FIFO pairing.
 
-    If the window is empty (Carina did not return orders spanning the period),
-    fall back to `prior_pnl.mtd` / `prior_pnl.ytd` verbatim. `realized_today`
-    is left at 0 (L0 runs pre-market; L5 fills during the day).
+    Row shape (from `journal.load_previous_orders`):
+      {ts, action ('BUY'|'SELL'), ticker, shares, price, order_id, ...}
 
-    Only filled orders with a truthy `filled_at` timestamp contribute. Cancelled
-    or unfilled orders are ignored.
+    For each ticker we sort rows chronologically and maintain a FIFO queue of
+    unmatched BUY lots. Each SELL consumes from the queue head to compute
+    `realized = (sell_price - buy_price) * matched_shares`. Realized is
+    attributed to MtD/YtD based on the SELL timestamp.
+
+    If no SELL rows fall inside the month/year window, the corresponding field
+    falls back to `prior_pnl.mtd` / `prior_pnl.ytd` verbatim (spec §8.4 — keeps
+    prior value instead of zeroing). `realized_today` always returns 0 because
+    L0 runs pre-market (today's fills come from L5 intraday).
+
+    Limitation: BUYs that happened before the journal window are not in the
+    queue, so SELLs matching those historical lots produce 0 realized for the
+    unmatched portion. This self-corrects as the journal accumulates history.
     """
     mtd = 0.0
     ytd = 0.0
@@ -68,64 +80,82 @@ def pnl_rollup_from_orders(
     month_start = today.replace(day=1)
     year_start = today.replace(month=1, day=1)
 
-    for o in carina_orders.get("orders", []):
-        if o.get("status") != "filled":
+    by_ticker: dict[str, list[dict]] = {}
+    for r in journal_rows:
+        action = str(r.get("action", "")).upper()
+        if action not in ("BUY", "SELL"):
             continue
-        filled_at = o.get("filled_at")
-        if not filled_at:
-            continue
-        # ISO8601 with offset — take the date portion only.
-        filled_date = _dt.date.fromisoformat(filled_at[:10])
-        realized = float(o.get("realized_pnl") or 0.0)
+        by_ticker.setdefault(str(r["ticker"]), []).append(r)
 
-        if filled_date >= year_start:
-            ytd += realized
-            ytd_had_row = True
-            if filled_date >= month_start:
-                mtd += realized
-                mtd_had_row = True
+    for _ticker, rows in by_ticker.items():
+        rows.sort(key=lambda r: str(r["ts"]))
+        queue: list[list] = []  # list of [shares_remaining, buy_price]
+        for r in rows:
+            action = str(r.get("action", "")).upper()
+            if action not in ("BUY", "SELL"):
+                continue
+            shares = int(r["shares"])
+            price = float(r["price"])
+            if action == "BUY":
+                queue.append([shares, price])
+                continue
+            realized = 0.0
+            remaining = shares
+            while remaining > 0 and queue:
+                lot_shares, lot_price = queue[0]
+                matched = min(remaining, lot_shares)
+                realized += (price - lot_price) * matched
+                lot_shares -= matched
+                remaining -= matched
+                if lot_shares == 0:
+                    queue.pop(0)
+                else:
+                    queue[0][0] = lot_shares
+            sell_date = _dt.date.fromisoformat(str(r["ts"])[:10])
+            if sell_date >= year_start:
+                ytd += realized
+                ytd_had_row = True
+                if sell_date >= month_start:
+                    mtd += realized
+                    mtd_had_row = True
 
     return PnL(
         realized=0.0,
-        unrealized=prior_pnl.unrealized,  # unrealized is set by holdings merge elsewhere
+        unrealized=prior_pnl.unrealized,
         mtd=mtd if mtd_had_row else prior_pnl.mtd,
         ytd=ytd if ytd_had_row else prior_pnl.ytd,
     )
 
 
-def _sum_unrealized(carina_positions: dict) -> float:
-    return sum(
-        float(p.get("unrealized_pnl") or 0.0)
-        for p in carina_positions.get("positions", [])
-    )
+def _unrealized_from_portfolio(carina_portfolio: dict) -> float:
+    """Read broker's own unrealized total from `summary.unrealised_pl`."""
+    return float(carina_portfolio.get("summary", {}).get("unrealised_pl") or 0.0)
 
 
 def assemble_trader_status_draft(
-    carina_cash: dict,
-    carina_positions: dict,
-    carina_orders: dict,
+    carina_portfolio: dict,
+    journal_rows: list[dict],
     prior_status: TraderStatus,
     today: _dt.date,
 ) -> TraderStatus:
     """Build a TraderStatus with mechanical fields filled (balance, pnl, holdings).
-    Judgment fields (aggressiveness, holding.details) are left at spec-#1 defaults
-    for the Claude playbook to synthesize via Opus. L1-owned fields
-    (regime, sectors, narratives) are carried over from `prior_status` unchanged.
+
+    Judgment fields (aggressiveness, holding.details) are left at spec-#1
+    defaults for the Claude playbook to synthesize via Opus. L1-owned fields
+    (regime, sectors, narratives) are carried from `prior_status` unchanged.
     """
-    balance = balance_from_cash(carina_cash)
-    holdings = holdings_from_positions(carina_positions)
+    balance = balance_from_portfolio(carina_portfolio)
+    holdings = holdings_from_portfolio(carina_portfolio)
 
-    prior_pnl = prior_status.pnl
-    pnl = pnl_rollup_from_orders(carina_orders, prior_pnl=prior_pnl, today=today)
-    pnl.unrealized = _sum_unrealized(carina_positions)
+    pnl = pnl_rollup_from_orders(journal_rows, prior_pnl=prior_status.pnl, today=today)
+    pnl.unrealized = _unrealized_from_portfolio(carina_portfolio)
 
-    draft = TraderStatus(
+    return TraderStatus(
         regime=prior_status.regime,
-        aggressiveness="",  # Opus fills from playbook
+        aggressiveness="",
         sectors=list(prior_status.sectors),
         narratives=list(prior_status.narratives),
         balance=balance,
         pnl=pnl,
         holdings=holdings,
     )
-    return draft

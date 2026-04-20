@@ -16,15 +16,20 @@ prior_status = ct_prior.trader_status
 
 If `load()` raises `ValueError`, send Telegram alert and exit — manual repair required.
 
-## Step 2 — Fetch Carina snapshots
+## Step 2 — Fetch broker + orders snapshots
 
-Call MCP tools in parallel:
+Call `mcp__lazytools__carina_portfolio` → `portfolio_resp` (one call returns `{summary, positions}` — replaces per-ticker position_detail loop and standalone cash balance call).
 
-- `mcp__lazytools__carina_cash_balance` → `cash_resp`
-- `mcp__lazytools__carina_position_detail` → `positions_resp`
-- `mcp__lazytools__carina_orders` with date range covering the current year (inclusive of today) → `orders_resp`
+Retry up to 3 times with 2s backoff on 5xx/timeout. If it still fails: `ct.save(ct_prior, layer="l0", status="error", note="carina unreachable")`, send Telegram alert, exit. Do NOT write partial `trader_status`.
 
-Retry each up to 3 times with 2s backoff on 5xx/timeout. If any still fails after retries: `ct.save(ct_prior, layer="l0", status="error", note="carina unreachable: <which>")`, send Telegram alert, exit. Do NOT write partial `trader_status`.
+Then read local order journal (no MCP — filesystem):
+
+```python
+from tools.trader import journal
+journal_rows = journal.load_previous_orders(days_back=365)
+```
+
+Carina exposes no historical-orders endpoint, so MtD/YtD realized is rolled up from `runtime/orders/*.jsonl` (written by L5). On first run this is empty → l0_synth falls back to `prior_status.pnl.mtd`/`ytd` (spec §8.4).
 
 ## Step 3 — Assemble mechanical draft
 
@@ -34,9 +39,8 @@ from tools.trader import l0_synth
 
 today_wib = dt.datetime.now(dt.timezone(dt.timedelta(hours=7))).date()
 draft = l0_synth.assemble_trader_status_draft(
-    carina_cash=cash_resp,
-    carina_positions=positions_resp,
-    carina_orders=orders_resp,
+    carina_portfolio=portfolio_resp,
+    journal_rows=journal_rows,
     prior_status=prior_status,
     today=today_wib,
 )

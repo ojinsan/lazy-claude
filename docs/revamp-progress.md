@@ -31,7 +31,7 @@ Legend for `status`:
 | `fund_manager_client.py` |   | live |   |
 | `imposter_detector.py` |   | live |   |
 | `indicators.py` |   | live |   |
-| `journal.py` |   | live |   |
+| `journal.py` | L0 | live | `load_previous_orders(365)` sources MtD/YtD rollup (Carina has no history endpoint) |
 | `konglo_flow.py` |   | live |   |
 | `konglo_loader.py` |   | live |   |
 | `macro.py` |   | live |   |
@@ -125,9 +125,23 @@ From grep of `archive/` for `tools/trader/<X>` mentions. Use this to know which 
 
 | MCP tool | Used-by-layer | Notes |
 |----------|---------------|-------|
-| `mcp__lazytools__carina_cash_balance` | L0 | live balance input |
-| `mcp__lazytools__carina_position_detail` | L0 | live holdings input |
-| `mcp__lazytools__carina_orders` | L0 | MtD/YtD rollup input |
+| `mcp__lazytools__carina_portfolio` | L0 | **new** — bulk summary + positions (one call) |
+| `mcp__lazytools__carina_cash_balance` |   | kept for ad-hoc, not used by L0 |
+| `mcp__lazytools__carina_position_detail` |   | kept for ad-hoc, not used by L0 |
+| `mcp__lazytools__carina_orders` |   | today-only; Carina has no history endpoint. L0 uses `journal.load_previous_orders` instead |
+
+## L0 — known gaps / follow-ups
+
+Not blockers for spec #2 acceptance; revisit when the trigger appears.
+
+| # | Gap | Trigger to fix |
+|---|-----|----------------|
+| 1 | Fractional-lot truncation. `api.get_portfolio()` returns float `lots` when shares<100; `Holding.lot:int` coerces to 0. GOTO dry-run: 77 residual shares → `lot=0`. Data loss for odd-lot tails. | First time a residual position matters (exit plan or reconciliation). Fix by changing `Holding.lot` to float OR tracking `shares` separately. |
+| 2 | MtD/YtD realized is local-only. `journal.load_previous_orders` reads `runtime/orders/*.jsonl` which only exists from L5 go-live onward. Pre-system trades invisible until backfilled. | When Boss wants accurate YtD. Path: Playwright-scrape Stockbit web transaction history into runtime/orders/*.jsonl. Defer until L5 has run ≥1 month. |
+| 3 | Opus→openclaude fallback paths in L0 steps 4 & 5 never exercised. Dry-run had no redflag/thesis-drift + Opus succeeded first try on aggressiveness. Untested on live-fail path. | First time Opus 429s or returns invalid tier. Monitor via `runtime/history/*/l0-*.json` `status=error` snapshots. |
+| 4 | `vault/thesis/` dir missing. Every holding tagged `no thesis:` — correct per playbook §4.1 but Boss never told to maintain thesis files. | When Boss starts writing theses manually. No code change needed; playbook already reads on-demand. |
+| 5 | Orphaned MCP tools `carina_cash_balance`, `carina_position_detail`, `carina_orders`. Kept live for ad-hoc use; not called by any layer. | Archive-sweep after all layers ship. Candidates for removal if still unused by spec #8 time. |
+| 6 | Hardcoded `days_back=365` in playbook journal call. Picks up all history; fine until bot runs >1 yr then quietly stops covering full YtD when `Jan-01 > today-365d`. | Mid-January of year 2 of live operation. Fix: compute `days_back = (today - year_start).days + lookback_buffer`. |
 
 ## Live dependencies on slash-command dir
 
@@ -139,7 +153,7 @@ From grep of `archive/` for `tools/trader/<X>` mentions. Use this to know which 
 |------|-------|--------|
 | #0 | Master | draft pushed |
 | #1 | Core + Archive/Scaffold | in progress |
-| #2 | L0 Portfolio | design+plan locked, executing |
+| #2 | L0 Portfolio | complete (dry-run passed 2026-04-20) |
 | #3 | L1 + L1-A + L1-B | not started |
 | #4 | L2 Screening | not started |
 | #5 | L3 Monitoring | not started |
