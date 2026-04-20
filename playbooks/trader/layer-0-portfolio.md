@@ -111,7 +111,7 @@ if redflags:
     lines = [f"L0 redflags ({len(redflags)}):"]
     for h in redflags:
         lines.append(f"• {h.ticker} — {h.details[len('redflag: '):]}")
-    telegram_client.send("\n".join(lines))
+    telegram_client.send_message("\n".join(lines))
 ```
 
 Silent when zero redflags.
