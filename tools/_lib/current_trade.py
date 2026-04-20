@@ -71,6 +71,7 @@ class Holding:
     avg_price: float
     current_price: float
     pnl_pct: float
+    details: str = ""
 
 
 @dataclass

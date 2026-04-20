@@ -139,5 +139,32 @@ class SnapshotTest(unittest.TestCase):
             self.assertRegex(files[0], r"^l2-\d{4}\.json$")
 
 
+class HoldingDetailsRoundTripTest(unittest.TestCase):
+    def test_details_field_round_trips(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            live = os.path.join(tmp, "current_trade.json")
+            hist = os.path.join(tmp, "history")
+            with patch.object(ct_mod, "LIVE_PATH", live), \
+                 patch.object(ct_mod, "HISTORY_DIR", hist):
+                ct = ct_mod.load()
+                ct.trader_status.holdings.append(
+                    ct_mod.Holding(
+                        ticker="ADMR",
+                        lot=40,
+                        avg_price=1950.0,
+                        current_price=1940.0,
+                        pnl_pct=-0.5,
+                        details="thesis-drift: supply wall unbroken 3d",
+                    )
+                )
+                ct_mod.save(ct, layer="l0", status="ok", note="test")
+                ct2 = ct_mod.load()
+        self.assertEqual(len(ct2.trader_status.holdings), 1)
+        self.assertEqual(
+            ct2.trader_status.holdings[0].details,
+            "thesis-drift: supply wall unbroken 3d",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
