@@ -102,6 +102,19 @@ func (s *Store) PositiveCandidates(minConfidence, days int) ([]*model.PositiveCa
 	return out, rows.Err()
 }
 
+// LastInsightAt returns the MAX(occurred_at) across all insights, or "" when empty.
+func (s *Store) LastInsightAt() (string, error) {
+	var ts *string
+	err := s.DB.QueryRow(`SELECT MAX(occurred_at) FROM insight`).Scan(&ts)
+	if err != nil {
+		return "", err
+	}
+	if ts == nil {
+		return "", nil
+	}
+	return *ts, nil
+}
+
 // RAGSearch performs FTS5 full-text search over insights.
 func (s *Store) RAGSearch(query string, limit int) ([]*model.Insight, error) {
 	if limit <= 0 {

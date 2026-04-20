@@ -19,7 +19,20 @@ func InsightsFeedRoutes(r chi.Router, s *store.Store) {
 // InsightsQueryRoutes mounts under /api/v1.
 func InsightsQueryRoutes(r chi.Router, s *store.Store) {
 	r.Get("/insights/positive-candidates", positiveCandidates(s))
+	r.Get("/insights/last", lastInsight(s))
 	r.Post("/rag/search", ragSearch(s))
+}
+
+func lastInsight(s *store.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ts, err := s.LastInsightAt()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"last_insight_at": ts})
+	}
 }
 
 func ingestTelegramInsight(s *store.Store) http.HandlerFunc {
