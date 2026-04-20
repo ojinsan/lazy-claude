@@ -21,3 +21,21 @@ class BalanceFromCashTest(unittest.TestCase):
         self.assertIsInstance(balance, ct.Balance)
         self.assertEqual(balance.cash, 19612924.64)
         self.assertEqual(balance.buying_power, 19612924.64)
+
+
+class HoldingsFromPositionsTest(unittest.TestCase):
+    def test_parses_each_position_into_holding(self):
+        resp = _load("carina_positions.json")
+        holdings = l0_synth.holdings_from_positions(resp)
+        self.assertEqual(len(holdings), 2)
+
+        admr = next(h for h in holdings if h.ticker == "ADMR")
+        self.assertEqual(admr.lot, 40)
+        self.assertEqual(admr.avg_price, 1950.0)
+        self.assertEqual(admr.current_price, 1940.0)
+        self.assertAlmostEqual(admr.pnl_pct, -0.51)
+        self.assertEqual(admr.details, "")
+
+        impc = next(h for h in holdings if h.ticker == "IMPC")
+        self.assertEqual(impc.lot, 20)
+        self.assertAlmostEqual(impc.pnl_pct, 4.17)

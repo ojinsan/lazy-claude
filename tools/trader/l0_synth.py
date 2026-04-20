@@ -9,7 +9,7 @@ See docs/superpowers/specs/2026-04-20-trading-agents-revamp-spec-2-l0-portfolio.
 """
 from __future__ import annotations
 
-from tools._lib.current_trade import Balance
+from tools._lib.current_trade import Balance, Holding
 
 
 def balance_from_cash(carina_cash: dict) -> Balance:
@@ -21,3 +21,24 @@ def balance_from_cash(carina_cash: dict) -> Balance:
         cash=float(carina_cash["cash"]),
         buying_power=float(carina_cash["buying_power"]),
     )
+
+
+def holdings_from_positions(carina_positions: dict) -> list[Holding]:
+    """Parse Carina position_detail response into list[Holding].
+
+    Expected shape: `{"positions": [{ticker, lot, avg_price, current_price, pnl_pct, ...}, ...]}`.
+    `details` always starts empty; playbook fills via Opus.
+    """
+    out: list[Holding] = []
+    for p in carina_positions.get("positions", []):
+        out.append(
+            Holding(
+                ticker=str(p["ticker"]),
+                lot=int(p["lot"]),
+                avg_price=float(p["avg_price"]),
+                current_price=float(p["current_price"]),
+                pnl_pct=float(p["pnl_pct"]),
+                details="",
+            )
+        )
+    return out
