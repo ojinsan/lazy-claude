@@ -1,0 +1,32 @@
+[
+  {
+    "ticker": "ADMR",
+    "hapcu_net_buy": 12500000000,
+    "foreign_net_buy": 3800000000,
+    "days_in_window": 3
+  },
+  {
+    "ticker": "ADRO",
+    "hapcu_net_buy": 8900000000,
+    "foreign_net_buy": 6200000000,
+    "days_in_window": 3
+  },
+  {
+    "ticker": "BBCA",
+    "hapcu_net_buy": 45000000000,
+    "foreign_net_buy": 28000000000,
+    "days_in_window": 3
+  },
+  {
+    "ticker": "BMRI",
+    "hapcu_net_buy": 21000000000,
+    "foreign_net_buy": 14500000000,
+    "days_in_window": 3
+  },
+  {
+    "ticker": "ICBP",
+    "hapcu_net_buy": 5400000000,
+    "foreign_net_buy": -1200000000,
+    "days_in_window": 3
+  }
+]

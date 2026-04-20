@@ -1,0 +1,175 @@
+{
+  "data": {
+    "broker_activity_transaction": {
+      "brokers_buy": [
+        {
+          "stock_code": "BBCA",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": 230751955000,
+          "lot": 357391,
+          "avg_price": 6461.327949264119,
+          "freq": 29386
+        },
+        {
+          "stock_code": "BMRI",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": 85281074000,
+          "lot": 184978,
+          "avg_price": 4619.789943459222,
+          "freq": 9784
+        },
+        {
+          "stock_code": "BBRI",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": 75613747000,
+          "lot": 220435,
+          "avg_price": 3428.9026346539854,
+          "freq": 14661
+        },
+        {
+          "stock_code": "WMUU",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": 45823306200,
+          "lot": 4887786,
+          "avg_price": 91.73390355983008,
+          "freq": 81578
+        },
+        {
+          "stock_code": "BRPT",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": 34910638000,
+          "lot": 148992.00000000012,
+          "avg_price": 2292.6303850799954,
+          "freq": 18706
+        },
+        {
+          "stock_code": "SINI",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": 34069407500,
+          "lot": 18724,
+          "avg_price": 18198.91141285533,
+          "freq": 1468
+        },
+        {
+          "stock_code": "TLKM",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": 13752364000,
+          "lot": 44359,
+          "avg_price": 3102.811598478888,
+          "freq": 3247
+        },
+        {
+          "stock_code": "ANTM",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": 10834318000,
+          "lot": 26941,
+          "avg_price": 4037.5215625686565,
+          "freq": 6169
+        }
+      ],
+      "brokers_sell": [
+        {
+          "stock_code": "ADRO",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": -42255450000,
+          "lot": -165829,
+          "avg_price": 2547.487418102082,
+          "freq": 8899
+        },
+        {
+          "stock_code": "AADI",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": -41851597500,
+          "lot": -37117,
+          "avg_price": 11270.125325782683,
+          "freq": 4093
+        },
+        {
+          "stock_code": "EMAS",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": -34893832500,
+          "lot": -40630,
+          "avg_price": 8556.229513046565,
+          "freq": 5453
+        },
+        {
+          "stock_code": "BRMS",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": -31461134000,
+          "lot": -362747,
+          "avg_price": 866.5165423331205,
+          "freq": 8795
+        },
+        {
+          "stock_code": "BREN",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": -28912117500,
+          "lot": -44253,
+          "avg_price": 6509.00546849494,
+          "freq": 2268
+        },
+        {
+          "stock_code": "CUAN",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": -26231563000,
+          "lot": -168170,
+          "avg_price": 1578.2418594706219,
+          "freq": 14946
+        },
+        {
+          "stock_code": "PACK",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": -17583166600,
+          "lot": -587551,
+          "avg_price": 274.168499245396,
+          "freq": 20958
+        },
+        {
+          "stock_code": "CPIN",
+          "broker_code": "PD",
+          "type": "BROKER_TYPE_LOCAL",
+          "date": "2026-04-17",
+          "value": -13906522000,
+          "lot": -30783,
+          "avg_price": 4515.245283018868,
+          "freq": 1600
+        }
+      ]
+    },
+    "broker_code": "PD, XC, XL, YP",
+    "broker_name": "",
+    "from": "2026-04-17",
+    "to": "2026-04-17"
+  },
+  "message": "Successfully loaded Broker Activity data"
+}

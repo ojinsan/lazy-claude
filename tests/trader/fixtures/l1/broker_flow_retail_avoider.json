@@ -1,0 +1,9 @@
+{
+  "date": "2026-04-17",
+  "tickers": [
+    {"ticker": "ADMR", "retail_net_sell": 8200000000, "smart_net_buy": 12500000000, "ratio": 1.52},
+    {"ticker": "ADRO", "retail_net_sell": 5100000000, "smart_net_buy": 8900000000, "ratio": 1.75},
+    {"ticker": "BBCA", "retail_net_sell": 18000000000, "smart_net_buy": 45000000000, "ratio": 2.50},
+    {"ticker": "BMRI", "retail_net_sell": 9500000000, "smart_net_buy": 21000000000, "ratio": 2.21}
+  ]
+}

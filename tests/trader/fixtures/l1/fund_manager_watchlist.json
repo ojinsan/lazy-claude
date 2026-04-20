@@ -1,0 +1,8 @@
+[
+  {"source": "lark", "status": "Watchlist", "ticker": "MBMA"},
+  {"source": "lark", "status": "Watchlist", "ticker": "ADMR"},
+  {"source": "lark", "status": "Watchlist", "ticker": "BBCA"},
+  {"source": "sqlite", "status": "Watchlist", "ticker": "ADRO"},
+  {"source": "sqlite", "status": "Watchlist", "ticker": "ICBP"},
+  {"source": "lark", "status": "Watchlist", "ticker": "BRPT"}
+]

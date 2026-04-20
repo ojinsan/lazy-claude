@@ -1,0 +1,106 @@
+[
+  {
+    "ticker": "ADMR",
+    "thesis": {
+      "timeframe": "swing",
+      "confidence": 78,
+      "target_1": 2100,
+      "target_2": 2250,
+      "stop_loss": 1820,
+      "thesis_content": "Coal exporter benefitting from China winter restock + weak rupiah. Smart-money net-buy 3 consecutive days.",
+      "top_theme": "coal winter restock"
+    },
+    "source_insights": 7
+  },
+  {
+    "ticker": "BUMI",
+    "thesis": {
+      "timeframe": "swing",
+      "confidence": 65,
+      "target_1": 180,
+      "target_2": 205,
+      "stop_loss": 140,
+      "thesis_content": "Coal rebound laggard; technically basing after 4w downtrend. Foreign flow turning neutral.",
+      "top_theme": "coal winter restock"
+    },
+    "source_insights": 5
+  },
+  {
+    "ticker": "ADRO",
+    "thesis": {
+      "timeframe": "long",
+      "confidence": 72,
+      "target_1": 2800,
+      "target_2": 3100,
+      "stop_loss": 2400,
+      "thesis_content": "Premium coal beta; cleanest balance sheet in sector. Re-rating candidate.",
+      "top_theme": "coal winter restock"
+    },
+    "source_insights": 9
+  },
+  {
+    "ticker": "BBCA",
+    "thesis": {
+      "timeframe": "long",
+      "confidence": 80,
+      "target_1": 10500,
+      "target_2": 11200,
+      "stop_loss": 9200,
+      "thesis_content": "Blue-chip bank re-pricing on BI 25bps cut expectations; NIM compression minimal.",
+      "top_theme": "banking BI cut"
+    },
+    "source_insights": 12
+  },
+  {
+    "ticker": "BMRI",
+    "thesis": {
+      "timeframe": "swing",
+      "confidence": 68,
+      "target_1": 6800,
+      "target_2": 7200,
+      "stop_loss": 6100,
+      "thesis_content": "State-bank laggard catch-up trade; infra-loan pipeline expanding.",
+      "top_theme": "banking BI cut"
+    },
+    "source_insights": 6
+  },
+  {
+    "ticker": "ICBP",
+    "thesis": {
+      "timeframe": "long",
+      "confidence": 70,
+      "target_1": 12200,
+      "target_2": 13000,
+      "stop_loss": 10800,
+      "thesis_content": "Lebaran restock tailwind + margin expansion on stable CPO input.",
+      "top_theme": "consumer Lebaran restock"
+    },
+    "source_insights": 8
+  },
+  {
+    "ticker": "INDF",
+    "thesis": {
+      "timeframe": "swing",
+      "confidence": 58,
+      "target_1": 7800,
+      "target_2": 8200,
+      "stop_loss": 7100,
+      "thesis_content": "Food-staple; defensive tilt if regime turns cautious.",
+      "top_theme": "consumer Lebaran restock"
+    },
+    "source_insights": 4
+  },
+  {
+    "ticker": "UNVR",
+    "thesis": {
+      "timeframe": "swing",
+      "confidence": 55,
+      "target_1": 2300,
+      "target_2": 2450,
+      "stop_loss": 2050,
+      "thesis_content": "Oversold bounce candidate; watch volume confirmation.",
+      "top_theme": "consumer Lebaran restock"
+    },
+    "source_insights": 3
+  }
+]
