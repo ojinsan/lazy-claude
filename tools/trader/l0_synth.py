@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import datetime as _dt
 
-from tools._lib.current_trade import Balance, Holding, PnL
+from tools._lib.current_trade import Balance, Holding, PnL, TraderStatus
 
 
 def balance_from_cash(carina_cash: dict) -> Balance:
@@ -91,3 +91,41 @@ def pnl_rollup_from_orders(
         mtd=mtd if mtd_had_row else prior_pnl.mtd,
         ytd=ytd if ytd_had_row else prior_pnl.ytd,
     )
+
+
+def _sum_unrealized(carina_positions: dict) -> float:
+    return sum(
+        float(p.get("unrealized_pnl") or 0.0)
+        for p in carina_positions.get("positions", [])
+    )
+
+
+def assemble_trader_status_draft(
+    carina_cash: dict,
+    carina_positions: dict,
+    carina_orders: dict,
+    prior_status: TraderStatus,
+    today: _dt.date,
+) -> TraderStatus:
+    """Build a TraderStatus with mechanical fields filled (balance, pnl, holdings).
+    Judgment fields (aggressiveness, holding.details) are left at spec-#1 defaults
+    for the Claude playbook to synthesize via Opus. L1-owned fields
+    (regime, sectors, narratives) are carried over from `prior_status` unchanged.
+    """
+    balance = balance_from_cash(carina_cash)
+    holdings = holdings_from_positions(carina_positions)
+
+    prior_pnl = prior_status.pnl
+    pnl = pnl_rollup_from_orders(carina_orders, prior_pnl=prior_pnl, today=today)
+    pnl.unrealized = _sum_unrealized(carina_positions)
+
+    draft = TraderStatus(
+        regime=prior_status.regime,
+        aggressiveness="",  # Opus fills from playbook
+        sectors=list(prior_status.sectors),
+        narratives=list(prior_status.narratives),
+        balance=balance,
+        pnl=pnl,
+        holdings=holdings,
+    )
+    return draft
