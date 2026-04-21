@@ -20,35 +20,47 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import api
 
 RETAIL_CODES = ["PD", "XL", "YP", "XC", "NI", "DP", "FS", "GA"]
-SMART_CODES = ["CG", "CS", "RG", "CC", "DX", "ZP", "UU", "AK", "KZ"]
+SMART_CODES = ["CG", "CS", "RG", "CC", "DX", "ZP"]
 
 
 def fetch_broker_activity(broker_codes: list[str], date: Optional[str] = None) -> dict:
-    """Live Stockbit fetch aggregating across broker_codes for a single date."""
-    params = {"broker_code": ",".join(broker_codes)}
+    """Live Stockbit fetch aggregating across broker_codes for a single date.
+
+    Stockbit rejects comma-joined broker_code — must use repeated query params
+    (`broker_code=PD&broker_code=XL&...`). httpx accepts list-of-tuples.
+    """
+    params: list[tuple[str, str]] = [("broker_code", c) for c in broker_codes]
     if date:
-        params["from"] = date
-        params["to"] = date
+        params.append(("from", date))
+        params.append(("to", date))
     return api._stockbit_get("/order-trade/broker/activity", params)
 
 
 def parse_nets(raw: dict) -> tuple[str, dict[str, float]]:
     """Extract (date, {ticker: net_value}) from a broker-activity response.
 
-    Sums value across all rows (buy + sell) per stock_code. Sell rows arrive
-    already negative so simple addition yields true net.
+    Stockbit live API returns POSITIVE values in both brokers_buy and
+    brokers_sell (the bucket name encodes side). Net = sum(buy) - sum(sell).
+    The fixture file kept pre-signed values — both shapes tolerated by
+    treating brokers_sell as contributing negatively regardless of sign.
     """
     data = (raw or {}).get("data") or {}
     bat = data.get("broker_activity_transaction") or {}
     buy = bat.get("brokers_buy") or []
     sell = bat.get("brokers_sell") or []
     nets: dict[str, float] = {}
-    for row in buy + sell:
+    for row in buy:
         code = row.get("stock_code")
         val = row.get("value")
         if not code or val is None:
             continue
-        nets[code] = nets.get(code, 0) + float(val)
+        nets[code] = nets.get(code, 0) + abs(float(val))
+    for row in sell:
+        code = row.get("stock_code")
+        val = row.get("value")
+        if not code or val is None:
+            continue
+        nets[code] = nets.get(code, 0) - abs(float(val))
     date = data.get("from") or data.get("to") or ""
     return date, nets
 

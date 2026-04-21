@@ -1,16 +1,16 @@
 """Opus ↔ openclaude CLI wrapper with bidirectional fallback.
 
-- model="opus": uses Anthropic HTTP API directly (urllib, no SDK dep).
-- model="openclaude": subprocess `claude --settings .claude/settings.openclaude.json -p PROMPT`.
-- Fallback on 429, 5xx, timeout, or RateLimitError.
+- model="opus": subprocess `claude -p PROMPT --model opus` — uses Boss's Claude
+  Code subscription (OAuth). No ANTHROPIC_API_KEY needed. --settings deliberately
+  omitted so the default user auth path is used.
+- model="openclaude": subprocess `claude --settings .claude/settings.openclaude.json -p PROMPT` — routes
+  to the local proxy (gpt-5.x) via ANTHROPIC_BASE_URL override.
+- Fallback on 429, overload, timeout, or RateLimitError.
 """
 from __future__ import annotations
 
-import json
 import os
 import subprocess
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Literal
 
@@ -18,8 +18,7 @@ from tools._lib.ratelimit import claude_api
 
 WORKSPACE = Path(__file__).resolve().parents[2]
 OPENCLAUDE_SETTINGS = WORKSPACE / ".claude" / "settings.openclaude.json"
-OPUS_MODEL_ID = os.environ.get("CLAUDE_OPUS_MODEL_ID", "claude-opus-4-7")
-ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+OPUS_MODEL_ALIAS = os.environ.get("CLAUDE_OPUS_MODEL_ALIAS", "opus")
 
 ModelName = Literal["opus", "openclaude"]
 
@@ -33,37 +32,22 @@ class RateLimitError(Exception):
 
 
 def _call_opus(prompt: str) -> str:
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise ModelError("ANTHROPIC_API_KEY not set")
     claude_api.acquire()
-    body = json.dumps({
-        "model": OPUS_MODEL_ID,
-        "max_tokens": 4096,
-        "messages": [{"role": "user", "content": prompt}],
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        ANTHROPIC_URL,
-        data=body,
-        headers={
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        method="POST",
-    )
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        if e.code == 429 or e.code >= 500:
-            raise RateLimitError(f"opus http {e.code}") from e
-        raise ModelError(f"opus http {e.code}: {e.reason}") from e
-    except (urllib.error.URLError, TimeoutError) as e:
-        raise RateLimitError(f"opus transport: {e}") from e
-    content = data.get("content", [])
-    parts = [p.get("text", "") for p in content if p.get("type") == "text"]
-    return "".join(parts)
+        proc = subprocess.run(
+            ["claude", "-p", prompt, "--model", OPUS_MODEL_ALIAS],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except subprocess.TimeoutExpired as e:
+        raise RateLimitError("opus timeout") from e
+    if proc.returncode != 0:
+        err = (proc.stderr or "").lower()
+        if "rate" in err or "429" in err or "overloaded" in err or "usage limit" in err:
+            raise RateLimitError(proc.stderr.strip())
+        raise ModelError(f"opus exit {proc.returncode}: {proc.stderr.strip()}")
+    return proc.stdout.strip()
 
 
 def _call_openclaude(prompt: str) -> str:
