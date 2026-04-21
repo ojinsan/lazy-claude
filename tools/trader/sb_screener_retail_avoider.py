@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import api
 
 RETAIL_CODES = ["PD", "XL", "YP", "XC", "NI", "DP", "FS", "GA"]
-SMART_CODES = ["CG", "CS", "RG", "CC", "DX", "ZP"]
+SMART_CODES = ["CG", "CS", "RG", "CC", "DX", "ZP", "AK", "KZ"]
 
 
 def fetch_broker_activity(broker_codes: list[str], date: Optional[str] = None) -> dict:
