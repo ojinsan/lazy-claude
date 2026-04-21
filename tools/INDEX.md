@@ -20,6 +20,8 @@
 | `journal.py`              | Vault journaling: lesson v2, pattern detect, attribution, calibration, weekly/monthly reviews, thesis queries, daily-note append | L0, L4, EOD |
 | `airtable_client.py`      | Airtable read/write for trader tables                        | Any   |
 | `stockbit_screener.py`    | Stockbit native screener wrapper with pre-built filter sets  | L2    |
+| `sb_screener_create.py`   | Generic Stockbit screener API helper — metrics, templates, payload, run/save | L2, Infra |
+| `sb_screener_hapcu_foreign_flow.py` | Saved Hapcu foreign-flow screener builder/run-save helper | L2 |
 | `telegram_client.py`      | Telegram alert sender for L0–L4 + execution + intent events | Any   |
 | `portfolio_health.py`     | L0 portfolio state: equity, MTD, drawdown, exposure, flags   | L0    |
 | `vault_sync.py`           | Light vault → Airtable dashboard sync (Journal/Lessons/PortfolioLog tables, upsert) | EOD |

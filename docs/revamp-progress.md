@@ -164,7 +164,7 @@ Not blockers for spec #2 acceptance; revisit when the trigger appears.
 | #0 | Master | draft pushed |
 | #1 | Core + Archive/Scaffold | in progress |
 | #2 | L0 Portfolio | complete (dry-run passed 2026-04-20) |
-| #3 | L1 + L1-A + L1-B | complete (pending Task 9 dry-run — blocked by stale telegram-scraper) |
+| #3 | L1 + L1-A + L1-B | complete (dry-run passed 2026-04-21) |
 | #4 | L2 Screening | not started |
 | #5 | L3 Monitoring | not started |
 | #6 | L4 Trade Plan | not started |

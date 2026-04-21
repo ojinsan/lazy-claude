@@ -38,7 +38,7 @@ On network error: logs warning, returns None — never raises.
 
 | Connector   | Type              | MCP | Manual |
 |-------------|-------------------|-----|--------|
-| stockbit    | REST API          | No  | `manual/stockbit.md` |
+| stockbit    | REST API          | No  | `manual/stockbit.md`, `manual/stockbit-screener.md` |
 | airtable    | REST API + MCP    | Yes | `manual/airtable.md` |
 | notion      | Browser + MCP     | Yes | `manual/notion.md` |
 | google      | OAuth REST        | Yes | `manual/google.md` |
