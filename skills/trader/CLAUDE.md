@@ -10,3 +10,4 @@ Master design: `docs/superpowers/specs/2026-04-19-trading-agents-revamp-spec-0-m
 |-------|----------|
 | L0 Portfolio | `playbooks/trader/layer-0-portfolio.md` |
 | L1 Insight | `playbooks/trader/layer-1-insight.md` |
+| L2 Screening | `playbooks/trader/layer-2-screening.md` |
