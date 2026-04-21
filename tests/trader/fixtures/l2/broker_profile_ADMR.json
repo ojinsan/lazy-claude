@@ -1,0 +1,10 @@
+{
+  "ticker": "ADMR",
+  "top_brokers": [
+    {"code": "CG", "role": "smart", "net": 18500000000, "rank_change": 0},
+    {"code": "RG", "role": "smart", "net": 12400000000, "rank_change": 1},
+    {"code": "AK", "role": "smart", "net": 8200000000, "rank_change": 2},
+    {"code": "PD", "role": "retail", "net": -3200000000, "rank_change": -1},
+    {"code": "YP", "role": "retail", "net": -1800000000, "rank_change": -2}
+  ]
+}

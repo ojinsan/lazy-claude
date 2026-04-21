@@ -1,0 +1,12 @@
+{
+  "ticker": "ADMR",
+  "rows": [
+    {"date": "2026-04-15", "net_shares": 12500000, "direction": "accumulation"},
+    {"date": "2026-04-16", "net_shares": 18200000, "direction": "accumulation"},
+    {"date": "2026-04-17", "net_shares": 8400000, "direction": "accumulation"},
+    {"date": "2026-04-18", "net_shares": 15600000, "direction": "accumulation"},
+    {"date": "2026-04-21", "net_shares": 22000000, "direction": "accumulation"}
+  ],
+  "streak_days": 5,
+  "direction": "accumulation"
+}

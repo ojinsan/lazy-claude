@@ -1,0 +1,12 @@
+{
+  "date": "2026-04-21",
+  "calcs": [
+    {"ticker": "ADMR", "hapcu_net_buy": 42800000000, "foreign_net_buy": 18500000000, "days_in_window": 3},
+    {"ticker": "BBRI", "hapcu_net_buy": 125000000000, "foreign_net_buy": 85000000000, "days_in_window": 5},
+    {"ticker": "GOTO", "hapcu_net_buy": 58000000000, "foreign_net_buy": 22000000000, "days_in_window": 2},
+    {"ticker": "ERAL", "hapcu_net_buy": 31000000000, "foreign_net_buy": 12000000000, "days_in_window": 4},
+    {"ticker": "PWON", "hapcu_net_buy": 22500000000, "foreign_net_buy": 8200000000, "days_in_window": 3},
+    {"ticker": "BUMI", "hapcu_net_buy": -48500000000, "foreign_net_buy": -22000000000, "days_in_window": 4},
+    {"ticker": "IMPC", "hapcu_net_buy": 9800000000, "foreign_net_buy": 3200000000, "days_in_window": 2}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "date": "2026-04-21",
+  "tickers": [
+    {"ticker": "ADMR", "retail_net_sell": 3200000000, "smart_net_buy": 42800000000, "ratio": 13.375},
+    {"ticker": "GOTO", "retail_net_sell": 8900000000, "smart_net_buy": 58000000000, "ratio": 6.517},
+    {"ticker": "PWON", "retail_net_sell": 1100000000, "smart_net_buy": 22500000000, "ratio": 20.455},
+    {"ticker": "ERAL", "retail_net_sell": 2400000000, "smart_net_buy": 31000000000, "ratio": 12.917},
+    {"ticker": "BBRI", "retail_net_sell": 14500000000, "smart_net_buy": 125000000000, "ratio": 8.621}
+  ]
+}

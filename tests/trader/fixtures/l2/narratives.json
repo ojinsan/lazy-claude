@@ -1,0 +1,20 @@
+[
+  {
+    "ticker": "ADMR",
+    "content": "Coal exporter with strongest margin leverage; China winter restock + weak rupiah tailwind",
+    "source": "rag:telegram+broker-flow",
+    "confidence": 82
+  },
+  {
+    "ticker": "GOTO",
+    "content": "Fintech momentum on GoPay expansion; foreign accumulation bouncing into 55 support",
+    "source": "rag:telegram",
+    "confidence": 74
+  },
+  {
+    "ticker": "PWON",
+    "content": "Property recovery theme; smart money 20x ratio vs retail sell on OCBC macro tailwind",
+    "source": "broker-flow",
+    "confidence": 78
+  }
+]

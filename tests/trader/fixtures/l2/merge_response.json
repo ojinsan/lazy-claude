@@ -1,0 +1,18 @@
+{
+  "ADMR": {
+    "current_plan": "buy_at_price",
+    "details": "3 strong + 1 superstrong. Buy 1855 whale-bid support, stop 1835. HAPCU +42.8B, SID 5d accumulation streak."
+  },
+  "GOTO": {
+    "current_plan": "wait_bid_offer",
+    "details": "Fintech narrative + smart money OK but book still mixed; wait for 56 offer acceptance before add."
+  },
+  "PWON": {
+    "current_plan": "buy_at_price",
+    "details": "Property recovery + 20x smart/retail ratio. Buy 468 support, stop 455."
+  },
+  "BUMI": {
+    "current_plan": "sell_at_price",
+    "details": "2 redflags (price distribution + HAPCU -48.5B). Sell 230 break; cover loss on portfolio."
+  }
+}

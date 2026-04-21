@@ -1,0 +1,8 @@
+{
+  "scores": {
+    "price": "strong",
+    "book": "weak",
+    "narrative": "strong"
+  },
+  "rationale": "Missing broker dim on purpose for test."
+}
