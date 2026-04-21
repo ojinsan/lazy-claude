@@ -21,7 +21,10 @@
 | `airtable_client.py`      | Airtable read/write for trader tables                        | Any   |
 | `stockbit_screener.py`    | Stockbit native screener wrapper with pre-built filter sets  | L2    |
 | `sb_screener_create.py`   | Generic Stockbit screener API helper — metrics, templates, payload, run/save | L2, Infra |
-| `sb_screener_hapcu_foreign_flow.py` | Saved Hapcu foreign-flow screener builder/run-save helper | L2 |
+| `sb_screener_hapcu_foreign_flow.py` | Saved Hapcu foreign-flow screener builder/run-save helper | L1, L2 |
+| `l2_healthcheck.py`       | L2 pre-run gate: empty universe / stale L1 / both caches missing | L2 |
+| `l2_dim_gather.py`        | L2 per-ticker 4-dim gatherers (price/wyckoff/spring/vp/RS, broker+SID+konglo, yesterday bid-offer, narrative) | L2 |
+| `l2_synth.py`             | L2 pure helpers: promotion truth table, judge+merge prompt builders, parsers, telegram recap | L2 |
 | `telegram_client.py`      | Telegram alert sender for L0–L4 + execution + intent events | Any   |
 | `portfolio_health.py`     | L0 portfolio state: equity, MTD, drawdown, exposure, flags   | L0    |
 | `vault_sync.py`           | Light vault → Airtable dashboard sync (Journal/Lessons/PortfolioLog tables, upsert) | EOD |

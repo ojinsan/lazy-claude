@@ -15,16 +15,16 @@ Legend for `status`:
 | `current_trade.py` | L0, L1, L2, L3, L4, L5 | live | spec #1 — shared schema + save/load |
 | `ratelimit.py` | L2, L3, L5 | live | spec #1 — token buckets |
 | `claude_model.py` | L0, L1, L2, L4 | live | spec #1 — Opus↔openclaude fallback |
-| `daily_note.py` | L0, L1 (L3/L5 later) | live | spec #2 — shared daily-note append |
+| `daily_note.py` | L0, L1, L2 (L3/L5 later) | live | spec #2 — shared daily-note append |
 
 ## `tools/trader/*.py` — Used By
 
 | Tool | Used-by-layer | Status | Notes |
 |------|---------------|--------|-------|
 | `airtable_client.py` |   | live |   |
-| `api.py` | L1 | live | `rag_search` via `fund_manager_client`; `_stockbit_get` used by retail-avoider |
+| `api.py` | L1, L2 | live | `rag_search` via `fund_manager_client`; `_stockbit_get` used by retail-avoider; `get_price_history(60d)` for L2 dim-1 |
 | `auto_trigger.py` |   | live |   |
-| `broker_profile.py` |   | live |   |
+| `broker_profile.py` | L2 | live | `analyze_players(ticker)` — L2 dim-2 smart-money read |
 | `catalyst_calendar.py` | L1 | live | `build()` populates today's events for L1 Opus prompt |
 | `config.py` |   | live |   |
 | `confluence_score.py` |   | live |   |
@@ -33,7 +33,7 @@ Legend for `status`:
 | `indicators.py` |   | live |   |
 | `journal.py` | L0 | live | `load_previous_orders(365)` sources MtD/YtD rollup (Carina has no history endpoint) |
 | `konglo_flow.py` |   | live |   |
-| `konglo_loader.py` |   | live |   |
+| `konglo_loader.py` | L2 | live | `group_for(ticker)` — feeds `konglo_in_l1_sectors` flag in L2 dim-2 |
 | `l1a_healthcheck.py` | L1 | live | GET /api/v1/insights/last; fresh/stale gate for L1 playbook |
 | `l1_synth.py` | L1 | live | pure validators + pool union + telegram recap format (spec #3) |
 | `macro.py` | L1 | live | `assess_regime()` live probe into L1 Opus prompt |
@@ -45,7 +45,7 @@ Legend for `status`:
 | `portfolio_health.py` |   | live |   |
 | `psychology.py` |   | live |   |
 | `realtime_listener.py` |   | live |   |
-| `relative_strength.py` |   | live |   |
+| `relative_strength.py` | L2 | live | `rank([ticker], days=20)` for RS value + `_rs_rank` sector rank in L2 dim-1 |
 | `running_trade_poller.py` |   | live |   |
 | `runtime_eod_publish.py` |   | live |   |
 | `runtime_layer1_context.py` |   | live |   |
@@ -53,26 +53,29 @@ Legend for `status`:
 | `runtime_monitoring.py` |   | live |   |
 | `runtime_summary_30m.py` |   | live |   |
 | `sb_screener_create.py` |   | live |   |
-| `sb_screener_hapcu_foreign_flow.py` | L1 | live | `post_screener(save=False)` probes smart-money HAPCU flow |
-| `sb_screener_retail_avoider.py` | L1 | live | fetch retail + smart broker codes; join for contrarian candidates (spec #3) |
+| `sb_screener_hapcu_foreign_flow.py` | L1, L2 | live | `post_screener(save=False)` probes smart-money HAPCU flow; L2 caches yesterday's snapshot for dim-2 |
+| `sb_screener_retail_avoider.py` | L1, L2 | live | fetch retail + smart broker codes; L2 caches yesterday's snapshot for dim-2 |
 | `screener.py` |   | live |   |
-| `sid_tracker.py` |   | live |   |
-| `spring_detector.py` |   | live |   |
+| `sid_tracker.py` | L2 | live | `check_sid(ticker)` — direction/streak/change-% fed into L2 dim-2 |
+| `spring_detector.py` | L2 | live | `detect(ticker)` — sets `judge_floor=strong` when spring hit with med/high confidence |
 | `stockbit_auth.py` |   | live |   |
 | `stockbit_headers.py` |   | live |   |
 | `stockbit_login.py` |   | live |   |
 | `stockbit_screener.py` |   | live |   |
 | `tape_runner.py` |   | live |   |
 | `l0_synth.py` | L0 | live | mechanical data reshaping for L0 playbook (spec #2) |
-| `telegram_client.py` | L0, L1 | live | `send_message()` for redflag alerts (L0) + L1 recap (always-send) |
+| `telegram_client.py` | L0, L1, L2 | live | `send_message()` for redflag alerts (L0) + L1 recap + L2 abort/recap (always-send) |
 | `think.py` |   | live |   |
 | `tick_walls.py` |   | live |   |
 | `tradeplan.py` |   | live |   |
 | `universe_scan.py` |   | live |   |
 | `vault_sync.py` |   | live |   |
-| `vp_analyzer.py` |   | live |   |
+| `vp_analyzer.py` | L2 | live | `classify(ticker, "1d")` — `vp_state` sets `vp_redflag` when weak_rally/distribution w/o spring |
 | `watchlist_4group_scan.py` |   | live |   |
-| `wyckoff.py` |   | live |   |
+| `wyckoff.py` | L2 | live | `analyze_wyckoff(ticker)` — phase/structure/volume_pattern/confidence/signals for L2 dim-1 |
+| `l2_healthcheck.py` | L2 | live | spec #4 — pre-run gate (empty universe / stale L1 / both caches missing) |
+| `l2_dim_gather.py` | L2 | live | spec #4 — 4-dim gatherers (price/broker/book/narrative) for per-ticker judge prompt |
+| `l2_synth.py` | L2 | live | spec #4 — pure helpers (promotion truth table, prompt builders, response parsers, telegram recap) |
 
 ## Archived references
 
@@ -165,7 +168,7 @@ Not blockers for spec #2 acceptance; revisit when the trigger appears.
 | #1 | Core + Archive/Scaffold | in progress |
 | #2 | L0 Portfolio | complete (dry-run passed 2026-04-20) |
 | #3 | L1 + L1-A + L1-B | complete (dry-run passed 2026-04-21) |
-| #4 | L2 Screening | not started |
+| #4 | L2 Screening | in progress (plan-complete, pre-dry-run) |
 | #5 | L3 Monitoring | not started |
 | #6 | L4 Trade Plan | not started |
 | #7 | L5 Execute | not started |
