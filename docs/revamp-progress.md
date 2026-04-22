@@ -165,7 +165,7 @@ Not blockers for spec #2 acceptance; revisit when the trigger appears.
 | Spec | Scope | Status |
 |------|-------|--------|
 | #0 | Master | draft pushed |
-| #1 | Core + Archive/Scaffold | in progress |
+| #1 | Core + Archive/Scaffold | complete |
 | #2 | L0 Portfolio | complete (dry-run passed 2026-04-20) |
 | #3 | L1 + L1-A + L1-B | complete (dry-run passed 2026-04-21) |
 | #4 | L2 Screening | in progress (plan-complete, pre-dry-run) |
