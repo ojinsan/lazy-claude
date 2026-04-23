@@ -25,6 +25,11 @@
 | `l2_healthcheck.py`       | L2 pre-run gate: empty universe / stale L1 / both caches missing | L2 |
 | `l2_dim_gather.py`        | L2 per-ticker 4-dim gatherers (price/wyckoff/spring/vp/RS, broker+SID+konglo, yesterday bid-offer, narrative) | L2 |
 | `l2_synth.py`             | L2 pure helpers: promotion truth table, judge+merge prompt builders, parsers, telegram recap | L2 |
+| `bid_offer_patterns.py`   | PRD port: `analyze_near_book` + `wall_withdrawn` pattern analysis | L3    |
+| `l3_buy_now_ledger.py`    | L3 same-day BUY-NOW idempotency ledger                       | L3    |
+| `l3_dim_gather.py`        | L3 per-ticker tape + thick-wall + spring + orderbook + running-trade gather | L3    |
+| `l3_healthcheck.py`       | L3 pre-run gate: market-hours, non-empty universe, orderbook_state dir | L3    |
+| `l3_synth.py`             | L3 pure helpers: prompt/parse, buy_now_gate, merge_plan_update, telegram/daily-note, opus confirm | L3    |
 | `telegram_client.py`      | Telegram alert sender for L0–L4 + execution + intent events | Any   |
 | `portfolio_health.py`     | L0 portfolio state: equity, MTD, drawdown, exposure, flags   | L0    |
 | `vault_sync.py`           | Light vault → Airtable dashboard sync (Journal/Lessons/PortfolioLog tables, upsert) | EOD |
