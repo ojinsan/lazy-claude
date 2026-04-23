@@ -12,17 +12,17 @@ Legend for `status`:
 
 | Tool | Used-by-layer | Status | Notes |
 |------|---------------|--------|-------|
-| `current_trade.py` | L0, L1, L2, L3, L4, L5 | live | spec #1 — shared schema + save/load |
+| `current_trade.py` | L0, L1, L2, L3, L4, L5 | improved | spec #1 — shared schema + save/load; spec #5 added `trader_status.intraday_notch:int` |
 | `ratelimit.py` | L2, L3, L5 | live | spec #1 — token buckets |
-| `claude_model.py` | L0, L1, L2, L4 | live | spec #1 — Opus↔openclaude fallback |
-| `daily_note.py` | L0, L1, L2 (L3/L5 later) | live | spec #2 — shared daily-note append |
+| `claude_model.py` | L0, L1, L2, L3, L4 | live | spec #1 — Opus↔openclaude fallback; spec #5 uses both paths (openclaude judge + Opus BUY-NOW confirm) |
+| `daily_note.py` | L0, L1, L2, L3 | live | spec #2 — shared daily-note append; spec #5 event-driven L3 entries |
 
 ## `tools/trader/*.py` — Used By
 
 | Tool | Used-by-layer | Status | Notes |
 |------|---------------|--------|-------|
 | `airtable_client.py` |   | live |   |
-| `api.py` | L1, L2 | live | `rag_search` via `fund_manager_client`; `_stockbit_get` used by retail-avoider; `get_price_history(60d)` for L2 dim-1 |
+| `api.py` | L1, L2, L3 | live | `rag_search` via `fund_manager_client`; `_stockbit_get` used by retail-avoider; `get_price_history(60d)` for L2 dim-1; `get_price` + `get_stockbit_index('IHSG')` for L3 |
 | `auto_trigger.py` |   | live |   |
 | `broker_profile.py` | L2 | live | `analyze_players(ticker)` — L2 dim-2 smart-money read |
 | `catalyst_calendar.py` | L1 | live | `build()` populates today's events for L1 Opus prompt |
@@ -39,32 +39,32 @@ Legend for `status`:
 | `macro.py` | L1 | live | `assess_regime()` live probe into L1 Opus prompt |
 | `market_structure.py` |   | live |   |
 | `narrative.py` | L1 | live | seeds narrative source tagging convention |
-| `orderbook_poller.py` |   | live |   |
+| `orderbook_poller.py` | L3 | live | live orderbook polling → `runtime/monitoring/orderbook_state/{t}.json` (consumed by L3) |
 | `orderbook_ws.py` |   | live |   |
 | `overnight_macro.py` | L1 | live | `vault/data/overnight-YYYY-MM-DD.json` cache; `fetch_all()` fallback |
 | `portfolio_health.py` |   | live |   |
 | `psychology.py` |   | live |   |
 | `realtime_listener.py` |   | live |   |
 | `relative_strength.py` | L2 | live | `rank([ticker], days=20)` for RS value + `_rs_rank` sector rank in L2 dim-1 |
-| `running_trade_poller.py` |   | live |   |
+| `running_trade_poller.py` | L3 | live | last-10m running trades → `runtime/monitoring/realtime/{t}-run.jsonl` (consumed by L3) |
 | `runtime_eod_publish.py` |   | live |   |
 | `runtime_layer1_context.py` |   | live |   |
 | `runtime_layer2_screening.py` |   | live |   |
-| `runtime_monitoring.py` |   | live |   |
+| `runtime_monitoring.py` | L3 | live | 10m cron producer: writes orderbook_state + running-trade JSONL files for L3 gather |
 | `runtime_summary_30m.py` |   | live |   |
 | `sb_screener_create.py` |   | live |   |
-| `sb_screener_hapcu_foreign_flow.py` | L1, L2 | live | `post_screener(save=False)` probes smart-money HAPCU flow; L2 caches yesterday's snapshot for dim-2 |
+| `sb_screener_hapcu_foreign_flow.py` | L1, L2, L3 | live | `post_screener(save=False)` probes smart-money HAPCU flow; L2 caches yesterday's snapshot; L3 uses `foreign_net_flow_today()` for 12:00 intraday-notch check |
 | `sb_screener_retail_avoider.py` | L1, L2 | live | fetch retail + smart broker codes; L2 caches yesterday's snapshot for dim-2 |
 | `screener.py` |   | live |   |
 | `sid_tracker.py` | L2 | live | `check_sid(ticker)` — direction/streak/change-% fed into L2 dim-2 |
-| `spring_detector.py` | L2 | live | `detect(ticker)` — sets `judge_floor=strong` when spring hit with med/high confidence |
+| `spring_detector.py` | L2, L3 | live | `detect(ticker)` — L2 sets `judge_floor=strong` on hit; L3 uses as intraday BUY-NOW gate alternative to thick-wall |
 | `stockbit_auth.py` |   | live |   |
 | `stockbit_headers.py` |   | live |   |
 | `stockbit_login.py` |   | live |   |
 | `stockbit_screener.py` |   | live |   |
-| `tape_runner.py` |   | live |   |
+| `tape_runner.py` | L3 | live | `snapshot(t)` — composite tape state (ideal_markup/healthy_markup/spring_ready/fake_support/distribution_trap/...) + confidence, per-cycle L3 input |
 | `l0_synth.py` | L0 | live | mechanical data reshaping for L0 playbook (spec #2) |
-| `telegram_client.py` | L0, L1, L2 | live | `send_message()` for redflag alerts (L0) + L1 recap + L2 abort/recap (always-send) |
+| `telegram_client.py` | L0, L1, L2, L3 | live | `send_message()` for redflag alerts (L0) + L1 recap + L2 abort/recap + L3 event-driven (BUY-NOW / thesis-break / notch) |
 | `think.py` |   | live |   |
 | `tick_walls.py` |   | live |   |
 | `tradeplan.py` |   | live |   |
@@ -76,6 +76,11 @@ Legend for `status`:
 | `l2_healthcheck.py` | L2 | live | spec #4 — pre-run gate (empty universe / stale L1 / both caches missing) |
 | `l2_dim_gather.py` | L2 | live | spec #4 — 4-dim gatherers (price/broker/book/narrative) for per-ticker judge prompt |
 | `l2_synth.py` | L2 | live | spec #4 — pure helpers (promotion truth table, prompt builders, response parsers, telegram recap) |
+| `bid_offer_patterns.py` | L3 | live | spec #5 — PRD port: `analyze_near_book` + `wall_withdrawn` pattern analysis |
+| `l3_buy_now_ledger.py` | L3 | live | spec #5 — daily idempotency ledger for `/trade:tradeplan` invocation |
+| `l3_dim_gather.py` | L3 | live | spec #5 — per-ticker tape + thick-wall + spring + orderbook + running-trade gather |
+| `l3_healthcheck.py` | L3 | live | spec #5 — pre-run gate: market-hours / non-empty universe / orderbook_state dir |
+| `l3_synth.py` | L3 | live | spec #5 — pure helpers: judge prompt/parse, buy_now_gate, merge_plan_update, telegram/daily-note, opus confirm |
 
 ## Archived references
 
@@ -169,7 +174,7 @@ Not blockers for spec #2 acceptance; revisit when the trigger appears.
 | #2 | L0 Portfolio | complete (dry-run passed 2026-04-20) |
 | #3 | L1 + L1-A + L1-B | complete (dry-run passed 2026-04-21) |
 | #4 | L2 Screening | in progress (plan-complete, pre-dry-run) |
-| #5 | L3 Monitoring | not started |
+| #5 | L3 Monitoring | in progress (plan-complete, pre-dry-run) |
 | #6 | L4 Trade Plan | not started |
 | #7 | L5 Execute | not started |
 | #8 | Orchestration / CRON | not started |
