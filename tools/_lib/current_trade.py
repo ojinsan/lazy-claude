@@ -83,6 +83,7 @@ class TraderStatus:
     balance: Balance = field(default_factory=Balance)
     pnl: PnL = field(default_factory=PnL)
     holdings: list[Holding] = field(default_factory=list)
+    intraday_notch: int = 0
 
 
 @dataclass
@@ -128,6 +129,7 @@ def _parse_trader_status(d: dict[str, Any]) -> TraderStatus:
         balance=Balance(**d.get("balance", {})),
         pnl=PnL(**d.get("pnl", {})),
         holdings=[Holding(**h) for h in d.get("holdings", [])],
+        intraday_notch=int(d.get("intraday_notch", 0)),
     )
 
 

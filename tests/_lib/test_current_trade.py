@@ -166,5 +166,42 @@ class HoldingDetailsRoundTripTest(unittest.TestCase):
         )
 
 
+class IntradayNotchTest(unittest.TestCase):
+    def test_intraday_notch_default_zero(self):
+        ct = ct_mod.CurrentTrade()
+        self.assertEqual(ct.trader_status.intraday_notch, 0)
+
+    def test_intraday_notch_round_trip(self):
+        import json as _json
+        with tempfile.TemporaryDirectory() as d:
+            with patch.object(ct_mod, "LIVE_PATH", os.path.join(d, "ct.json")), \
+                 patch.object(ct_mod, "HISTORY_DIR", os.path.join(d, "hist")):
+                ct = ct_mod.CurrentTrade()
+                ct.trader_status.intraday_notch = -1
+                ct_mod.save(ct, layer="l3", status="ok", note="notch flip")
+                loaded = ct_mod.load()
+        self.assertEqual(loaded.trader_status.intraday_notch, -1)
+
+    def test_intraday_notch_parses_missing_as_zero(self):
+        import json as _json
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "ct.json")
+            with open(path, "w") as f:
+                _json.dump({
+                    "schema_version": ct_mod.SCHEMA_VERSION,
+                    "version": 1,
+                    "updated_at": "2026-04-22T12:00:00+07:00",
+                    "lists": {"filtered": [], "watchlist": [], "superlist": [], "exitlist": []},
+                    "trader_status": {
+                        "regime": "", "aggressiveness": "", "sectors": [], "narratives": [],
+                        "balance": {}, "pnl": {}, "holdings": [],
+                    },
+                    "layer_runs": {k: {} for k in ("l0", "l1", "l2", "l3", "l4", "l5")},
+                }, f)
+            with patch.object(ct_mod, "LIVE_PATH", path):
+                loaded = ct_mod.load()
+        self.assertEqual(loaded.trader_status.intraday_notch, 0)
+
+
 if __name__ == "__main__":
     unittest.main()
