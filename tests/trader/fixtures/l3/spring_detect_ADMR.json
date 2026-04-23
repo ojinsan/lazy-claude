@@ -1,0 +1,12 @@
+{
+  "ticker": "ADMR",
+  "is_spring": true,
+  "support": 1855,
+  "last": 1860,
+  "pct_below": 0.27,
+  "bid_offer_ratio": 1.8,
+  "smart_money_bid_freq_ratio": 0.65,
+  "volume_spike": 1.7,
+  "confidence": "high",
+  "notes": ["support held", "bid quality intact", "smart money bidding", "vol surge"]
+}

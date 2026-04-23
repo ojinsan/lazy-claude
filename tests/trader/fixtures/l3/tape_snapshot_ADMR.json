@@ -1,0 +1,15 @@
+{
+  "ticker": "ADMR",
+  "ts": "2026-04-22T12:10:00Z",
+  "walls": {"bid_walls": [{"price": 1855, "lot": 20000}], "offer_walls": [{"price": 1880, "lot": 18000}]},
+  "wall_fate": "eaten",
+  "bullish_absorption": true,
+  "queue_nature": {"freq": "low", "lot": "high"},
+  "fake_queue_risk": "low",
+  "healthy_markup": true,
+  "ideal_markup": false,
+  "crossing": null,
+  "spam": {"risk": "low"},
+  "composite": "healthy_markup",
+  "confidence": "high"
+}
