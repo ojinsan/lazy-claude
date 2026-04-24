@@ -27,11 +27,25 @@ class CurrentPlan:
 
 
 @dataclass
+class TradePlan:
+    entry: float
+    stop: float
+    tp1: float
+    tp2: Optional[float] = None
+    lots: int = 0
+    risk_idr: float = 0.0
+    mode: str = "A"
+    rationale: str = ""
+    updated_at: str = ""
+
+
+@dataclass
 class ListItem:
     ticker: str
     confidence: int
     current_plan: Optional[CurrentPlan] = None
     details: str = ""
+    plan: Optional[TradePlan] = None
 
 
 @dataclass
@@ -108,15 +122,30 @@ class CurrentTrade:
 
 
 def _parse_list_item(d: dict[str, Any]) -> ListItem:
-    plan = None
-    raw_plan = d.get("current_plan")
-    if raw_plan is not None:
-        plan = CurrentPlan(mode=raw_plan["mode"], price=raw_plan.get("price"))
+    cp = None
+    raw_cp = d.get("current_plan")
+    if raw_cp is not None:
+        cp = CurrentPlan(mode=raw_cp["mode"], price=raw_cp.get("price"))
+    tp = None
+    raw_tp = d.get("plan")
+    if raw_tp is not None:
+        tp = TradePlan(
+            entry=float(raw_tp["entry"]),
+            stop=float(raw_tp["stop"]),
+            tp1=float(raw_tp["tp1"]),
+            tp2=float(raw_tp["tp2"]) if raw_tp.get("tp2") is not None else None,
+            lots=int(raw_tp.get("lots", 0)),
+            risk_idr=float(raw_tp.get("risk_idr", 0.0)),
+            mode=raw_tp.get("mode", "A"),
+            rationale=raw_tp.get("rationale", ""),
+            updated_at=raw_tp.get("updated_at", ""),
+        )
     return ListItem(
         ticker=d["ticker"],
         confidence=int(d["confidence"]),
-        current_plan=plan,
+        current_plan=cp,
         details=d.get("details", ""),
+        plan=tp,
     )
 
 

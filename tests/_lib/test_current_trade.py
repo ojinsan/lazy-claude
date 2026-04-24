@@ -203,5 +203,81 @@ class IntradayNotchTest(unittest.TestCase):
         self.assertEqual(loaded.trader_status.intraday_notch, 0)
 
 
+class TradePlanTest(unittest.TestCase):
+    def test_list_item_default_plan_none(self):
+        item = ct_mod.ListItem(ticker="ADMR", confidence=80)
+        self.assertIsNone(item.plan)
+
+    def test_parse_list_item_with_plan(self):
+        raw = {
+            "ticker": "ADMR",
+            "confidence": 82,
+            "current_plan": {"mode": "buy_at_price", "price": 1855},
+            "details": "L4-A entry",
+            "plan": {
+                "entry": 1855, "stop": 1835, "tp1": 1955, "tp2": 2050,
+                "lots": 50, "risk_idr": 100000, "mode": "A",
+                "rationale": "LPS at support", "updated_at": "2026-04-22T05:45:12+07:00",
+            },
+        }
+        item = ct_mod._parse_list_item(raw)
+        self.assertIsNotNone(item.plan)
+        self.assertEqual(item.plan.entry, 1855)
+        self.assertEqual(item.plan.tp2, 2050)
+        self.assertEqual(item.plan.mode, "A")
+        self.assertEqual(item.plan.lots, 50)
+
+    def test_parse_list_item_missing_plan_back_compat(self):
+        raw = {
+            "ticker": "BUMI",
+            "confidence": 60,
+            "current_plan": {"mode": "sell_at_price", "price": 240},
+            "details": "old L2 entry, no plan yet",
+        }
+        item = ct_mod._parse_list_item(raw)
+        self.assertIsNone(item.plan)
+
+    def test_parse_list_item_tp2_null(self):
+        raw = {
+            "ticker": "ADMR",
+            "confidence": 75,
+            "current_plan": {"mode": "buy_at_price", "price": 1850},
+            "details": "",
+            "plan": {
+                "entry": 1855, "stop": 1835, "tp1": 1955, "tp2": None,
+                "lots": 30, "risk_idr": 60000, "mode": "B",
+                "rationale": "tp2 skipped", "updated_at": "2026-04-22T12:05:00+07:00",
+            },
+        }
+        item = ct_mod._parse_list_item(raw)
+        self.assertIsNone(item.plan.tp2)
+        self.assertEqual(item.plan.mode, "B")
+
+    def test_save_load_plan_roundtrip(self):
+        with tempfile.TemporaryDirectory() as d:
+            with patch.object(ct_mod, "LIVE_PATH", os.path.join(d, "ct.json")), \
+                 patch.object(ct_mod, "HISTORY_DIR", os.path.join(d, "hist")):
+                ct = ct_mod.CurrentTrade()
+                ct.lists.superlist.append(ct_mod.ListItem(
+                    ticker="ADMR",
+                    confidence=82,
+                    current_plan=ct_mod.CurrentPlan(mode="buy_at_price", price=1855),
+                    details="L4-A",
+                    plan=ct_mod.TradePlan(
+                        entry=1855, stop=1835, tp1=1955, tp2=2050,
+                        lots=50, risk_idr=100000, mode="A",
+                        rationale="LPS", updated_at="2026-04-22T05:45:12+07:00",
+                    ),
+                ))
+                ct_mod.save(ct, layer="l4", status="ok", note="test")
+                loaded = ct_mod.load()
+        self.assertEqual(len(loaded.lists.superlist), 1)
+        p = loaded.lists.superlist[0].plan
+        self.assertIsNotNone(p)
+        self.assertEqual(p.entry, 1855)
+        self.assertEqual(p.tp2, 2050)
+        self.assertEqual(p.lots, 50)
+
+
 if __name__ == "__main__":
     unittest.main()
