@@ -1,6 +1,6 @@
 import unittest
 
-from tools.trader.l4_synth import get_tick, round_to_tick
+from tools.trader.l4_synth import get_tick, round_to_tick, size_plan, TIER, BP_SINGLE_NAME_CAP
 
 
 class GetTickTest(unittest.TestCase):
@@ -82,6 +82,82 @@ class RoundToTickEdgeTest(unittest.TestCase):
     def test_invalid_side_raises(self):
         with self.assertRaises(ValueError):
             round_to_tick(1000, "hold", "entry")
+
+
+class SizePlanTest(unittest.TestCase):
+    def test_normal_buy_risk_bound(self):
+        # entry=1850, stop=1830, dist=20, BP=10M, tier=med(2%) → risk=200k, shares=10000, lots=100
+        # cap: 10M * 0.30 / (1850*100) = 16 lots → cap binds
+        r = size_plan(1850, 1830, 10_000_000, "med", 0)
+        self.assertFalse(r.get("abort"))
+        self.assertEqual(r["lots"], 16)
+        self.assertEqual(r["tier"], 0.02)
+
+    def test_normal_risk_not_bp_capped(self):
+        # entry=1000, stop=990, dist=10, BP=100M, tier=low(1%) → risk=1M, shares=100000, lots=1000
+        # cap: 100M * 0.30 / (1000*100) = 300 lots → cap binds
+        r = size_plan(1000, 990, 100_000_000, "low", 0)
+        self.assertFalse(r.get("abort"))
+        self.assertEqual(r["lots"], 300)
+
+    def test_risk_bound_not_cap(self):
+        # entry=100, stop=50, dist=50, BP=100M, tier=low(1%) → risk=1M, shares=20k, lots=200
+        # cap: 100M*0.30 / (100*100) = 3000 lots → risk binds, lots=200
+        r = size_plan(100, 50, 100_000_000, "low", 0)
+        self.assertEqual(r["lots"], 200)
+        self.assertEqual(r["notional"], 2_000_000)
+        self.assertEqual(r["risk_idr"], 1_000_000)
+
+    def test_notch_shrinks_high_to_med(self):
+        r = size_plan(1850, 1830, 10_000_000, "high", intraday_notch=-1)
+        self.assertEqual(r["tier"], 0.02)
+
+    def test_notch_shrinks_med_to_low(self):
+        r = size_plan(1850, 1830, 10_000_000, "med", intraday_notch=-1)
+        self.assertEqual(r["tier"], 0.01)
+
+    def test_notch_floor_1pct(self):
+        r = size_plan(1850, 1830, 10_000_000, "low", intraday_notch=-1)
+        self.assertEqual(r["tier"], 0.01)
+
+    def test_positive_notch_no_shrink(self):
+        r = size_plan(1850, 1830, 10_000_000, "med", intraday_notch=0)
+        self.assertEqual(r["tier"], 0.02)
+
+    def test_off_aborts(self):
+        r = size_plan(1850, 1830, 10_000_000, "off", 0)
+        self.assertTrue(r["abort"])
+        self.assertIn("off", r["reason"])
+
+    def test_empty_aggressiveness_aborts(self):
+        r = size_plan(1850, 1830, 10_000_000, "", 0)
+        self.assertTrue(r["abort"])
+
+    def test_zero_bp_aborts(self):
+        r = size_plan(1850, 1830, 0, "med", 0)
+        self.assertTrue(r["abort"])
+        self.assertIn("buying_power", r["reason"])
+
+    def test_zero_dist_aborts(self):
+        r = size_plan(1850, 1850, 10_000_000, "med", 0)
+        self.assertTrue(r["abort"])
+        self.assertIn("zero", r["reason"])
+
+    def test_sub_lot_aborts(self):
+        # entry=50000, stop=49999, dist=1, BP=100k, tier=low(1%) → risk=1000, shares=1000, lots=10
+        # cap: 100k * 0.30 / (50000*100) = 0 → sub-lot
+        r = size_plan(50000, 49999, 100_000, "low", 0)
+        self.assertTrue(r["abort"])
+        self.assertIn("sub-lot", r["reason"])
+
+    def test_case_insensitive_tier(self):
+        r = size_plan(1850, 1830, 10_000_000, "HIGH", 0)
+        self.assertEqual(r["tier"], 0.03)
+
+    def test_sell_side_same_math(self):
+        r = size_plan(1850, 1870, 10_000_000, "med", 0, side="sell")
+        self.assertFalse(r.get("abort"))
+        self.assertGreater(r["lots"], 0)
 
 
 if __name__ == "__main__":
