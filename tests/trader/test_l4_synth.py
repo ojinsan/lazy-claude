@@ -1,6 +1,19 @@
+import json
 import unittest
+from pathlib import Path
 
-from tools.trader.l4_synth import get_tick, round_to_tick, size_plan, TIER, BP_SINGLE_NAME_CAP
+from tools.trader.l4_synth import (
+    get_tick,
+    round_to_tick,
+    size_plan,
+    TIER,
+    BP_SINGLE_NAME_CAP,
+    format_plan_prompt_a,
+    format_plan_prompt_b,
+    parse_opus_plan_response,
+)
+
+FIX = Path(__file__).resolve().parent / "fixtures" / "l4"
 
 
 class GetTickTest(unittest.TestCase):
@@ -158,6 +171,141 @@ class SizePlanTest(unittest.TestCase):
         r = size_plan(1850, 1870, 10_000_000, "med", 0, side="sell")
         self.assertFalse(r.get("abort"))
         self.assertGreater(r["lots"], 0)
+
+
+class FormatPlanPromptATest(unittest.TestCase):
+    def _ctx(self):
+        return {
+            "ticker": "ADMR",
+            "regime": "bullish",
+            "aggressiveness": "med",
+            "side": "buy",
+            "bp_idr": 100_000_000,
+            "conf": 82,
+            "details": "3 strong dims",
+            "narrative": "coal theme",
+            "structure": {
+                "trend": "uptrend", "wyckoff_phase": "accumulation",
+                "support": 1820, "resistance": 1960,
+                "last_swing_low": {"price": 1830},
+            },
+            "atr": 32, "close": 1870, "hi60": 1960, "lo60": 1620,
+        }
+
+    def test_contains_ticker_and_side(self):
+        p = format_plan_prompt_a(self._ctx())
+        self.assertIn("ADMR", p)
+        self.assertIn("side=buy", p)
+
+    def test_renders_structure(self):
+        p = format_plan_prompt_a(self._ctx())
+        self.assertIn("support=1820", p)
+        self.assertIn("last_swing_low=1830", p)
+        self.assertIn("wyckoff=accumulation", p)
+
+    def test_renders_numeric_bp(self):
+        p = format_plan_prompt_a(self._ctx())
+        self.assertIn("100,000,000", p)
+
+    def test_missing_optional_narrative(self):
+        ctx = self._ctx(); ctx.pop("narrative")
+        p = format_plan_prompt_a(ctx)
+        self.assertIn("narrative: —", p)
+
+    def test_sell_side(self):
+        ctx = self._ctx(); ctx["side"] = "sell"
+        p = format_plan_prompt_a(ctx)
+        self.assertIn("side=sell", p)
+
+
+class FormatPlanPromptBTest(unittest.TestCase):
+    def _ctx(self):
+        return {
+            "ticker": "ADMR",
+            "conf": 82,
+            "orderbook": {"best_bid": 1870, "best_offer": 1875, "last_price": 1875},
+            "last_note": {"composite": "ideal_markup", "thick_wall_buy_strong": True, "spring_confirmed": True},
+            "support": 1820,
+            "last_swing_low": 1830,
+            "atr": 32,
+            "intraday_notch": 0,
+        }
+
+    def test_contains_orderbook(self):
+        p = format_plan_prompt_b(self._ctx())
+        self.assertIn("best_offer=1875", p)
+        self.assertIn("last=1875", p)
+
+    def test_contains_tape_flags(self):
+        p = format_plan_prompt_b(self._ctx())
+        self.assertIn("thick_wall_buy_strong=True", p)
+        self.assertIn("spring_confirmed=True", p)
+
+    def test_mentions_abort_option(self):
+        p = format_plan_prompt_b(self._ctx())
+        self.assertIn("abort", p)
+
+
+class ParseOpusPlanResponseTest(unittest.TestCase):
+    def test_parse_approve_full(self):
+        raw = (FIX / "opus_plan_A_approve.json").read_text()
+        d = parse_opus_plan_response(raw)
+        self.assertFalse(d.get("abort"))
+        self.assertEqual(d["entry"], 1855)
+        self.assertEqual(d["tp2"], 2050)
+        self.assertIn("Accumulation", d["rationale"])
+
+    def test_parse_mode_b_approve(self):
+        raw = (FIX / "opus_plan_B_approve.json").read_text()
+        d = parse_opus_plan_response(raw)
+        self.assertEqual(d["entry"], 1875)
+        self.assertEqual(d["stop"], 1825)
+
+    def test_parse_abort(self):
+        raw = (FIX / "opus_plan_B_abort.json").read_text()
+        d = parse_opus_plan_response(raw)
+        self.assertTrue(d["abort"])
+        self.assertIn("too loose", d["reason"])
+
+    def test_parse_malformed_missing_key_raises(self):
+        raw = (FIX / "opus_malformed.json").read_text()
+        with self.assertRaises(ValueError) as cm:
+            parse_opus_plan_response(raw)
+        self.assertIn("tp1", str(cm.exception))
+
+    def test_parse_fenced_json(self):
+        raw = '```json\n{"entry":1,"stop":0.5,"tp1":2,"tp2":null,"rationale":"x"}\n```'
+        d = parse_opus_plan_response(raw)
+        self.assertEqual(d["entry"], 1.0)
+        self.assertIsNone(d["tp2"])
+
+    def test_parse_fenced_no_lang(self):
+        raw = '```\n{"entry":1,"stop":0.5,"tp1":2,"rationale":"x"}\n```'
+        d = parse_opus_plan_response(raw)
+        self.assertEqual(d["stop"], 0.5)
+
+    def test_parse_rationale_truncated_to_180(self):
+        long = "x" * 300
+        raw = json.dumps({"entry": 1, "stop": 0.5, "tp1": 2, "rationale": long})
+        d = parse_opus_plan_response(raw)
+        self.assertEqual(len(d["rationale"]), 180)
+
+    def test_parse_abort_missing_reason_raises(self):
+        with self.assertRaises(ValueError):
+            parse_opus_plan_response('{"abort": true}')
+
+    def test_parse_invalid_json_raises(self):
+        with self.assertRaises(ValueError):
+            parse_opus_plan_response("not json at all")
+
+    def test_parse_non_object_raises(self):
+        with self.assertRaises(ValueError):
+            parse_opus_plan_response("[1,2,3]")
+
+    def test_parse_abort_reason_truncated_to_80(self):
+        raw = json.dumps({"abort": True, "reason": "y" * 200})
+        d = parse_opus_plan_response(raw)
+        self.assertEqual(len(d["reason"]), 80)
 
 
 if __name__ == "__main__":
