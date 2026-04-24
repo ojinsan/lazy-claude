@@ -1,122 +1,176 @@
 #!/usr/bin/env bash
-# cron-dispatcher.sh — runs trader command files on a WIB schedule.
-# Monitoring window: tries --settings openclaude.json first, falls back to default Claude.
-# All other windows: default Claude only (no --settings).
+# cron-dispatcher.sh — single entry point for all trader cron jobs.
+#
+# Crontab: * * * * * /home/lazywork/workspace/tools/trader/cron-dispatcher.sh
+#
+# Schedule (WIB, Mon–Fri, non-holiday):
+#   03:00  overnight_macro.py
+#   04:00  universe_scan.py + catalyst_calendar.py
+#   04:30  L0 /trade:portfolio
+#   05:00  L1 /trade:insight
+#   05:30  L2 /trade:screening
+#   06:00  L4 /trade:tradeplan (Mode A batch)
+#   08:30  L5 /trade:execute  (pre-open sweep)
+#   09:05  watchdog (missed-window check)
+#   09:00–15:30, min%10==0  L3 /trade:monitor (every 10m)
+#   09:00–15:00, min%30==0  L5 /trade:execute (reconcile, every 30m, after monitor)
+#   15:20  /trade:eod
+#   Sun 20:00  journal weekly
+#   Month-end 20:00  journal monthly
+#
+# Guarantee: at most one Claude subprocess per tick (monitor fires first; reconcile follows).
 set -euo pipefail
 
 WORKSPACE="/home/lazywork/workspace"
 MONITORING_SETTINGS="$WORKSPACE/.claude/settings.openclaude.json"
 COMMAND_DIR="$WORKSPACE/.claude/commands/trade"
+PYTHON="python3"
 CLAUDE="/home/lazywork/.local/bin/claude"
 LOG_DIR="$WORKSPACE/runtime/cron"
+HOLIDAY_FILE="$WORKSPACE/vault/data/idx_holidays.json"
+
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/$(TZ='Asia/Jakarta' date +%Y%m%d).log"
 
+WIB_DATE=$(TZ='Asia/Jakarta' date +%Y-%m-%d)
 WIB_HOUR=$(TZ='Asia/Jakarta' date +%-H)
 WIB_MIN=$(TZ='Asia/Jakarta' date +%-M)
+WIB_DOW=$(TZ='Asia/Jakarta' date +%u)   # 1=Mon … 7=Sun
+WIB_YEAR=$(TZ='Asia/Jakarta' date +%Y)
 
 log() { echo "[$(TZ='Asia/Jakarta' date '+%Y-%m-%d %H:%M')] $*" >> "$LOG"; }
 
-# Default: no special settings (one-shot daily jobs — L0, screening, tradeplan, 08:30 execute)
-run_claude_job() {
-    local command_file="$1"
-    local prompt="Non-interactive cron run. Read the instructions in $command_file and execute them. Run to completion and exit. Do not wait for user input."
-    cd "$WORKSPACE"
-    "$CLAUDE" --dangerously-skip-permissions --bare -p "$prompt" >> "$LOG" 2>&1
+# ── Holiday gate ─────────────────────────────────────────────────────────────
+is_holiday() {
+    if [[ ! -f "$HOLIDAY_FILE" ]]; then
+        log "WARN holiday file missing ($HOLIDAY_FILE) — treating as trading day"
+        return 1  # fail-open
+    fi
+    # Use python3 to parse JSON; avoid jq dependency
+    "$PYTHON" - <<EOF
+import json, sys
+with open("$HOLIDAY_FILE") as f:
+    data = json.load(f)
+holidays = data.get("$WIB_YEAR", [])
+sys.exit(0 if "$WIB_DATE" in holidays else 1)
+EOF
 }
 
-# Monitoring: try --settings first; if it fails, fall back to default Claude
-run_monitoring_job() {
-    local command_file="$1"
+is_trading_day() {
+    [[ $WIB_DOW -le 5 ]] && ! is_holiday
+}
+
+# ── Job runners ───────────────────────────────────────────────────────────────
+
+# One-shot daily jobs (L0, L4, L5 pre-open, EOD)
+run_claude_job() {
+    local label="$1"
+    local command_file="$2"
     local prompt="Non-interactive cron run. Read the instructions in $command_file and execute them. Run to completion and exit. Do not wait for user input."
+    log "→ $label start"
     cd "$WORKSPACE"
-    if "$CLAUDE" --dangerously-skip-permissions --bare --settings "$MONITORING_SETTINGS" -p "$prompt" >> "$LOG" 2>&1; then
+    "$CLAUDE" --dangerously-skip-permissions --bare -p "$prompt" >> "$LOG" 2>&1 \
+        && log "← $label done" \
+        || log "← $label FAILED (exit $?)"
+}
+
+# Monitoring / reconcile: try openclaude settings first, fall back to default
+run_monitoring_job() {
+    local label="$1"
+    local command_file="$2"
+    local prompt="Non-interactive cron run. Read the instructions in $command_file and execute them. Run to completion and exit. Do not wait for user input."
+    log "→ $label start"
+    cd "$WORKSPACE"
+    if [[ -f "$MONITORING_SETTINGS" ]] && \
+       "$CLAUDE" --dangerously-skip-permissions --bare --settings "$MONITORING_SETTINGS" \
+                 -p "$prompt" >> "$LOG" 2>&1; then
+        log "← $label done"
         return 0
     fi
-    log "⚠ --settings run failed — falling back to default Claude"
-    "$CLAUDE" --dangerously-skip-permissions --bare -p "$prompt" >> "$LOG" 2>&1
+    log "WARN $label --settings run failed — falling back to default Claude"
+    "$CLAUDE" --dangerously-skip-permissions --bare -p "$prompt" >> "$LOG" 2>&1 \
+        && log "← $label done" \
+        || log "← $label FAILED (exit $?)"
 }
 
-log "tick — WIB ${WIB_HOUR}:$(printf '%02d' "$WIB_MIN")"
+run_python_job() {
+    local label="$1"
+    local script="$2"
+    shift 2
+    log "→ $label start"
+    "$PYTHON" "$script" "$@" >> "$LOG" 2>&1 \
+        && log "← $label done" \
+        || log "WARN $label failed (exit $?)"
+}
 
-# ── Pre-market data fetch: 04:00 WIB ────────────────────────────────────────
-if [[ $WIB_HOUR -eq 4 && $WIB_MIN -eq 0 ]]; then
-    log "→ PRE-MARKET DATA start"
-    python "$WORKSPACE/tools/trader/universe_scan.py" >> "$LOG" 2>&1 || log "⚠ universe_scan failed"
-    python "$WORKSPACE/tools/trader/catalyst_calendar.py" >> "$LOG" 2>&1 || log "⚠ catalyst_calendar failed"
-    log "← PRE-MARKET DATA done"
+# ── Tick ─────────────────────────────────────────────────────────────────────
+log "tick — WIB ${WIB_HOUR}:$(printf '%02d' "$WIB_MIN") dow=$WIB_DOW"
 
-# ── Portfolio window: 04:30 WIB ─────────────────────────────────────────────
-elif [[ $WIB_HOUR -eq 4 && $WIB_MIN -eq 30 ]]; then
-    log "→ PORTFOLIO (L0) start"
-    run_claude_job "$COMMAND_DIR/portfolio.md"
-    log "← PORTFOLIO done"
+# ── Off-hours / weekend / holiday (non-market jobs still run) ────────────────
 
-# ── Screening window: 05:00, 05:30 WIB ─────────────────────────────────────
-elif [[ $WIB_HOUR -eq 5 ]]; then
-    log "→ SCREENING (L1+L2) start"
-    run_claude_job "$COMMAND_DIR/screening.md"
-    log "← SCREENING done"
+# ── 03:00 — overnight macro (any day) ────────────────────────────────────────
+if [[ $WIB_HOUR -eq 3 && $WIB_MIN -eq 0 ]]; then
+    run_python_job "OVERNIGHT MACRO" "$WORKSPACE/tools/trader/overnight_macro.py"
 
-# ── Trade plan window: 06:00 WIB ────────────────────────────────────────────
-elif [[ $WIB_HOUR -eq 6 && $WIB_MIN -eq 0 ]]; then
-    log "→ TRADEPLAN (L4 pre-market) start"
-    run_claude_job "$COMMAND_DIR/tradeplan.md"
-    log "← TRADEPLAN done"
+# ── 04:00 — pre-market data (trading days only) ───────────────────────────────
+elif [[ $WIB_HOUR -eq 4 && $WIB_MIN -eq 0 ]] && is_trading_day; then
+    run_python_job "UNIVERSE SCAN" "$WORKSPACE/tools/trader/universe_scan.py"
+    run_python_job "CATALYST CALENDAR" "$WORKSPACE/tools/trader/catalyst_calendar.py"
 
-# ── Execute window: 08:30 WIB ────────────────────────────────────────────────
-elif [[ $WIB_HOUR -eq 8 && $WIB_MIN -eq 30 ]]; then
-    log "→ EXECUTE (portfolio check + orders) start"
-    run_claude_job "$COMMAND_DIR/execute.md"
-    log "← EXECUTE done"
+# ── 04:30 — L0 Portfolio (trading days) ──────────────────────────────────────
+elif [[ $WIB_HOUR -eq 4 && $WIB_MIN -eq 30 ]] && is_trading_day; then
+    run_claude_job "L0 PORTFOLIO" "$COMMAND_DIR/portfolio.md"
 
-# ── Monitoring window: 09:00–15:00 WIB (inclusive) ─────────────────────────
-elif [[ $WIB_HOUR -ge 9 ]] && [[ $WIB_HOUR -lt 15 || ($WIB_HOUR -eq 15 && $WIB_MIN -eq 0) ]]; then
-    log "→ MONITORING (L3+L4) start"
-    run_monitoring_job "$COMMAND_DIR/monitoring.md"
-    log "← MONITORING done"
+# ── 05:00 — L1 Insight (trading days) ────────────────────────────────────────
+elif [[ $WIB_HOUR -eq 5 && $WIB_MIN -eq 0 ]] && is_trading_day; then
+    run_claude_job "L1 INSIGHT" "$COMMAND_DIR/insight.md"
 
-    log "→ EXECUTE (intraday signals) start"
-    run_monitoring_job "$COMMAND_DIR/execute.md"
-    log "← EXECUTE done"
+# ── 05:30 — L2 Screening (trading days) ──────────────────────────────────────
+elif [[ $WIB_HOUR -eq 5 && $WIB_MIN -eq 30 ]] && is_trading_day; then
+    run_claude_job "L2 SCREENING" "$COMMAND_DIR/screening.md"
 
-# ── EOD publish: 15:20 WIB ──────────────────────────────────────────────────
-elif [[ $WIB_HOUR -eq 15 && $WIB_MIN -eq 20 ]]; then
-    log "→ EOD PUBLISH start"
-    run_claude_job "$COMMAND_DIR/eod.md"
-    log "← EOD PUBLISH done"
+# ── 06:00 — L4 Tradeplan Mode A batch (trading days) ─────────────────────────
+elif [[ $WIB_HOUR -eq 6 && $WIB_MIN -eq 0 ]] && is_trading_day; then
+    run_claude_job "L4 TRADEPLAN" "$COMMAND_DIR/tradeplan.md"
 
-# ── Weekly review: Sunday 20:00 WIB ─────────────────────────────────────────
-elif [[ $(TZ='Asia/Jakarta' date +%u) -eq 7 && $WIB_HOUR -eq 20 && $WIB_MIN -eq 0 ]]; then
-    log "→ WEEKLY REVIEW start"
-    python "$WORKSPACE/tools/trader/journal.py" weekly >> "$LOG" 2>&1 || log "⚠ weekly review failed"
-    log "← WEEKLY REVIEW done"
+# ── 08:30 — L5 pre-open sweep (trading days) ─────────────────────────────────
+elif [[ $WIB_HOUR -eq 8 && $WIB_MIN -eq 30 ]] && is_trading_day; then
+    run_claude_job "L5 EXECUTE pre-open" "$COMMAND_DIR/execute.md"
 
-# ── Monthly review: last calendar day of month 20:00 WIB ────────────────────
-elif [[ $WIB_HOUR -eq 20 && $WIB_MIN -eq 0 ]] && [[ $(TZ='Asia/Jakarta' date -d '+1 day' +%d) == "01" ]]; then
-    log "→ MONTHLY REVIEW start"
-    python "$WORKSPACE/tools/trader/journal.py" monthly >> "$LOG" 2>&1 || log "⚠ monthly review failed"
-    log "← MONTHLY REVIEW done"
+# ── 09:05 — watchdog (trading days) ──────────────────────────────────────────
+elif [[ $WIB_HOUR -eq 9 && $WIB_MIN -eq 5 ]] && is_trading_day; then
+    run_python_job "WATCHDOG" "$WORKSPACE/tools/trader/runtime_cron_watchdog.py"
 
-# ── Overnight macro: 03:00 WIB ───────────────────────────────────────────────
-elif [[ $WIB_HOUR -eq 3 && $WIB_MIN -eq 0 ]]; then
-    log "→ OVERNIGHT MACRO start"
-    python "$WORKSPACE/tools/trader/overnight_macro.py" >> "$LOG" 2>&1 || log "⚠ overnight_macro failed"
-    log "← OVERNIGHT MACRO done"
+# ── 09:00–15:30, every 10m — L3 monitor (trading days) ───────────────────────
+# ── 09:00–15:00, every 30m — L5 reconcile after monitor (trading days) ───────
+elif [[ $WIB_HOUR -ge 9 ]] && \
+     [[ $WIB_HOUR -lt 15 || ($WIB_HOUR -eq 15 && $WIB_MIN -le 30) ]] && \
+     [[ $((WIB_MIN % 10)) -eq 0 ]] && \
+     is_trading_day; then
 
-# ── Mid-day regime check: 11:30 WIB ──────────────────────────────────────────
-elif [[ $WIB_HOUR -eq 11 && $WIB_MIN -eq 30 ]]; then
-    log "→ MIDDAY REGIME (11:30) start"
-    run_monitoring_job "$COMMAND_DIR/monitoring.md"
-    log "← MIDDAY REGIME done"
+    # L3 monitor fires every 10m 09:00–15:30
+    run_monitoring_job "L3 MONITOR" "$COMMAND_DIR/monitor.md"
 
-# ── Mid-day regime check: 14:00 WIB ──────────────────────────────────────────
-elif [[ $WIB_HOUR -eq 14 && $WIB_MIN -eq 0 ]]; then
-    log "→ MIDDAY REGIME (14:00) start"
-    run_monitoring_job "$COMMAND_DIR/monitoring.md"
-    log "← MIDDAY REGIME done"
+    # L5 reconcile fires every 30m 09:00–15:00, after monitor
+    if [[ $((WIB_MIN % 30)) -eq 0 ]] && \
+       [[ $WIB_HOUR -lt 15 || ($WIB_HOUR -eq 15 && $WIB_MIN -eq 0) ]]; then
+        run_monitoring_job "L5 EXECUTE reconcile" "$COMMAND_DIR/execute.md"
+    fi
 
-# ── Off-hours ───────────────────────────────────────────────────────────────
+# ── 15:20 — EOD publish (trading days) ───────────────────────────────────────
+elif [[ $WIB_HOUR -eq 15 && $WIB_MIN -eq 20 ]] && is_trading_day; then
+    run_claude_job "EOD PUBLISH" "$COMMAND_DIR/eod.md"
+
+# ── Sun 20:00 — weekly journal (any week) ────────────────────────────────────
+elif [[ $WIB_DOW -eq 7 && $WIB_HOUR -eq 20 && $WIB_MIN -eq 0 ]]; then
+    run_python_job "WEEKLY REVIEW" "$WORKSPACE/tools/trader/journal.py" weekly
+
+# ── Month-end 20:00 — monthly journal ────────────────────────────────────────
+elif [[ $WIB_HOUR -eq 20 && $WIB_MIN -eq 0 ]] && \
+     [[ $(TZ='Asia/Jakarta' date -d '+1 day' +%d) == "01" ]]; then
+    run_python_job "MONTHLY REVIEW" "$WORKSPACE/tools/trader/journal.py" monthly
+
+# ── Off-hours ─────────────────────────────────────────────────────────────────
 else
     log "off-hours — skip"
 fi

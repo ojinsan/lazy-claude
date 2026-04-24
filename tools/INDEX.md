@@ -55,7 +55,8 @@
 | `runtime_monitoring.py`     | Periodic L3 monitoring loop                    |
 | `runtime_summary_30m.py`    | 30-min market summary                          |
 | `runtime_eod_publish.py`    | EOD Airtable publish                           |
-| `cron-dispatcher.sh`        | WIB-schedule dispatcher → runs Claude commands |
+| `cron-dispatcher.sh`        | WIB-schedule dispatcher → runs Claude commands (spec #8: holiday gate, 10m monitor, 30m reconcile, single-subprocess guarantee) | Infra |
+| `runtime_cron_watchdog.py`  | Missed-window detector + 30d log prune + telegram alert (09:05 WIB daily) | Infra |
 
 ## trader/ — Live Data (on-demand)
 

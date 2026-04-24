@@ -89,6 +89,7 @@ Legend for `status`:
 | `l5_healthcheck.py` | L5 | live | spec #7 — pre-run gate: aggressiveness=off / Carina token age / WIB window (pre_open 08:00–08:45, reconcile 09:00–15:15) / intraday ticker+plan+stale-plan guard |
 | `l5_executor.py` | L5 | live | spec #7 — place/cancel/stop/TP wrappers with exponential-backoff retry (3 attempts) + idempotency key `(ticker, leg, plan_updated_at)` |
 | `l5_run.py` | L5 | live | spec #7 — CLI entrypoint for intraday fire: `python -m tools.trader.l5_run --ticker T` |
+| `runtime_cron_watchdog.py` | Infra | live | spec #8 — missed-window detector (fires at 09:05 WIB) + 30d log prune + telegram warn |
 
 ## Archived references
 
@@ -171,7 +172,7 @@ Not blockers for spec #2 acceptance; revisit when the trigger appears.
 
 ## Live dependencies on slash-command dir
 
-- `tools/trader/cron-dispatcher.sh` still references `.claude/commands/trade/`. Resolves to new stubs today. Revisit per spec #8 (orchestration).
+- `tools/trader/cron-dispatcher.sh` fully wired to `.claude/commands/trade/` (spec #8). All commands live.
 
 ## Spec status
 
@@ -185,4 +186,4 @@ Not blockers for spec #2 acceptance; revisit when the trigger appears.
 | #5 | L3 Monitoring | in progress (plan-complete, pre-dry-run) |
 | #6 | L4 Trade Plan | in progress (plan-complete, pre-dry-run) |
 | #7 | L5 Execute | in progress (plan-complete, pre-dry-run) |
-| #8 | Orchestration / CRON | not started |
+| #8 | Orchestration / CRON | in progress (plan-complete, pre-dry-run) |
