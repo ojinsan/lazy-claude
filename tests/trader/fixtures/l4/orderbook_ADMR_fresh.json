@@ -1,0 +1,19 @@
+{
+  "ticker": "ADMR",
+  "ts": "2026-04-22T12:10:05+07:00",
+  "last_price": 1875,
+  "best_bid": 1870,
+  "best_offer": 1875,
+  "bids": [
+    {"price": 1870, "lot": 8500},
+    {"price": 1865, "lot": 12000},
+    {"price": 1860, "lot": 9800},
+    {"price": 1855, "lot": 15200}
+  ],
+  "offers": [
+    {"price": 1875, "lot": 3200},
+    {"price": 1880, "lot": 18000},
+    {"price": 1885, "lot": 14500},
+    {"price": 1890, "lot": 6200}
+  ]
+}

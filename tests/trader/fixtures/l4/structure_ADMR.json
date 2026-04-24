@@ -1,0 +1,14 @@
+{
+  "ticker": "ADMR",
+  "current_price": 1870,
+  "trend": "uptrend",
+  "trend_strength": 3,
+  "support": 1820,
+  "resistance": 1960,
+  "support_strength": 4,
+  "resistance_strength": 3,
+  "wyckoff_phase": "accumulation",
+  "wyckoff_position": "lps",
+  "last_swing_low": {"price": 1830, "time": "2026-04-18", "type": "low", "strength": 3},
+  "last_swing_high": {"price": 1920, "time": "2026-04-21", "type": "high", "strength": 2}
+}
