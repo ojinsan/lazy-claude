@@ -11,6 +11,10 @@ from tools.trader.l4_synth import (
     format_plan_prompt_a,
     format_plan_prompt_b,
     parse_opus_plan_response,
+    build_plan_struct,
+    format_details_line,
+    format_telegram_event,
+    format_daily_note_block,
 )
 
 FIX = Path(__file__).resolve().parent / "fixtures" / "l4"
@@ -306,6 +310,97 @@ class ParseOpusPlanResponseTest(unittest.TestCase):
         raw = json.dumps({"abort": True, "reason": "y" * 200})
         d = parse_opus_plan_response(raw)
         self.assertEqual(len(d["reason"]), 80)
+
+
+class BuildPlanStructTest(unittest.TestCase):
+    def _parsed(self):
+        return {"entry": 1853.7, "stop": 1833.2, "tp1": 1952.4, "tp2": 2048.0, "rationale": "LPS"}
+
+    def _sizing(self):
+        return {"lots": 50, "risk_idr": 100000, "notional": 9250000, "tier": 0.02}
+
+    def test_applies_tick_rounding_buy(self):
+        d = build_plan_struct("ADMR", self._parsed(), self._sizing(), "A", "buy", "2026-04-22T05:45:12+07:00")
+        self.assertEqual(d["entry"], 1850)   # 1853.7 → down → 1850
+        self.assertEqual(d["stop"], 1830)    # 1833.2 → down → 1830
+        self.assertEqual(d["tp1"], 1955)     # 1952.4 → up → 1955
+        self.assertEqual(d["tp2"], 2050)     # 2048 → up → 2050
+        self.assertEqual(d["lots"], 50)
+        self.assertEqual(d["mode"], "A")
+
+    def test_sell_side_rounding_mirror(self):
+        d = build_plan_struct("BUMI", self._parsed(), self._sizing(), "A", "sell", "2026-04-22T05:45:12+07:00")
+        self.assertEqual(d["entry"], 1855)   # up
+        self.assertEqual(d["stop"], 1835)    # up
+        self.assertEqual(d["tp1"], 1950)     # down
+
+    def test_tp2_null_stays_null(self):
+        p = self._parsed(); p["tp2"] = None
+        d = build_plan_struct("ADMR", p, self._sizing(), "B", "buy", "t")
+        self.assertIsNone(d["tp2"])
+
+    def test_parsed_abort_propagates(self):
+        d = build_plan_struct("ADMR", {"abort": True, "reason": "too loose"}, self._sizing(), "B", "buy", "t")
+        self.assertTrue(d["abort"])
+        self.assertIn("too loose", d["reason"])
+
+    def test_sizing_abort_propagates(self):
+        d = build_plan_struct("ADMR", self._parsed(), {"abort": True, "reason": "sub-lot size"}, "A", "buy", "t")
+        self.assertTrue(d["abort"])
+        self.assertIn("sub-lot", d["reason"])
+
+
+class FormatDetailsLineTest(unittest.TestCase):
+    def _plan(self):
+        return {"entry": 1850, "stop": 1830, "tp1": 1950, "tp2": 2050, "lots": 50, "mode": "A", "rationale": "x"}
+
+    def test_contains_all_fields(self):
+        s = format_details_line("ADMR", self._plan(), 100_000_000)
+        self.assertIn("L4-A", s)
+        self.assertIn("E 1850", s)
+        self.assertIn("SL 1830", s)
+        self.assertIn("T1 1950", s)
+        self.assertIn("T2 2050", s)
+        self.assertIn("50lot", s)
+        self.assertIn("%BP", s)
+
+    def test_no_tp2_omitted(self):
+        p = self._plan(); p["tp2"] = None
+        s = format_details_line("ADMR", p, 100_000_000)
+        self.assertNotIn("T2", s)
+
+
+class FormatTelegramEventTest(unittest.TestCase):
+    def _plan(self):
+        return {"entry": 1850, "stop": 1830, "tp1": 1950, "tp2": 2050, "lots": 50, "mode": "B", "rationale": "BUY-NOW tape"}
+
+    def test_buy_side_header(self):
+        s = format_telegram_event("ADMR", self._plan(), "buy", 82, 100_000_000)
+        self.assertIn("[L4-B]", s)
+        self.assertIn("ADMR buy", s)
+        self.assertIn("Conv 82", s)
+        self.assertIn("BUY-NOW tape", s)
+
+    def test_sell_side(self):
+        s = format_telegram_event("BUMI", self._plan(), "sell", 60, 100_000_000)
+        self.assertIn("BUMI sell", s)
+
+
+class FormatDailyNoteBlockTest(unittest.TestCase):
+    def test_multi_ticker(self):
+        plans = [
+            {"ticker": "ADMR", "plan": {"entry": 1850, "stop": 1830, "tp1": 1950, "lots": 50, "rationale": "a"}, "side": "buy", "confidence": 82},
+            {"ticker": "BUMI", "plan": {"entry": 240, "stop": 230, "tp1": 270, "lots": 200, "rationale": "b"}, "side": "buy", "confidence": 70},
+        ]
+        s = format_daily_note_block("2026-04-22", plans)
+        self.assertIn("## L4 Trade Plan — 2026-04-22", s)
+        self.assertIn("**ADMR**", s)
+        self.assertIn("**BUMI**", s)
+        self.assertIn("E 1850", s)
+
+    def test_empty_list(self):
+        s = format_daily_note_block("2026-04-22", [])
+        self.assertIn("## L4 Trade Plan", s)
 
 
 if __name__ == "__main__":

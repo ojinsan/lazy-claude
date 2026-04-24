@@ -198,3 +198,99 @@ def parse_opus_plan_response(raw: str) -> dict:
         "tp2": float(d["tp2"]) if d.get("tp2") is not None else None,
         "rationale": str(d["rationale"])[:180],
     }
+
+
+def build_plan_struct(
+    ticker: str,
+    parsed: dict,
+    sizing: dict,
+    mode: str,
+    side: Side,
+    now_iso: str,
+) -> dict:
+    """Apply tick rounding + sizing to parsed Opus response.
+
+    Returns:
+        TradePlan-ready dict on success
+        {"abort":True,"reason":str} if either parsed or sizing aborted
+    """
+    if parsed.get("abort"):
+        return {"abort": True, "reason": parsed.get("reason", "opus aborted")}
+    if sizing.get("abort"):
+        return {"abort": True, "reason": sizing.get("reason", "sizing aborted")}
+    entry = round_to_tick(parsed["entry"], side, "entry")
+    stop = round_to_tick(parsed["stop"], side, "stop")
+    tp1 = round_to_tick(parsed["tp1"], side, "tp")
+    tp2 = round_to_tick(parsed["tp2"], side, "tp") if parsed.get("tp2") is not None else None
+    return {
+        "entry": entry,
+        "stop": stop,
+        "tp1": tp1,
+        "tp2": tp2,
+        "lots": sizing["lots"],
+        "risk_idr": sizing["risk_idr"],
+        "mode": mode,
+        "rationale": parsed["rationale"],
+        "updated_at": now_iso,
+    }
+
+
+def _r_multiple(entry: float, stop: float, tp: float) -> float:
+    dist = abs(entry - stop)
+    return abs(tp - entry) / dist if dist > 0 else 0.0
+
+
+def format_details_line(ticker: str, plan: dict, bp_idr: float) -> str:
+    """One-line summary for ListItem.details."""
+    entry = plan["entry"]
+    stop = plan["stop"]
+    tp1 = plan["tp1"]
+    tp2 = plan.get("tp2")
+    lots = plan["lots"]
+    stop_pct = round(abs(entry - stop) / entry * 100, 2) if entry > 0 else 0
+    r1 = _r_multiple(entry, stop, tp1)
+    notional = lots * 100 * entry
+    bp_pct = round(notional / bp_idr * 100, 1) if bp_idr > 0 else 0
+    tp2_s = f" | T2 {tp2}" if tp2 is not None else ""
+    return (
+        f"L4-{plan['mode']}: E {entry} | SL {stop} ({stop_pct}%) | "
+        f"T1 {tp1} ({r1:.1f}R){tp2_s} | {lots}lot {notional/1e6:.2f}M/{bp_pct}%BP"
+    )
+
+
+def format_telegram_event(
+    ticker: str,
+    plan: dict,
+    side: Side,
+    confidence: int,
+    bp_idr: float,
+) -> str:
+    entry = plan["entry"]
+    stop = plan["stop"]
+    tp1 = plan["tp1"]
+    tp2 = plan.get("tp2")
+    lots = plan["lots"]
+    stop_pct = round(abs(entry - stop) / entry * 100, 2) if entry > 0 else 0
+    r1 = _r_multiple(entry, stop, tp1)
+    notional = lots * 100 * entry
+    bp_pct = round(notional / bp_idr * 100, 1) if bp_idr > 0 else 0
+    tp2_s = f" | T2 {tp2}" if tp2 is not None else ""
+    return (
+        f"[L4-{plan['mode']}] {ticker} {side}\n"
+        f"E {entry} | SL {stop} ({stop_pct}%) | T1 {tp1} ({r1:.1f}R){tp2_s}\n"
+        f"Size {lots}lot ({notional/1e6:.2f}M/{bp_pct}%BP) | Conv {confidence}\n"
+        f"{plan.get('rationale','')}"
+    )
+
+
+def format_daily_note_block(date: str, plans: list[dict]) -> str:
+    """plans: list of {ticker, plan (dict), side, confidence}."""
+    lines = [f"## L4 Trade Plan — {date}", ""]
+    for p in plans:
+        pl = p["plan"]
+        lines.append(
+            f"- **{p['ticker']}** ({p['side']}, conv {p['confidence']}): "
+            f"E {pl['entry']} / SL {pl['stop']} / "
+            f"T1 {pl['tp1']} / {pl['lots']}lot — {pl.get('rationale','')}"
+        )
+    return "\n".join(lines) + "\n"
