@@ -1,0 +1,15 @@
+[
+  {
+    "order_id": "CR-12346",
+    "stock_code": "ADMR",
+    "side": "buy",
+    "order_type": "LIMIT_DAY",
+    "price": 1855,
+    "shares": 5000,
+    "status": "rejected",
+    "filled_shares": 0,
+    "reject_reason": "insufficient_funds",
+    "created_at": "2026-04-24T08:31:05+07:00",
+    "updated_at": "2026-04-24T08:31:05+07:00"
+  }
+]

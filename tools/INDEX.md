@@ -33,6 +33,11 @@
 | `l4_synth.py`             | L4 IDX tick math + size_plan + prompt builders (A/B) + parser + struct builder + telegram/daily-note formatters | L4    |
 | `l4_dim_gather.py`        | L4 structure + indicators (A) + orderbook snapshot + last tape note (B); graceful-degrade | L4    |
 | `l4_healthcheck.py`       | L4 pre-run gate: aggressiveness / BP / duplicate / wait_bid_offer / ticker regex / empty queue | L4    |
+| `l5_synth.py`             | L5 pure helpers: validators, payload builders, circuit-breaker, reconcile decision tree, telegram/daily-note formatters | L5 |
+| `l5_dim_gather.py`        | L5 Carina reads: cash balance, open orders, position detail; graceful-degrade | L5 |
+| `l5_healthcheck.py`       | L5 pre-run gate: aggressiveness=off / token age / WIB window / intraday ticker+plan+stale guard | L5 |
+| `l5_executor.py`          | L5 Carina order wrappers: place entry/stop/TP + cancel; exponential-backoff retry + idempotency key | L5 |
+| `l5_run.py`               | L5 intraday CLI: `python -m tools.trader.l5_run --ticker T` (called by L4 Mode B Popen) | L5 |
 | `telegram_client.py`      | Telegram alert sender for L0–L4 + execution + intent events | Any   |
 | `portfolio_health.py`     | L0 portfolio state: equity, MTD, drawdown, exposure, flags   | L0    |
 | `vault_sync.py`           | Light vault → Airtable dashboard sync (Journal/Lessons/PortfolioLog tables, upsert) | EOD |

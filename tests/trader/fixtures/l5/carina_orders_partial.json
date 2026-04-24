@@ -1,0 +1,15 @@
+[
+  {
+    "order_id": "CR-12345",
+    "stock_code": "ADMR",
+    "side": "buy",
+    "order_type": "LIMIT_DAY",
+    "price": 1855,
+    "shares": 5000,
+    "status": "partial",
+    "filled_shares": 2000,
+    "avg_fill_price": 1854,
+    "created_at": "2026-04-24T08:31:00+07:00",
+    "updated_at": "2026-04-24T09:45:00+07:00"
+  }
+]

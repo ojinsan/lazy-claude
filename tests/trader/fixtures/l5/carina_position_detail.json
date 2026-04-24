@@ -1,0 +1,9 @@
+{
+  "stock_code": "ADMR",
+  "lot": 50,
+  "shares": 5000,
+  "avg_price": 1855,
+  "current_price": 1870,
+  "unrealized_pnl": 75000,
+  "unrealized_pnl_pct": 0.81
+}

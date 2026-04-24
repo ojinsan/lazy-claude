@@ -12,7 +12,7 @@ Legend for `status`:
 
 | Tool | Used-by-layer | Status | Notes |
 |------|---------------|--------|-------|
-| `current_trade.py` | L0, L1, L2, L3, L4, L5 | improved | spec #1 — shared schema + save/load; spec #5 added `trader_status.intraday_notch:int`; spec #6 added `ListItem.plan:TradePlan` |
+| `current_trade.py` | L0, L1, L2, L3, L4, L5 | improved | spec #1 — shared schema + save/load; spec #5 added `trader_status.intraday_notch:int`; spec #6 added `ListItem.plan:TradePlan`; spec #7 added `ExecutionState`+`FillEvent`+`ListItem.execution` |
 | `ratelimit.py` | L2, L3, L5 | live | spec #1 — token buckets |
 | `claude_model.py` | L0, L1, L2, L3, L4 | live | spec #1 — Opus↔openclaude fallback; spec #5 uses both paths (openclaude judge + Opus BUY-NOW confirm); spec #6 L4 Opus plan synth |
 | `daily_note.py` | L0, L1, L2, L3, L4 | live | spec #2 — shared daily-note append; spec #5 event-driven L3 entries; spec #6 L4 plan block |
@@ -84,6 +84,11 @@ Legend for `status`:
 | `l4_synth.py` | L4 | live | spec #6 — IDX tick math + size_plan + prompt builders (Mode A/B) + parser + struct builder + telegram/daily-note formatters |
 | `l4_dim_gather.py` | L4 | live | spec #6 — structure + indicators (Mode A) + orderbook snapshot + last tape note (Mode B); graceful-degrade on gather failures |
 | `l4_healthcheck.py` | L4 | live | spec #6 — pre-run gate: aggressiveness=off / BP / duplicate-guard / wait_bid_offer / ticker regex / empty queue |
+| `l5_synth.py` | L5 | live | spec #7 — validators, payload builders, circuit-breaker, reconcile decision tree (classify_order_state/is_order_stale/append_fill), telegram/daily-note formatters |
+| `l5_dim_gather.py` | L5 | live | spec #7 — cash, open orders, position detail from Carina; graceful-degrade |
+| `l5_healthcheck.py` | L5 | live | spec #7 — pre-run gate: aggressiveness=off / Carina token age / WIB window (pre_open 08:00–08:45, reconcile 09:00–15:15) / intraday ticker+plan+stale-plan guard |
+| `l5_executor.py` | L5 | live | spec #7 — place/cancel/stop/TP wrappers with exponential-backoff retry (3 attempts) + idempotency key `(ticker, leg, plan_updated_at)` |
+| `l5_run.py` | L5 | live | spec #7 — CLI entrypoint for intraday fire: `python -m tools.trader.l5_run --ticker T` |
 
 ## Archived references
 
@@ -179,5 +184,5 @@ Not blockers for spec #2 acceptance; revisit when the trigger appears.
 | #4 | L2 Screening | in progress (plan-complete, pre-dry-run) |
 | #5 | L3 Monitoring | in progress (plan-complete, pre-dry-run) |
 | #6 | L4 Trade Plan | in progress (plan-complete, pre-dry-run) |
-| #7 | L5 Execute | not started |
+| #7 | L5 Execute | in progress (plan-complete, pre-dry-run) |
 | #8 | Orchestration / CRON | not started |

@@ -13,3 +13,4 @@ Master design: `docs/superpowers/specs/2026-04-19-trading-agents-revamp-spec-0-m
 | L2 Screening | `playbooks/trader/layer-2-screening.md` |
 | L3 Monitoring | `playbooks/trader/layer-3-monitoring.md` |
 | L4 Tradeplan | `playbooks/trader/layer-4-tradeplan.md` |
+| L5 Execute | `playbooks/trader/layer-5-execute.md` |

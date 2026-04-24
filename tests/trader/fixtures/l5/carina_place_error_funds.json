@@ -1,0 +1,5 @@
+{
+  "error": "insufficient_funds",
+  "message": "Cash balance 2100000 < required 9250000",
+  "code": 422
+}

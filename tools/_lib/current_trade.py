@@ -40,12 +40,35 @@ class TradePlan:
 
 
 @dataclass
+class FillEvent:
+    ts: str
+    lot: int
+    price: float
+    order_id: str
+    leg: str  # entry | stop | tp1 | tp2
+
+
+@dataclass
+class ExecutionState:
+    status: str = "pending"   # pending|placed|partial|filled|cancelled|failed|closed
+    path: str = ""            # pre_open|intraday|reconcile
+    entry_order_id: Optional[str] = None
+    stop_order_id: Optional[str] = None
+    tp1_order_id: Optional[str] = None
+    tp2_order_id: Optional[str] = None
+    fills: list[FillEvent] = field(default_factory=list)
+    last_check: str = ""
+    last_error: Optional[str] = None
+
+
+@dataclass
 class ListItem:
     ticker: str
     confidence: int
     current_plan: Optional[CurrentPlan] = None
     details: str = ""
     plan: Optional[TradePlan] = None
+    execution: Optional[ExecutionState] = None
 
 
 @dataclass
@@ -140,12 +163,27 @@ def _parse_list_item(d: dict[str, Any]) -> ListItem:
             rationale=raw_tp.get("rationale", ""),
             updated_at=raw_tp.get("updated_at", ""),
         )
+    ex = None
+    raw_ex = d.get("execution")
+    if raw_ex is not None:
+        ex = ExecutionState(
+            status=raw_ex.get("status", "pending"),
+            path=raw_ex.get("path", ""),
+            entry_order_id=raw_ex.get("entry_order_id"),
+            stop_order_id=raw_ex.get("stop_order_id"),
+            tp1_order_id=raw_ex.get("tp1_order_id"),
+            tp2_order_id=raw_ex.get("tp2_order_id"),
+            fills=[FillEvent(**fe) for fe in raw_ex.get("fills", [])],
+            last_check=raw_ex.get("last_check", ""),
+            last_error=raw_ex.get("last_error"),
+        )
     return ListItem(
         ticker=d["ticker"],
         confidence=int(d["confidence"]),
         current_plan=cp,
         details=d.get("details", ""),
         plan=tp,
+        execution=ex,
     )
 
 
