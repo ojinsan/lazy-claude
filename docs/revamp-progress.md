@@ -12,17 +12,17 @@ Legend for `status`:
 
 | Tool | Used-by-layer | Status | Notes |
 |------|---------------|--------|-------|
-| `current_trade.py` | L0, L1, L2, L3, L4, L5 | improved | spec #1 — shared schema + save/load; spec #5 added `trader_status.intraday_notch:int` |
+| `current_trade.py` | L0, L1, L2, L3, L4, L5 | improved | spec #1 — shared schema + save/load; spec #5 added `trader_status.intraday_notch:int`; spec #6 added `ListItem.plan:TradePlan` |
 | `ratelimit.py` | L2, L3, L5 | live | spec #1 — token buckets |
-| `claude_model.py` | L0, L1, L2, L3, L4 | live | spec #1 — Opus↔openclaude fallback; spec #5 uses both paths (openclaude judge + Opus BUY-NOW confirm) |
-| `daily_note.py` | L0, L1, L2, L3 | live | spec #2 — shared daily-note append; spec #5 event-driven L3 entries |
+| `claude_model.py` | L0, L1, L2, L3, L4 | live | spec #1 — Opus↔openclaude fallback; spec #5 uses both paths (openclaude judge + Opus BUY-NOW confirm); spec #6 L4 Opus plan synth |
+| `daily_note.py` | L0, L1, L2, L3, L4 | live | spec #2 — shared daily-note append; spec #5 event-driven L3 entries; spec #6 L4 plan block |
 
 ## `tools/trader/*.py` — Used By
 
 | Tool | Used-by-layer | Status | Notes |
 |------|---------------|--------|-------|
 | `airtable_client.py` |   | live |   |
-| `api.py` | L1, L2, L3 | live | `rag_search` via `fund_manager_client`; `_stockbit_get` used by retail-avoider; `get_price_history(60d)` for L2 dim-1; `get_price` + `get_stockbit_index('IHSG')` for L3 |
+| `api.py` | L1, L2, L3, L4 | live | `rag_search` via `fund_manager_client`; `_stockbit_get` used by retail-avoider; `get_price_history(60d)` for L2 dim-1; `get_price` + `get_stockbit_index('IHSG')` for L3; `compute_indicators_from_price_data` for L4 ATR |
 | `auto_trigger.py` |   | live |   |
 | `broker_profile.py` | L2 | live | `analyze_players(ticker)` — L2 dim-2 smart-money read |
 | `catalyst_calendar.py` | L1 | live | `build()` populates today's events for L1 Opus prompt |
@@ -37,7 +37,7 @@ Legend for `status`:
 | `l1a_healthcheck.py` | L1 | live | GET /api/v1/insights/last; fresh/stale gate for L1 playbook |
 | `l1_synth.py` | L1 | live | pure validators + pool union + telegram recap format (spec #3) |
 | `macro.py` | L1 | live | `assess_regime()` live probe into L1 Opus prompt |
-| `market_structure.py` |   | live |   |
+| `market_structure.py` | L4 | live | spec #6 — `analyze_market_structure` provides S/R + wyckoff + swing points for L4 entry/stop placement |
 | `narrative.py` | L1 | live | seeds narrative source tagging convention |
 | `orderbook_poller.py` | L3 | live | live orderbook polling → `runtime/monitoring/orderbook_state/{t}.json` (consumed by L3) |
 | `orderbook_ws.py` |   | live |   |
@@ -64,7 +64,7 @@ Legend for `status`:
 | `stockbit_screener.py` |   | live |   |
 | `tape_runner.py` | L3 | live | `snapshot(t)` — composite tape state (ideal_markup/healthy_markup/spring_ready/fake_support/distribution_trap/...) + confidence, per-cycle L3 input |
 | `l0_synth.py` | L0 | live | mechanical data reshaping for L0 playbook (spec #2) |
-| `telegram_client.py` | L0, L1, L2, L3 | live | `send_message()` for redflag alerts (L0) + L1 recap + L2 abort/recap + L3 event-driven (BUY-NOW / thesis-break / notch) |
+| `telegram_client.py` | L0, L1, L2, L3, L4 | live | `send_message()` for redflag alerts (L0) + L1 recap + L2 abort/recap + L3 event-driven (BUY-NOW / thesis-break / notch) + L4 plan event per finalized ticker |
 | `think.py` |   | live |   |
 | `tick_walls.py` |   | live |   |
 | `tradeplan.py` |   | live |   |
@@ -77,10 +77,13 @@ Legend for `status`:
 | `l2_dim_gather.py` | L2 | live | spec #4 — 4-dim gatherers (price/broker/book/narrative) for per-ticker judge prompt |
 | `l2_synth.py` | L2 | live | spec #4 — pure helpers (promotion truth table, prompt builders, response parsers, telegram recap) |
 | `bid_offer_patterns.py` | L3 | live | spec #5 — PRD port: `analyze_near_book` + `wall_withdrawn` pattern analysis |
-| `l3_buy_now_ledger.py` | L3 | live | spec #5 — daily idempotency ledger for `/trade:tradeplan` invocation |
+| `l3_buy_now_ledger.py` | L3, L4 | live | spec #5 — daily idempotency ledger for `/trade:tradeplan` invocation; spec #6 L4 reads ledger to detect Mode B (L3 BUY-NOW recent) |
 | `l3_dim_gather.py` | L3 | live | spec #5 — per-ticker tape + thick-wall + spring + orderbook + running-trade gather |
 | `l3_healthcheck.py` | L3 | live | spec #5 — pre-run gate: market-hours / non-empty universe / orderbook_state dir |
 | `l3_synth.py` | L3 | live | spec #5 — pure helpers: judge prompt/parse, buy_now_gate, merge_plan_update, telegram/daily-note, opus confirm |
+| `l4_synth.py` | L4 | live | spec #6 — IDX tick math + size_plan + prompt builders (Mode A/B) + parser + struct builder + telegram/daily-note formatters |
+| `l4_dim_gather.py` | L4 | live | spec #6 — structure + indicators (Mode A) + orderbook snapshot + last tape note (Mode B); graceful-degrade on gather failures |
+| `l4_healthcheck.py` | L4 | live | spec #6 — pre-run gate: aggressiveness=off / BP / duplicate-guard / wait_bid_offer / ticker regex / empty queue |
 
 ## Archived references
 
@@ -175,6 +178,6 @@ Not blockers for spec #2 acceptance; revisit when the trigger appears.
 | #3 | L1 + L1-A + L1-B | complete (dry-run passed 2026-04-21) |
 | #4 | L2 Screening | in progress (plan-complete, pre-dry-run) |
 | #5 | L3 Monitoring | in progress (plan-complete, pre-dry-run) |
-| #6 | L4 Trade Plan | not started |
+| #6 | L4 Trade Plan | in progress (plan-complete, pre-dry-run) |
 | #7 | L5 Execute | not started |
 | #8 | Orchestration / CRON | not started |

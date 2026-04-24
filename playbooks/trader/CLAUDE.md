@@ -8,7 +8,7 @@ Each layer has one combined skill+workflow playbook. Slash command under `.claud
 | L1 Insight | `layer-1-insight.md` | `/trade:insight` | live |
 | L2 Screening | `layer-2-screening.md` | `/trade:screening` | live |
 | L3 Monitoring | `layer-3-monitoring.md` | `/trade:monitor` | live |
-| L4 Tradeplan | stub — spec #6 | `/trade:tradeplan` | stub |
+| L4 Tradeplan | `layer-4-tradeplan.md` | `/trade:tradeplan` | live |
 | L5 Execute | stub — spec #7 | `/trade:execute` | stub |
 
 Master design: `docs/superpowers/specs/2026-04-19-trading-agents-revamp-spec-0-master-design.md`.

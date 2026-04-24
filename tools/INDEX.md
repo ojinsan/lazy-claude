@@ -30,6 +30,9 @@
 | `l3_dim_gather.py`        | L3 per-ticker tape + thick-wall + spring + orderbook + running-trade gather | L3    |
 | `l3_healthcheck.py`       | L3 pre-run gate: market-hours, non-empty universe, orderbook_state dir | L3    |
 | `l3_synth.py`             | L3 pure helpers: prompt/parse, buy_now_gate, merge_plan_update, telegram/daily-note, opus confirm | L3    |
+| `l4_synth.py`             | L4 IDX tick math + size_plan + prompt builders (A/B) + parser + struct builder + telegram/daily-note formatters | L4    |
+| `l4_dim_gather.py`        | L4 structure + indicators (A) + orderbook snapshot + last tape note (B); graceful-degrade | L4    |
+| `l4_healthcheck.py`       | L4 pre-run gate: aggressiveness / BP / duplicate / wait_bid_offer / ticker regex / empty queue | L4    |
 | `telegram_client.py`      | Telegram alert sender for L0–L4 + execution + intent events | Any   |
 | `portfolio_health.py`     | L0 portfolio state: equity, MTD, drawdown, exposure, flags   | L0    |
 | `vault_sync.py`           | Light vault → Airtable dashboard sync (Journal/Lessons/PortfolioLog tables, upsert) | EOD |
