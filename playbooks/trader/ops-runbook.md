@@ -50,7 +50,7 @@ Key patterns:
 
 ```bash
 cd /home/lazywork/workspace
-claude --dangerously-skip-permissions --bare \
+claude --dangerously-skip-permissions \
   -p "Non-interactive cron run. Read the instructions in .claude/commands/trade/LAYER.md and execute them. Run to completion and exit. Do not wait for user input."
 ```
 

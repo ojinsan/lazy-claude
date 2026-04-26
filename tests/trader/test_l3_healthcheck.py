@@ -7,8 +7,8 @@ from tools._lib import current_trade as ct_mod
 from tools.trader import l3_healthcheck
 
 
-def _wib(h, m=0):
-    return dt.datetime(2026, 4, 22, h, m, tzinfo=dt.timezone(dt.timedelta(hours=7)))
+def _wib(h, m=0, day=22):
+    return dt.datetime(2026, 4, day, h, m, tzinfo=dt.timezone(dt.timedelta(hours=7)))
 
 
 class TestL3Healthcheck(unittest.TestCase):
@@ -52,6 +52,29 @@ class TestL3Healthcheck(unittest.TestCase):
         out = l3_healthcheck.check(ct, now_wib=_wib(12, 10), orderbook_state_dir="/nonexistent/ob_dir_zzz")
         self.assertFalse(out["ok"])
         self.assertIn("tape", out["reason"].lower())
+
+
+    def test_saturday_rejects(self):
+        # 2026-04-25 is Saturday
+        ct = ct_mod.CurrentTrade()
+        ct.trader_status.holdings.append(ct_mod.Holding(ticker="ADMR", lot=10, avg_price=1855, current_price=1860, pnl_pct=0.27))
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "ob"))
+            saturday = dt.datetime(2026, 4, 25, 12, 0, tzinfo=dt.timezone(dt.timedelta(hours=7)))
+            out = l3_healthcheck.check(ct, now_wib=saturday, orderbook_state_dir=os.path.join(d, "ob"))
+        self.assertFalse(out["ok"])
+        self.assertIn("not a trading day", out["reason"].lower())
+
+    def test_holiday_rejects(self):
+        # 2026-01-01 is in idx_holidays.json
+        ct = ct_mod.CurrentTrade()
+        ct.trader_status.holdings.append(ct_mod.Holding(ticker="ADMR", lot=10, avg_price=1855, current_price=1860, pnl_pct=0.27))
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "ob"))
+            holiday = dt.datetime(2026, 1, 1, 12, 0, tzinfo=dt.timezone(dt.timedelta(hours=7)))
+            out = l3_healthcheck.check(ct, now_wib=holiday, orderbook_state_dir=os.path.join(d, "ob"))
+        self.assertFalse(out["ok"])
+        self.assertIn("not a trading day", out["reason"].lower())
 
 
 if __name__ == "__main__":

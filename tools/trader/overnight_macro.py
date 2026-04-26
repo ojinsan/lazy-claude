@@ -86,9 +86,14 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     data = fetch_all()
     path = save(data)
+    if "error" in data and len(data) == 1:
+        print(f"Overnight macro: ERROR — {data['error']}")
+        sys.exit(1)
     print(f"Overnight macro: {len(data)} instruments → {path}")
     for k, v in data.items():
-        if "error" not in v:
+        if not isinstance(v, dict):
+            print(f"  {k:10s}  ERROR: {v}")
+        elif "error" not in v:
             print(f"  {k:10s}  {v['close']:>12.4f}  {v['change_pct']:>+7.2f}%")
         else:
             print(f"  {k:10s}  ERROR: {v.get('error','?')}")

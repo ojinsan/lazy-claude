@@ -69,7 +69,7 @@ run_claude_job() {
     local prompt="Non-interactive cron run. Read the instructions in $command_file and execute them. Run to completion and exit. Do not wait for user input."
     log "→ $label start"
     cd "$WORKSPACE"
-    "$CLAUDE" --dangerously-skip-permissions --bare -p "$prompt" >> "$LOG" 2>&1 \
+    "$CLAUDE" --dangerously-skip-permissions -p "$prompt" >> "$LOG" 2>&1 \
         && log "← $label done" \
         || log "← $label FAILED (exit $?)"
 }
@@ -82,13 +82,13 @@ run_monitoring_job() {
     log "→ $label start"
     cd "$WORKSPACE"
     if [[ -f "$MONITORING_SETTINGS" ]] && \
-       "$CLAUDE" --dangerously-skip-permissions --bare --settings "$MONITORING_SETTINGS" \
+       "$CLAUDE" --dangerously-skip-permissions --settings "$MONITORING_SETTINGS" \
                  -p "$prompt" >> "$LOG" 2>&1; then
         log "← $label done"
         return 0
     fi
     log "WARN $label --settings run failed — falling back to default Claude"
-    "$CLAUDE" --dangerously-skip-permissions --bare -p "$prompt" >> "$LOG" 2>&1 \
+    "$CLAUDE" --dangerously-skip-permissions -p "$prompt" >> "$LOG" 2>&1 \
         && log "← $label done" \
         || log "← $label FAILED (exit $?)"
 }
