@@ -89,21 +89,25 @@ def format_telegram_recap(
 ) -> str:
     lines: list[str] = []
     if rag_empty:
-        lines.append("⚠️ RAG empty")
+        lines.append("⚠️ <b>RAG empty</b>")
     if prev_regime and regime and prev_regime != regime:
-        lines.append(f"⚠️ regime flipped: {prev_regime} → {regime}")
-    lines.append(f"L1 {now_hhmm} — regime: {regime.upper()}")
-    lines.append("Sectors: " + ", ".join(sectors))
-    lines.append(f"Themes ({len(narratives)}):")
-    for n in narratives:
-        content = getattr(n, "content", None) or (n.get("content") if isinstance(n, dict) else "")
-        lines.append(f"  • {content}")
+        lines.append(f"⚠️ <b>regime flipped:</b> {prev_regime} → {regime}")
+    lines.append(f"🌍 <b>L1 Insight — {now_hhmm}</b>")
+    lines.append("")
+    lines.append(f"<b>Regime:</b> {regime.upper()}")
+    if sectors:
+        lines.append("<b>Sectors:</b> " + ", ".join(sectors))
+    lines.append("")
+    if narratives:
+        lines.append(f"<b>Themes ({len(narratives)}):</b>")
+        for n in narratives:
+            content = getattr(n, "content", None) or (n.get("content") if isinstance(n, dict) else "")
+            lines.append(f"• {content}")
     wl_tickers = [_ticker_of(w).upper() for w in watchlist if _ticker_of(w)]
     n = len(wl_tickers)
-    if n <= 3:
-        wl_str = ", ".join(wl_tickers)
-        lines.append(f"Watchlist: {n} ({wl_str})")
-    else:
-        wl_str = ", ".join(wl_tickers[:3])
-        lines.append(f"Watchlist: {n} ({wl_str} …)")
+    wl_str = ", ".join(wl_tickers[:3]) + (" …" if n > 3 else "")
+    lines.append("")
+    lines.append(f"<b>Watchlist:</b> {n} ({wl_str})")
+    lines.append("")
+    lines.append(f"<i>Scarlett · L1 · fresh {l1a_fresh_minutes}min</i>")
     return "\n".join(lines)

@@ -318,20 +318,20 @@ class FormattersTest(unittest.TestCase):
 
     def test_fmt_place_event(self):
         msg = fmt_place_event("ADMR", "buy", 50, 1855, "CR-12345")
-        self.assertIn("[L5 place]", msg)
+        self.assertIn("PLACE", msg)
         self.assertIn("ADMR", msg)
         self.assertIn("50lot", msg)
         self.assertIn("CR-12345", msg)
 
     def test_fmt_fill_event(self):
         msg = fmt_fill_event("ADMR", 50, 1855, 1830, 1955)
-        self.assertIn("[L5 fill]", msg)
-        self.assertIn("stop@1830", msg)
-        self.assertIn("TP1@1955", msg)
+        self.assertIn("FILL", msg)
+        self.assertIn("1,830", msg)
+        self.assertIn("1,955", msg)
 
     def test_fmt_error_event_simple(self):
         msg = fmt_error_event("ADMR", "insufficient_funds")
-        self.assertIn("[L5 error]", msg)
+        self.assertIn("ERROR", msg)
         self.assertIn("insufficient_funds", msg)
 
     def test_fmt_error_event_with_amounts(self):
@@ -342,13 +342,12 @@ class FormattersTest(unittest.TestCase):
 
     def test_fmt_stale_event(self):
         msg = fmt_stale_event("ADMR", 6.3)
-        self.assertIn("[L5 stale]", msg)
+        self.assertIn("STALE", msg)
         self.assertIn("6h", msg)
-        self.assertIn("cancel?", msg)
 
     def test_fmt_circuit_breaker(self):
         msg = fmt_circuit_breaker_event("ADMR", 1855, 1952)
-        self.assertIn("[L5 abort]", msg)
+        self.assertIn("DRIFT", msg)
         self.assertIn("ADMR", msg)
 
     def test_fmt_daily_note_block_empty(self):

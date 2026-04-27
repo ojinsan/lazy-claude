@@ -274,13 +274,20 @@ def format_telegram_event(
     r1 = _r_multiple(entry, stop, tp1)
     notional = lots * 100 * entry
     bp_pct = round(notional / bp_idr * 100, 1) if bp_idr > 0 else 0
-    tp2_s = f" | T2 {tp2}" if tp2 is not None else ""
-    return (
-        f"[L4-{plan['mode']}] {ticker} {side}\n"
-        f"E {entry} | SL {stop} ({stop_pct}%) | T1 {tp1} ({r1:.1f}R){tp2_s}\n"
-        f"Size {lots}lot ({notional/1e6:.2f}M/{bp_pct}%BP) | Conv {confidence}\n"
-        f"{plan.get('rationale','')}"
-    )
+    tp2_line = f"\n• <b>T2:</b> {tp2:,.0f}" if tp2 is not None else ""
+    rationale = plan.get("rationale", "")
+    lines = [
+        f"🎯 <b>{ticker}</b> {side.upper()} · Mode {plan['mode']} · conf {confidence}",
+        "",
+        f"• <b>Entry:</b> {entry:,.0f}",
+        f"• <b>Stop:</b> {stop:,.0f} ({stop_pct}%)",
+        f"• <b>T1:</b> {tp1:,.0f} ({r1:.1f}R){tp2_line}",
+        f"• <b>Size:</b> {lots}lot · {notional/1e6:.1f}M / {bp_pct}%BP",
+    ]
+    if rationale:
+        lines += ["", f"<blockquote>{rationale}</blockquote>"]
+    lines += ["", "<i>Scarlett · L4</i>"]
+    return "\n".join(lines)
 
 
 def format_daily_note_block(date: str, plans: list[dict]) -> str:

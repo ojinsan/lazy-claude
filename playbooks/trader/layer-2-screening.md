@@ -38,7 +38,7 @@ retail_path = pathlib.Path(f"vault/data/retail-{today_wib.isoformat()}.json")
 hc = l2_healthcheck.check(ct_prior, str(hapcu_path), str(retail_path))
 if not hc["ok"]:
     ct.save(ct_prior, layer="l2", status="error", note=f"healthcheck: {hc['reason']}")
-    telegram_client.send_message(f"⚠️ L2 abort — {hc['reason']}")
+    telegram_client.send_message(f"⚠️ <b>L2 abort</b> — {hc['reason']}")
     exit()
 ```
 
@@ -142,7 +142,7 @@ for t in universe:
 if fallback_count * 2 > len(universe):
     ct.save(ct_prior, layer="l2", status="error",
             note=f"judge fallback {fallback_count}/{len(universe)} — upstream fail")
-    telegram_client.send_message(f"⚠️ L2 abort — judge fallback {fallback_count}/{len(universe)}")
+    telegram_client.send_message(f"⚠️ <b>L2 abort</b> — judge fallback {fallback_count}/{len(universe)}")
     exit()
 ```
 

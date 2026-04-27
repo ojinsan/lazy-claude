@@ -176,16 +176,22 @@ def format_telegram_recap(
 ) -> str:
     """Always-send recap. Empty superlist → short form. Otherwise top-3 per bucket."""
     if not superlist:
-        return f"🔍 L2 {now_hhmm}: 0 promoted ({n_judged} judged, regime={regime})"
+        return f"🧭 <b>L2 Screening — {now_hhmm}</b>\n\n0 promoted · {n_judged} judged · regime: {regime}\n\n<i>Scarlett · L2</i>"
 
-    lines = [f"🔍 L2 {now_hhmm} — {len(superlist)} promoted, {len(exitlist)} exit ({n_judged} judged, regime={regime})"]
-    lines.append("Superlist:")
-    for item in superlist[:3]:
-        lines.append(f"  • {item['ticker']} [{item['current_plan']}] {item.get('details', '')}")
-    if exitlist:
-        lines.append("Exit:")
-        for item in exitlist[:3]:
-            lines.append(f"  • {item['ticker']} [{item['current_plan']}] {item.get('details', '')}")
+    lines = [f"🧭 <b>L2 Screening — {now_hhmm}</b>"]
+    delta = ""
     if prev_superlist_count != len(superlist):
-        lines.append(f"(prev superlist: {prev_superlist_count})")
+        delta = f" (prev {prev_superlist_count})"
+    lines.append(f"<b>{len(superlist)} promoted{delta}</b> · {len(exitlist)} exit · {n_judged} judged · regime: {regime}")
+    lines.append("")
+    lines.append("<b>Superlist:</b>")
+    for item in superlist[:5]:
+        lines.append(f"• <b>{item['ticker']}</b> [{item['current_plan']}] {item.get('details', '')}")
+    if exitlist:
+        lines.append("")
+        lines.append("<b>Exit:</b>")
+        for item in exitlist[:3]:
+            lines.append(f"• <b>{item['ticker']}</b> [{item['current_plan']}] {item.get('details', '')}")
+    lines.append("")
+    lines.append("<i>Scarlett · L2</i>")
     return "\n".join(lines)

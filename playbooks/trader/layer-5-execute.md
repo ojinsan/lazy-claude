@@ -41,7 +41,7 @@ hc = check(ct, path, now=now)
 if not hc["ok"]:
     # send telegram warn, mark skipped
     from tools.trader.telegram_client import send_message
-    send_message(f"[L5 skip] {hc['reason']}")
+    send_message(f"⚠️ <b>L5 skip</b> — {hc['reason']}")
     ct_mod.save(ct, "l5", "skipped", note=hc["reason"])
     exit(0)
 ```

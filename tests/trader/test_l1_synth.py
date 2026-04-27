@@ -107,11 +107,13 @@ class FormatTelegramRecapTest(unittest.TestCase):
             rag_empty=False,
             now_hhmm="04:00",
         )
-        self.assertIn("L1 04:00 — regime: CAUTIOUS", s)
-        self.assertIn("Sectors: coal, banking, consumer", s)
-        self.assertIn("Themes (3):", s)
+        self.assertIn("<b>L1 Insight — 04:00</b>", s)
+        self.assertIn("<b>Regime:</b> CAUTIOUS", s)
+        self.assertIn("<b>Sectors:</b> coal, banking, consumer", s)
+        self.assertIn("<b>Themes (3):</b>", s)
         self.assertIn("• coal exporters China winter", s)
-        self.assertIn("Watchlist: 5 (ADMR, BUMI, BBCA …)", s)
+        self.assertIn("<b>Watchlist:</b> 5 (ADMR, BUMI, BBCA …)", s)
+        self.assertIn("Scarlett · L1 · fresh 10min", s)
         self.assertNotIn("⚠️", s)
 
     def test_regime_flip_prefix(self):
@@ -120,7 +122,9 @@ class FormatTelegramRecapTest(unittest.TestCase):
             watchlist=self._wl(["A", "B", "C"]),
             prev_regime="risk_on", l1a_fresh_minutes=10, rag_empty=False, now_hhmm="04:00",
         )
-        self.assertIn("⚠️ regime flipped: risk_on → risk_off", s)
+        self.assertIn("⚠️", s)
+        self.assertIn("regime flipped:", s)
+        self.assertIn("risk_on → risk_off", s)
 
     def test_rag_empty_prefix(self):
         s = ls.format_telegram_recap(
@@ -128,7 +132,8 @@ class FormatTelegramRecapTest(unittest.TestCase):
             watchlist=self._wl(["A"]),
             prev_regime="cautious", l1a_fresh_minutes=10, rag_empty=True, now_hhmm="04:00",
         )
-        self.assertIn("⚠️ RAG empty", s)
+        self.assertIn("⚠️", s)
+        self.assertIn("RAG empty", s)
 
     def test_both_prefixes_rag_first_then_flip(self):
         s = ls.format_telegram_recap(
@@ -136,8 +141,8 @@ class FormatTelegramRecapTest(unittest.TestCase):
             watchlist=self._wl(["A"]),
             prev_regime="risk_on", l1a_fresh_minutes=10, rag_empty=True, now_hhmm="04:00",
         )
-        rag_idx = s.index("⚠️ RAG empty")
-        flip_idx = s.index("⚠️ regime flipped")
+        rag_idx = s.index("RAG empty")
+        flip_idx = s.index("regime flipped")
         self.assertLess(rag_idx, flip_idx)
 
     def test_watchlist_three_or_fewer_no_ellipsis(self):
@@ -146,7 +151,8 @@ class FormatTelegramRecapTest(unittest.TestCase):
             watchlist=self._wl(["ADMR", "BBCA", "BMRI"]),
             prev_regime="cautious", l1a_fresh_minutes=10, rag_empty=False, now_hhmm="04:00",
         )
-        self.assertIn("Watchlist: 3 (ADMR, BBCA, BMRI)", s)
+        self.assertIn("Watchlist:", s)
+        self.assertIn("3 (ADMR, BBCA, BMRI)", s)
         self.assertNotIn("…", s)
 
 

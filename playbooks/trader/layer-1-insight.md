@@ -31,7 +31,7 @@ from tools.trader import telegram_client
 mins = hc["last_seen_minutes_ago"]
 note = f"L1-A stale {mins}min" if mins is not None else "L1-A backend unreachable"
 ct.save(ct_prior, layer="l1", status="error", note=note)
-telegram_client.send_message(f"⚠️ L1 abort — {note}")
+telegram_client.send_message(f"⚠️ <b>L1 abort</b> — {note}")
 exit()
 ```
 
@@ -218,7 +218,7 @@ if errors and not retry_used:
 
 if errors:
     ct.save(ct_prior, layer="l1", status="error", note="validation: " + "; ".join(errors))
-    telegram_client.send_message("⚠️ L1 validation failed: " + "; ".join(errors))
+    telegram_client.send_message("⚠️ <b>L1 validation failed</b> — " + "; ".join(errors))
     exit()
 ```
 

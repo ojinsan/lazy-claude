@@ -159,34 +159,37 @@ def append_fill(execution: ExecutionState, order: dict,
 
 def fmt_place_event(ticker: str, side: str, lots: int, price: float,
                     order_id: str) -> str:
-    return f"[L5 place] {ticker} {side} {lots}lot @ {price:.0f} (order {order_id})"
+    return (f"🔵 <b>PLACE</b> {ticker} {side.upper()} · {lots}lot @ {price:,.0f} "
+            f"<i>(order {order_id})</i>")
 
 
 def fmt_fill_event(ticker: str, lots: int, price: float,
                    stop: float, tp1: float) -> str:
-    return (f"[L5 fill]  {ticker} entry {lots}lot @ {price:.0f}"
-            f" → placing stop@{stop:.0f} + TP1@{tp1:.0f}")
+    return (f"✅ <b>FILL</b> {ticker} · {lots}lot @ {price:,.0f}\n"
+            f"↳ stop@{stop:,.0f} · TP1@{tp1:,.0f}")
 
 
 def fmt_error_event(ticker: str, reason: str,
                     cash: Optional[float] = None,
                     notional: Optional[float] = None) -> str:
-    detail = f": {reason}"
+    msg = f"❌ <b>ERROR</b> {ticker} — {reason}"
     if cash is not None and notional is not None:
-        detail += f" — BP {cash/1e6:.1f}M < notional {notional/1e6:.2f}M"
-    return f"[L5 error] {ticker} place failed{detail}"
+        msg += f"\n<i>BP {cash/1e6:.1f}M &lt; notional {notional/1e6:.2f}M</i>"
+    return msg
 
 
 def fmt_stale_event(ticker: str, age_hours: float) -> str:
     h = int(age_hours)
-    return f"[L5 stale] {ticker} entry open {h}h, no fill; cancel? (reconcile)"
+    return (f"⏳ <b>STALE</b> {ticker} — entry open {h}h, no fill\n"
+            f"<i>Review: cancel or hold?</i>")
 
 
 def fmt_circuit_breaker_event(ticker: str, plan_price: float,
                                live_price: float) -> str:
     drift_pct = abs(live_price - plan_price) / plan_price * 100
-    return (f"[L5 abort] {ticker} price drift {drift_pct:.1f}%"
-            f" (plan {plan_price:.0f} vs live {live_price:.0f}) — skip")
+    return (f"🛑 <b>DRIFT</b> {ticker} — {drift_pct:.1f}% "
+            f"(plan {plan_price:,.0f} → live {live_price:,.0f})\n"
+            f"<i>Execution skipped</i>")
 
 
 # ── Daily note block ───────────────────────────────────────────────────────

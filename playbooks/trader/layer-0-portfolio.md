@@ -112,9 +112,9 @@ daily_note.append_section(
 from tools.trader import telegram_client
 
 if redflags:
-    lines = [f"L0 redflags ({len(redflags)}):"]
+    lines = [f"🚨 <b>L0 Redflags ({len(redflags)})</b>"]
     for h in redflags:
-        lines.append(f"• {h.ticker} — {h.details[len('redflag: '):]}")
+        lines.append(f"• <b>{h.ticker}</b> — {h.details[len('redflag: '):]}")
     telegram_client.send_message("\n".join(lines))
 ```
 

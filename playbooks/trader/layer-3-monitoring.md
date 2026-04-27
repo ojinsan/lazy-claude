@@ -29,7 +29,7 @@ hc = l3_healthcheck.check(ct_prior)
 if not hc["ok"]:
     ct.save(ct_prior, layer="l3", status="error", note=f"healthcheck: {hc['reason']}")
     if "market closed" not in hc["reason"]:
-        telegram_client.send_message(f"⚠️ L3 abort — {hc['reason']}")
+        telegram_client.send_message(f"⚠️ <b>L3 abort</b> — {hc['reason']}")
     exit()
 ```
 

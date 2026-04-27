@@ -59,7 +59,7 @@ hc = l4_healthcheck.check(ct_prior, mode=check_mode, ticker=ticker_arg, now=now)
 if not hc["ok"]:
     ct.save(ct_prior, layer="l4", status="skipped", note=f"healthcheck: {hc['reason']}")
     if "empty queue" not in hc["reason"]:
-        telegram_client.send_message(f"⚠️ L4 abort — {hc['reason']}")
+        telegram_client.send_message(f"⚠️ <b>L4 abort</b> — {hc['reason']}")
     exit()
 
 queue = hc.get("queue") or [hc["ticker"]]
@@ -118,12 +118,12 @@ for t in queue:
         parsed = l4_synth.parse_opus_plan_response(raw)
     except Exception as e:
         aborted += 1
-        telegram_client.send_message(f"⚠️ L4 {t}: opus/parse error — {e}")
+        telegram_client.send_message(f"⚠️ <b>L4 {t} error</b> — {e}")
         continue
 
     if parsed.get("abort"):
         aborted += 1
-        telegram_client.send_message(f"⚠️ L4 {t} abort: {parsed['reason']}")
+        telegram_client.send_message(f"⚠️ <b>L4 {t} abort</b> — {parsed['reason']}")
         continue
 
     sizing = l4_synth.size_plan(
@@ -134,7 +134,7 @@ for t in queue:
                                            side, now_iso)
     if plan_dict.get("abort"):
         aborted += 1
-        telegram_client.send_message(f"⚠️ L4 {t} sizing abort: {plan_dict['reason']}")
+        telegram_client.send_message(f"⚠️ <b>L4 {t} sizing abort</b> — {plan_dict['reason']}")
         continue
 
     item.plan = ct.TradePlan(**{k: v for k, v in plan_dict.items() if k != "abort"})

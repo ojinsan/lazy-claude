@@ -126,18 +126,28 @@ def format_intraday_notch_alert(ihsg_pct: float, foreign_delta: float) -> str:
 def format_telegram_events(events: list[dict[str, Any]]) -> str | None:
     if not events:
         return None
-    lines = []
+    parts = []
     for e in events:
         k = e.get("kind")
         if k == "buy_now":
-            lines.append(f"🟢 L3 BUY-NOW: {e['ticker']} @ {e['price']} — {e['rationale']}. L4 invoked.")
+            msg = (
+                f"🟢 <b>BUY-NOW — {e['ticker']}</b>\n"
+                f"<b>Price:</b> {e['price']}\n"
+                f"<blockquote>{e['rationale']}</blockquote>\n"
+                f"<i>L4 invoked · Scarlett · L3</i>"
+            )
         elif k == "thesis_break":
-            lines.append(f"🔴 L3 THESIS BREAK: {e['ticker']} — {e['rationale']}")
+            msg = (
+                f"🔴 <b>THESIS BREAK — {e['ticker']}</b>\n\n"
+                f"<blockquote>{e['rationale']}</blockquote>\n\n"
+                f"<i>Scarlett · L3</i>"
+            )
         elif k == "notch":
-            lines.append(e["message"])
+            msg = e["message"]
         else:
-            lines.append(f"L3: {k} — {e}")
-    return "\n".join(lines)
+            msg = f"L3: {k} — {e}"
+        parts.append(msg)
+    return "\n\n".join(parts)
 
 
 def format_opus_confirm_prompt(

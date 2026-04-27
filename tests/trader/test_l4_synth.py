@@ -376,14 +376,19 @@ class FormatTelegramEventTest(unittest.TestCase):
 
     def test_buy_side_header(self):
         s = format_telegram_event("ADMR", self._plan(), "buy", 82, 100_000_000)
-        self.assertIn("[L4-B]", s)
-        self.assertIn("ADMR buy", s)
-        self.assertIn("Conv 82", s)
+        self.assertIn("<b>ADMR</b>", s)
+        self.assertIn("BUY", s)
+        self.assertIn("Mode B", s)
+        self.assertIn("conf 82", s)
         self.assertIn("BUY-NOW tape", s)
+        self.assertIn("<b>Entry:</b>", s)
+        self.assertIn("<b>Stop:</b>", s)
+        self.assertIn("Scarlett · L4", s)
 
     def test_sell_side(self):
         s = format_telegram_event("BUMI", self._plan(), "sell", 60, 100_000_000)
-        self.assertIn("BUMI sell", s)
+        self.assertIn("<b>BUMI</b>", s)
+        self.assertIn("SELL", s)
 
 
 class FormatDailyNoteBlockTest(unittest.TestCase):
