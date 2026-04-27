@@ -183,7 +183,7 @@ Not blockers for spec #2 acceptance; revisit when the trigger appears.
 | #2 | L0 Portfolio | complete (dry-run passed 2026-04-20) |
 | #3 | L1 + L1-A + L1-B | complete (dry-run passed 2026-04-21) |
 | #4 | L2 Screening | in progress (plan-complete, pre-dry-run) |
-| #5 | L3 Monitoring | in progress (plan-complete, pre-dry-run) |
+| #5 | L3 Monitoring | complete (dry-run passed 2026-04-27) |
 | #6 | L4 Trade Plan | in progress (plan-complete, pre-dry-run) |
 | #7 | L5 Execute | in progress (plan-complete, pre-dry-run) |
 | #8 | Orchestration / CRON | in progress (plan-complete, pre-dry-run) |
