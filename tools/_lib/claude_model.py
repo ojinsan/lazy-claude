@@ -10,15 +10,25 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Literal
 
 from tools._lib.ratelimit import claude_api
 
+# Strip vars that block nested claude invocations (set by parent Claude Code session).
+_BLOCKED_ENV_VARS = {"CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_EXECPATH"}
+
+def _clean_env() -> dict:
+    return {k: v for k, v in os.environ.items() if k not in _BLOCKED_ENV_VARS}
+
 WORKSPACE = Path(__file__).resolve().parents[2]
 OPENCLAUDE_SETTINGS = WORKSPACE / ".claude" / "settings.openclaude.json"
-OPUS_MODEL_ALIAS = os.environ.get("CLAUDE_OPUS_MODEL_ALIAS", "opus")
+OPUS_MODEL_ALIAS = os.environ.get("CLAUDE_OPUS_MODEL_ALIAS", "sonnet")
+
+# Resolve full path at import time so cron/subprocess contexts without ~/.local/bin on PATH work.
+_CLAUDE_BIN = shutil.which("claude") or "/home/lazywork/.local/bin/claude"
 
 ModelName = Literal["opus", "openclaude"]
 
@@ -35,10 +45,11 @@ def _call_opus(prompt: str) -> str:
     claude_api.acquire()
     try:
         proc = subprocess.run(
-            ["claude", "-p", prompt, "--model", OPUS_MODEL_ALIAS],
+            [_CLAUDE_BIN, "-p", prompt, "--model", OPUS_MODEL_ALIAS],
             capture_output=True,
             text=True,
             timeout=300,
+            env=_clean_env(),
         )
     except subprocess.TimeoutExpired as e:
         raise RateLimitError("opus timeout") from e
@@ -54,17 +65,20 @@ def _call_openclaude(prompt: str) -> str:
     claude_api.acquire()
     try:
         proc = subprocess.run(
-            ["claude", "--settings", str(OPENCLAUDE_SETTINGS), "-p", prompt],
+            [_CLAUDE_BIN, "--settings", str(OPENCLAUDE_SETTINGS), "-p", prompt],
             capture_output=True,
             text=True,
             timeout=300,
+            env=_clean_env(),
         )
     except subprocess.TimeoutExpired as e:
         raise RateLimitError("openclaude timeout") from e
     if proc.returncode != 0:
-        err = (proc.stderr or "").lower()
-        if "rate" in err or "429" in err or "overloaded" in err:
-            raise RateLimitError(proc.stderr.strip())
+        # Claude CLI emits 429/cooldown messages on stdout (not stderr) when the
+        # proxy rejects the request — check both to trigger the opus fallback.
+        err = ((proc.stderr or "") + (proc.stdout or "")).lower()
+        if "rate" in err or "429" in err or "overloaded" in err or "cooling down" in err:
+            raise RateLimitError((proc.stderr or proc.stdout).strip())
         raise ModelError(f"openclaude exit {proc.returncode}: {proc.stderr.strip()}")
     return proc.stdout.strip()
 
