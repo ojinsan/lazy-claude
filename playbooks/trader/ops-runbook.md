@@ -56,11 +56,20 @@ claude --dangerously-skip-permissions \
 
 Replace `LAYER` with `portfolio`, `insight`, `screening`, `tradeplan`, `execute`, `monitor`.
 
-## Rotate Carina broker token
+## Rotate / refresh Stockbit token
 
-1. Run `python3 tools/trader/stockbit_login.py` → saves fresh token
-2. Run `python3 tools/trader/stockbit_auth.py` → verify token active
-3. Check `runtime/cron/YYYYMMDD.log` for next L5 healthcheck to confirm no `token expired` warn
+Symptom: `WARNING No valid Stockbit token`, L2 abort `broker-flow caches missing`, universe scan 0 tickers.
+
+```bash
+cd /home/lazywork/workspace
+python3 tools/trader/stockbit_login.py          # normal relogin
+python3 tools/trader/stockbit_login.py --force  # force even if token looks valid
+python3 tools/trader/stockbit_auth.py           # verify token active
+```
+
+Cron refreshes every 6h automatically. If caches still missing after relogin, L2 will rebuild them on next run — no manual action needed.
+
+See also: `tools/manual/stockbit.md` § Token Refresh.
 
 ## Force-run watchdog
 

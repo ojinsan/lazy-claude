@@ -21,6 +21,25 @@ Three API layers:
 
 Env vars: `BACKEND_URL`, `BACKEND_TOKEN`, `STOCKBIT_TOKEN` (fallback)
 
+## Token Refresh / Relogin
+
+Exodus + Carina tokens expire. Symptoms: `WARNING No valid Stockbit token`, L2 broker-flow caches missing, universe scan returning 0 tickers.
+
+```bash
+# Relogin (auto — reads credentials from .env.local)
+python3 tools/trader/stockbit_login.py
+
+# Force relogin even if token appears valid
+python3 tools/trader/stockbit_login.py --force
+
+# Verify token active
+python3 tools/trader/stockbit_auth.py
+```
+
+Cron runs `stockbit_login.py` every 6h via crontab. If it keeps expiring, run `--force` and check `.env.local` has correct `STOCKBIT_PHONE` and `STOCKBIT_PASSWORD`.
+
+After relogin, broker-flow caches are stale — L2 will rebuild them on next run.
+
 ## HTTP Helpers (internal)
 
 | Helper            | Domain                    | Auth         |
